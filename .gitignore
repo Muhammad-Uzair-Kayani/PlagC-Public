@@ -1,0 +1,17 @@
+# Target project folders
+bin/
+bin-int/
+.vs/
+
+# Visual Studio build artifacts and logs
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# Compiler outputs
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.lib
