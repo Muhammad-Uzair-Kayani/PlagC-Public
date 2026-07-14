@@ -12,6 +12,11 @@ project "PlagC"
         "**.h"
     }
 
+    includedirs
+    {
+        "vendor/spdlog/include"
+    }
+
     postbuildcommands 
 		{
 			("echo Creating Sandbox folder if it does not exist..."),
@@ -21,7 +26,8 @@ project "PlagC"
 		}
 
     defines {
-        "WINDOWS"
+        "PC_PLATFORM_WINDOWS",
+        "PC_BUILD_DLL"
     }
 
     filter { "configurations:Debug" }

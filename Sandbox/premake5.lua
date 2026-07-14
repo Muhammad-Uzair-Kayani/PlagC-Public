@@ -13,7 +13,8 @@ project "Sandbox"
     }
 
     includedirs {
-	"../PlagC"
+	"../PlagC/src",
+        "../PlagC/vendor/spdlog/include"
     }
 
     links {
@@ -21,7 +22,8 @@ project "Sandbox"
     }
 
     defines {
-        "WINDOWS"
+        "PC_PLATFORM_WINDOWS",
+        "PC_APP"
     }
 
     filter { "configurations:Debug" }
