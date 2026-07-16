@@ -12,7 +12,7 @@ public:
 		// Clean up your application here
 	}
 };
-
+ 
 PlagC::Application* PlagC::CreateApplication()
 {
 	return new Sandbox();

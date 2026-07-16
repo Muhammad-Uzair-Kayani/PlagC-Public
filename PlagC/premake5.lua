@@ -14,7 +14,8 @@ project "PlagC"
 
     includedirs
     {
-        "vendor/spdlog/include"
+        "vendor/spdlog/include",
+	"src"
     }
 
     postbuildcommands 

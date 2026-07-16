@@ -7,6 +7,9 @@
     <Filter Include="src\PlagC">
       <UniqueIdentifier>{E399A0B3-4F04-552A-9842-06D004EC327F}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\PlagC\Events">
+      <UniqueIdentifier>{67E8AF01-53E1-CE53-7C13-B4D8686BAE5F}</UniqueIdentifier>
+    </Filter>
     <Filter Include="vendor">
       <UniqueIdentifier>{B3738122-9F15-ACF8-88D0-BF4C74113349}</UniqueIdentifier>
     </Filter>
@@ -41,6 +44,18 @@
     </ClInclude>
     <ClInclude Include="src\PlagC\Core.h">
       <Filter>src\PlagC</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Events\ApplicationEvent.h">
+      <Filter>src\PlagC\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Events\Event.h">
+      <Filter>src\PlagC\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Events\KeyEvent.h">
+      <Filter>src\PlagC\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Events\MouseEvent.h">
+      <Filter>src\PlagC\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\StartingPoint.h">
       <Filter>src\PlagC</Filter>

@@ -10,3 +10,5 @@
 	//#error PlagC only supports Windows!
 
 #endif // PC_PLATFORM_WINDOWS
+
+#define BIT(x) (1 << x)
