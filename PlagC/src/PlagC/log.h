@@ -1,13 +1,9 @@
 #pragma once
-//Headers for c++ standard library
-#include<memory>
-
 //Headers for vendor library
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/fmt/ostr.h>
 //Headers for PlagC Cores
-#include "core.h"
+#include "PlagC/Core.h"
 
 namespace PlagC
 {

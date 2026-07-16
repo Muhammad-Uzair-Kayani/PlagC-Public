@@ -7,6 +7,9 @@ project "PlagC"
     targetdir("../bin/" .. outputdir .. "/%{prj.name}")
     objdir("../bin-int/" .. outputdir .. "/%{prj.name}")
 
+    pchheader "pch.h"
+    pchsource "src/pch.cpp"
+	
     files {
         "**.cpp",
         "**.h"

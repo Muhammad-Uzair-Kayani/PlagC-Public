@@ -7,6 +7,7 @@ project "Sandbox"
     targetdir("../bin/" .. outputdir .. "/%{prj.name}")
     objdir("../bin-int/" .. outputdir .. "/%{prj.name}")
 
+
     files {
         "**.cpp",
         "**.h"
@@ -14,6 +15,7 @@ project "Sandbox"
 
     includedirs {
 	"../PlagC/src",
+	"../PlagC",
         "../PlagC/vendor/spdlog/include"
     }
 

@@ -63,6 +63,9 @@
     <ClInclude Include="src\PlagC\log.h">
       <Filter>src\PlagC</Filter>
     </ClInclude>
+    <ClInclude Include="src\pch.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="vendor\spdlog\include\spdlog\async.h">
       <Filter>vendor\spdlog\include\spdlog</Filter>
     </ClInclude>
@@ -217,6 +220,9 @@
     </ClCompile>
     <ClCompile Include="src\PlagC\log.cpp">
       <Filter>src\PlagC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pch.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
