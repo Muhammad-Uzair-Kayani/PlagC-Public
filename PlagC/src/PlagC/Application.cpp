@@ -1,12 +1,17 @@
 #include "pch.h"
 #include "Application.h"
-#include "log.h"
 
-#define PC_BIND_EVENT_FN(fn) std::bind(&fn, this, std::placeholders::_1)
+#include <GLFW/glfw3.h>
+
+namespace PlagC
+{
+	#define BIND_EVENT_FN(x) std::bind(&Application::x, this, std::placeholders::_1)
+}
 
 PlagC::Application::Application()
 {
-
+	m_Window = std::unique_ptr<Window>(Window::Create());
+	m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 }
 
 PlagC::Application::~Application()
@@ -14,32 +19,30 @@ PlagC::Application::~Application()
 
 }
 
+void PlagC::Application::OnEvent(Event& e)
+{
+	PC_CORE_INFO(e.ToString() + " Event Dispatched");
+	EventDispatcher dispatcher(e);
+	dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
+}
+
+bool PlagC::Application::OnWindowClose(WindowCloseEvent& e)
+{
+	m_Running = false;
+	return true;
+}
+
 void PlagC::Application::Run()
 {
 
-	WindowResizeEvent e(1280, 720);
-
-	if (e.GetEventType() == EventType::WindowResize)
+	while (m_Running)
 	{
-		PC_TRACE(e.ToString());
-	}
-	if (e.GetEventType() == EventType::ApplicationRender)
-	{
-		PC_TRACE(e.ToString());
-	}
-
-	EventDispatcher dispatcher(e);
-
-	dispatcher.Dispatch<WindowResizeEvent>(PC_BIND_EVENT_FN(PlagC::Application::OnWindowClose));
-
-	while (true)
-	{
+		glClear(GL_COLOR_BUFFER_BIT);
+		glClearColor(0.1f, 0.1f, 0.4f, 1.0f);
+		m_Window->OnUpdate();
 	}
 }
 
-bool PlagC::Application::OnWindowClose(WindowResizeEvent& e)
-{
-	PC_TRACE(e.ToString() + " Event Dispatched");
-	return true;
-}
+
+
 

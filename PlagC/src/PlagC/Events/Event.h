@@ -1,9 +1,4 @@
 #pragma once
-
-#include <string>
-#include <sstream>
-#include <functional>
-
 #include "PlagC/Core.h"
 
 namespace PlagC

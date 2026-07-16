@@ -58,8 +58,8 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>PC_PLATFORM_WINDOWS;PC_BUILD_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>vendor\spdlog\include;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PC_PLATFORM_WINDOWS;PC_BUILD_DLL;PC_ENABLE_ASSERTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -69,6 +69,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>..\bin\Debug-windows-x86_64\PlagC\PlagC.lib</ImportLibrary>
     </Link>
     <PostBuildEvent>
@@ -83,8 +84,8 @@ IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\b
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>PC_PLATFORM_WINDOWS;PC_BUILD_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>vendor\spdlog\include;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PC_PLATFORM_WINDOWS;PC_BUILD_DLL;PC_ENABLE_ASSERTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -98,6 +99,7 @@ IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\b
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>..\bin\Release-windows-x86_64\PlagC\PlagC.lib</ImportLibrary>
     </Link>
     <PostBuildEvent>
@@ -115,9 +117,32 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\Events\Event.h" />
     <ClInclude Include="src\PlagC\Events\KeyEvent.h" />
     <ClInclude Include="src\PlagC\Events\MouseEvent.h" />
+    <ClInclude Include="src\PlagC\Platfrom\WindowsWindow.h" />
     <ClInclude Include="src\PlagC\StartingPoint.h" />
+    <ClInclude Include="src\PlagC\Window.h" />
     <ClInclude Include="src\PlagC\log.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="vendor\GLFW\include\GLFW\glfw3.h" />
+    <ClInclude Include="vendor\GLFW\include\GLFW\glfw3native.h" />
+    <ClInclude Include="vendor\GLFW\src\cocoa_joystick.h" />
+    <ClInclude Include="vendor\GLFW\src\cocoa_platform.h" />
+    <ClInclude Include="vendor\GLFW\src\egl_context.h" />
+    <ClInclude Include="vendor\GLFW\src\glx_context.h" />
+    <ClInclude Include="vendor\GLFW\src\internal.h" />
+    <ClInclude Include="vendor\GLFW\src\linux_joystick.h" />
+    <ClInclude Include="vendor\GLFW\src\mappings.h" />
+    <ClInclude Include="vendor\GLFW\src\nsgl_context.h" />
+    <ClInclude Include="vendor\GLFW\src\null_joystick.h" />
+    <ClInclude Include="vendor\GLFW\src\null_platform.h" />
+    <ClInclude Include="vendor\GLFW\src\osmesa_context.h" />
+    <ClInclude Include="vendor\GLFW\src\posix_thread.h" />
+    <ClInclude Include="vendor\GLFW\src\posix_time.h" />
+    <ClInclude Include="vendor\GLFW\src\wgl_context.h" />
+    <ClInclude Include="vendor\GLFW\src\win32_joystick.h" />
+    <ClInclude Include="vendor\GLFW\src\win32_platform.h" />
+    <ClInclude Include="vendor\GLFW\src\wl_platform.h" />
+    <ClInclude Include="vendor\GLFW\src\x11_platform.h" />
+    <ClInclude Include="vendor\GLFW\src\xkb_unicode.h" />
     <ClInclude Include="vendor\spdlog\include\spdlog\async.h" />
     <ClInclude Include="vendor\spdlog\include\spdlog\async_logger.h" />
     <ClInclude Include="vendor\spdlog\include\spdlog\common.h" />
@@ -170,10 +195,16 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp" />
+    <ClCompile Include="src\PlagC\Platfrom\WindowsWindow.cpp" />
     <ClCompile Include="src\PlagC\log.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="vendor\GLFW\GLFW.vcxproj">
+      <Project>{154B857C-0182-860D-AA6E-6C109684020F}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

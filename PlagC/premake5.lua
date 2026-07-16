@@ -18,7 +18,14 @@ project "PlagC"
     includedirs
     {
         "vendor/spdlog/include",
-	"src"
+	"src",
+        "vendor/GLFW/include"
+    }
+	
+    links
+    {
+        "GLFW",
+	"opengl32.lib"
     }
 
     postbuildcommands 
@@ -31,13 +38,15 @@ project "PlagC"
 
     defines {
         "PC_PLATFORM_WINDOWS",
-        "PC_BUILD_DLL"
+        "PC_BUILD_DLL",
+	"PC_ENABLE_ASSERTS"
     }
 
     filter { "configurations:Debug" }
         buildoptions "/MTd"
         runtime "Debug"
         symbols "on"
+
 
     filter { "configurations:Release" }
         buildoptions "/MT"

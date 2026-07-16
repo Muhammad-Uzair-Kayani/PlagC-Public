@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "log.h"
 
 std::shared_ptr<spdlog::logger> PlagC::log::s_CoreLogger;
 std::shared_ptr<spdlog::logger> PlagC::log::s_ClientLogger;

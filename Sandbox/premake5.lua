@@ -16,7 +16,8 @@ project "Sandbox"
     includedirs {
 	"../PlagC/src",
 	"../PlagC",
-        "../PlagC/vendor/spdlog/include"
+        "../PlagC/vendor/spdlog/include",
+	"../PlagC/vendor/GLFW/include"
     }
 
     links {

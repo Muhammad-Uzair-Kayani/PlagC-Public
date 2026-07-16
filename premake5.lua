@@ -10,5 +10,6 @@ workspace "PlagC"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
+include "PlagC/vendor/GLFW"
 include "PlagC"
 include "Sandbox"

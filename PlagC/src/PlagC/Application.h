@@ -1,6 +1,7 @@
 #pragma once
 #include "PlagC/Events/Event.h"
 #include "PlagC/Events/ApplicationEvent.h"
+#include "PlagC/Window.h"
 
 namespace PlagC
 {
@@ -10,10 +11,16 @@ namespace PlagC
 		Application();
 		virtual ~Application();
 		void Run();
-		bool OnWindowClose(WindowResizeEvent& e);
+		void OnEvent(Event& e);
+
+	private:
+		bool OnWindowClose(WindowCloseEvent& e);
+
+	private:
+		std::unique_ptr<Window> m_Window;
+		bool m_Running = true;
 	};
 
-	
 
 	Application* CreateApplication();
 }
