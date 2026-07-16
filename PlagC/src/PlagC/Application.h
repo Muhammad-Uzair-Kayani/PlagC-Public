@@ -1,5 +1,7 @@
 #pragma once
 #include "Core.h"
+#include "PlagC/Events/Event.h"
+#include "PlagC/Events/ApplicationEvent.h"
 
 namespace PlagC
 {
@@ -9,8 +11,10 @@ namespace PlagC
 		Application();
 		virtual ~Application();
 		void Run();
-
+		bool OnWindowClose(WindowResizeEvent& e);
 	};
+
+	
 
 	Application* CreateApplication();
 }

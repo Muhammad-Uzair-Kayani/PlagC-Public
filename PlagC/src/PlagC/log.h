@@ -5,13 +5,13 @@
 //Headers for vendor library
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-
+#include <spdlog/fmt/ostr.h>
 //Headers for PlagC Cores
 #include "core.h"
 
-
 namespace PlagC
 {
+
 	class PLAGC_API log
 	{
 	public:
