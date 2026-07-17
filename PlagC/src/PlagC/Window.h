@@ -16,7 +16,7 @@ namespace PlagC
 			: Title(title), Width(width), Height(height) {}
 	};
 
-	class PLAGC_API Window
+	class PC_API Window
 	{
 	public:
 		static Window* Create(const WindowProps& properties = WindowProps());

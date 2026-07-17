@@ -43,12 +43,12 @@ project "PlagC"
     }
 
     filter { "configurations:Debug" }
-        buildoptions "/MTd"
+        buildoptions "/Mdd"
         runtime "Debug"
         symbols "on"
 
 
     filter { "configurations:Release" }
-        buildoptions "/MT"
+        buildoptions "/Md"
         runtime "Release"
         optimize "on"

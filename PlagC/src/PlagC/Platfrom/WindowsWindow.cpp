@@ -61,7 +61,7 @@ void PlagC::WindowsWindow::Init(const WindowProps& properties)
 	if(!s_GLFWInitialized)
 	{
 		int success = glfwInit();
-		PLAGC_CORE_ASSERT(success, "Could not initialize GLFW!");
+		PC_CORE_ASSERT(success, "Could not initialize GLFW!");
 		glfwSetErrorCallback(GLFWErrorCallback);
 		s_GLFWInitialized = true;
 	}

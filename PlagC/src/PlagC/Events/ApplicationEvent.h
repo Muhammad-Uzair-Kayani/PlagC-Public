@@ -3,7 +3,7 @@
 
 namespace PlagC
 {
-	class PLAGC_API WindowResizeEvent : public Event
+	class PC_API WindowResizeEvent : public Event
 	{
 
 	public:
@@ -26,7 +26,7 @@ namespace PlagC
 		unsigned int m_Width, m_Height;
 	};
 
-	class PLAGC_API WindowCloseEvent : public Event
+	class PC_API WindowCloseEvent : public Event
 	{
 
 	public:
@@ -40,7 +40,7 @@ namespace PlagC
 
 	};
 
-	class PLAGC_API AppTickEvent : public Event
+	class PC_API AppTickEvent : public Event
 	{
 
 	public:
@@ -54,7 +54,7 @@ namespace PlagC
 
 	};
 
-	class PLAGC_API AppUpdateEvent : public Event
+	class PC_API AppUpdateEvent : public Event
 	{
 
 	public:
@@ -68,7 +68,7 @@ namespace PlagC
 
 	};
 
-	class PLAGC_API AppRenderEvent : public Event
+	class PC_API AppRenderEvent : public Event
 	{
 
 	public:

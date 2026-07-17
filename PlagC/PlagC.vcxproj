@@ -63,7 +63,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalOptions>/MTd %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Mdd %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -92,7 +92,7 @@ IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\b
       <MinimalRebuild>false</MinimalRebuild>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalOptions>/MT %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Md %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -117,6 +117,8 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\Events\Event.h" />
     <ClInclude Include="src\PlagC\Events\KeyEvent.h" />
     <ClInclude Include="src\PlagC\Events\MouseEvent.h" />
+    <ClInclude Include="src\PlagC\Layer.h" />
+    <ClInclude Include="src\PlagC\LayerStack.h" />
     <ClInclude Include="src\PlagC\Platfrom\WindowsWindow.h" />
     <ClInclude Include="src\PlagC\StartingPoint.h" />
     <ClInclude Include="src\PlagC\Window.h" />
@@ -195,6 +197,8 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp" />
+    <ClCompile Include="src\PlagC\Layer.cpp" />
+    <ClCompile Include="src\PlagC\LayerStack.cpp" />
     <ClCompile Include="src\PlagC\Platfrom\WindowsWindow.cpp" />
     <ClCompile Include="src\PlagC\log.cpp" />
     <ClCompile Include="src\pch.cpp">

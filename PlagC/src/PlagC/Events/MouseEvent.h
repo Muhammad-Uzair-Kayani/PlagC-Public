@@ -3,7 +3,7 @@
 
 namespace PlagC
 {
-	class PLAGC_API MouseMovedEvent : public Event
+	class PC_API MouseMovedEvent : public Event
 	{
 	public:
 
@@ -28,7 +28,7 @@ namespace PlagC
 		float m_MouseX, m_MouseY;
 	};
 
-	class PLAGC_API MouseScrolledEvent : public Event
+	class PC_API MouseScrolledEvent : public Event
 	{
 	public:
 
@@ -51,7 +51,7 @@ namespace PlagC
 		float m_XOffset, m_YOffset;
 	};
 
-	class PLAGC_API MouseButtonEvent : public Event
+	class PC_API MouseButtonEvent : public Event
 	{
 	public:
 
@@ -65,7 +65,7 @@ namespace PlagC
 			int m_MouseButton;
 	};
 
-	class PLAGC_API MouseButtonPressedEvent : public MouseButtonEvent
+	class PC_API MouseButtonPressedEvent : public MouseButtonEvent
 	{
 	public:
 
@@ -82,7 +82,7 @@ namespace PlagC
 		
 	};
 
-	class PLAGC_API MouseButtonReleasedEvent : public MouseButtonEvent
+	class PC_API MouseButtonReleasedEvent : public MouseButtonEvent
 	{
 	public:
 

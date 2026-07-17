@@ -72,6 +72,12 @@
     <ClInclude Include="src\PlagC\Events\MouseEvent.h">
       <Filter>src\PlagC\Events</Filter>
     </ClInclude>
+    <ClInclude Include="src\PlagC\Layer.h">
+      <Filter>src\PlagC</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\LayerStack.h">
+      <Filter>src\PlagC</Filter>
+    </ClInclude>
     <ClInclude Include="src\PlagC\Platfrom\WindowsWindow.h">
       <Filter>src\PlagC\Platfrom</Filter>
     </ClInclude>
@@ -300,6 +306,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp">
+      <Filter>src\PlagC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Layer.cpp">
+      <Filter>src\PlagC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\LayerStack.cpp">
       <Filter>src\PlagC</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\Platfrom\WindowsWindow.cpp">

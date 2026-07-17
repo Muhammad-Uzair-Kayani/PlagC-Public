@@ -4,7 +4,7 @@
 namespace PlagC
 {
 
-	class PLAGC_API KeyEvent : public Event
+	class PC_API KeyEvent : public Event
 	{
 	public:
 
@@ -22,7 +22,7 @@ namespace PlagC
 		int m_KeyCode;
 	};
 
-	class PLAGC_API KeyPressedEvent : public KeyEvent
+	class PC_API KeyPressedEvent : public KeyEvent
 	{
 	public:
 
@@ -45,7 +45,7 @@ namespace PlagC
 		int m_RepeatCount;
 	};
 
-	class PLAGC_API KeyReleasedEvent : public KeyEvent
+	class PC_API KeyReleasedEvent : public KeyEvent
 	{
 	public:
 

@@ -8,7 +8,7 @@
 namespace PlagC
 {
 
-	class PLAGC_API log
+	class PC_API log
 	{
 	public:
 		log();
