@@ -1,12 +1,13 @@
 @echo off
 title Generate VS2022 Solution
+
 echo Running Premake5 for Visual Studio 2022...
 echo.
 
-:: Ensure the script runs from the directory it is located in
-cd /d "%~dp0"
+:: Move to the project root (parent of Build)
+cd /d "%~dp0.."
 
-:: Run the premake command
+:: Run Premake
 vendor\premake\premake5.exe vs2022
 
 :: Check if the command succeeded
