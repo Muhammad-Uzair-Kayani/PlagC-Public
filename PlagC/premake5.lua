@@ -19,13 +19,15 @@ project "PlagC"
     {
         "vendor/spdlog/include",
 	"src",
-        "vendor/GLFW/include"
+        "vendor/GLFW/include",
+        "vendor/Glad/include"
     }
 	
     links
     {
         "GLFW",
-	"opengl32.lib"
+	"opengl32.lib",
+	"GLAD"
     }
 
     postbuildcommands 

@@ -28,6 +28,18 @@
     <Filter Include="vendor\GLFW\src">
       <UniqueIdentifier>{E94D2683-55D9-9347-5EEA-163CCAF4EF47}</UniqueIdentifier>
     </Filter>
+    <Filter Include="vendor\Glad">
+      <UniqueIdentifier>{7A0268C1-E6B7-E0B6-6FAC-DA8DDB60D7BA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vendor\Glad\include">
+      <UniqueIdentifier>{ED032520-5965-022E-E2D2-48E04E3339ED}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vendor\Glad\include\KHR">
+      <UniqueIdentifier>{E140CAF1-4D78-1289-5682-76ACC2383982}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vendor\Glad\include\glad">
+      <UniqueIdentifier>{1453222B-0078-71AB-29C3-563B154770C9}</UniqueIdentifier>
+    </Filter>
     <Filter Include="vendor\spdlog">
       <UniqueIdentifier>{8BBC5F22-F77C-DB58-C0B7-24D62C372035}</UniqueIdentifier>
     </Filter>
@@ -155,6 +167,12 @@
     </ClInclude>
     <ClInclude Include="vendor\GLFW\src\xkb_unicode.h">
       <Filter>vendor\GLFW\src</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\Glad\include\KHR\khrplatform.h">
+      <Filter>vendor\Glad\include\KHR</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\Glad\include\glad\glad.h">
+      <Filter>vendor\Glad\include\glad</Filter>
     </ClInclude>
     <ClInclude Include="vendor\spdlog\include\spdlog\async.h">
       <Filter>vendor\spdlog\include\spdlog</Filter>

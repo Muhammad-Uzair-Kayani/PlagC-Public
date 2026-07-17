@@ -59,7 +59,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PC_PLATFORM_WINDOWS;PC_BUILD_DLL;PC_ENABLE_ASSERTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;vendor\Glad\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -85,7 +85,7 @@ IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\b
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PC_PLATFORM_WINDOWS;PC_BUILD_DLL;PC_ENABLE_ASSERTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;vendor\Glad\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -145,6 +145,8 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="vendor\GLFW\src\wl_platform.h" />
     <ClInclude Include="vendor\GLFW\src\x11_platform.h" />
     <ClInclude Include="vendor\GLFW\src\xkb_unicode.h" />
+    <ClInclude Include="vendor\Glad\include\KHR\khrplatform.h" />
+    <ClInclude Include="vendor\Glad\include\glad\glad.h" />
     <ClInclude Include="vendor\spdlog\include\spdlog\async.h" />
     <ClInclude Include="vendor\spdlog\include\spdlog\async_logger.h" />
     <ClInclude Include="vendor\spdlog\include\spdlog\common.h" />
@@ -208,6 +210,9 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
   <ItemGroup>
     <ProjectReference Include="vendor\GLFW\GLFW.vcxproj">
       <Project>{154B857C-0182-860D-AA6E-6C109684020F}</Project>
+    </ProjectReference>
+    <ProjectReference Include="vendor\Glad\Glad.vcxproj">
+      <Project>{BDD6857C-A90D-870D-52FA-6C103E10030F}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

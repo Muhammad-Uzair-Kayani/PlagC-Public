@@ -71,6 +71,14 @@ void PlagC::WindowsWindow::Init(const WindowProps& properties)
 	m_Window = glfwCreateWindow((int)properties.Width,
 		(int)properties.Height, properties.Title.c_str(), nullptr, nullptr);
 	glfwMakeContextCurrent(m_Window);
+
+	//Initializing GLAD
+	int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+	PC_CORE_ASSERT(status, "Could not initialize GLFW!");
+	if (status)
+		PC_CORE_TRACE("SUCCESS IN LOADING GLAD ADRESS");
+
+
 	glfwSetWindowUserPointer(m_Window, &m_Data);
 	SetVsync(1);
 
