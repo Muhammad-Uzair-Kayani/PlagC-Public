@@ -11,8 +11,8 @@ project "PlagC"
     pchsource "src/pch.cpp"
 	
     files {
-        "**.cpp",
-        "**.h"
+       "src/**.h",
+	"src/**.cpp",
     }
 
     includedirs
@@ -20,14 +20,16 @@ project "PlagC"
         "vendor/spdlog/include",
 	"src",
         "vendor/GLFW/include",
-        "vendor/Glad/include"
+        "vendor/Glad/include",
+        "vendor/ImGui"
     }
 	
     links
     {
         "GLFW",
 	"opengl32.lib",
-	"GLAD"
+	"GLAD",
+	"ImGui"
     }
 
     postbuildcommands 

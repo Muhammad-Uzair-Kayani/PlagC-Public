@@ -56,7 +56,8 @@ void PlagC::WindowsWindow::Init(const WindowProps& properties)
 	m_Data.Width = properties.Width;
 	m_Data.Height = properties.Height;
 
-	PC_CORE_INFO("Trying to create window {0} ({1}, {2})", properties.Title, properties.Width, properties.Height);
+	PC_CORE_INFO("Trying to create window {0} ({1}, {2})", 
+		         properties.Title,properties.Width, properties.Height);
 
 	if(!s_GLFWInitialized)
 	{
