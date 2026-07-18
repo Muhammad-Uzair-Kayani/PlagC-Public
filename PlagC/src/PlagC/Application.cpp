@@ -6,10 +6,13 @@
 namespace PlagC
 {
 	#define BIND_EVENT_FN(x) std::bind(&Application::x, this, std::placeholders::_1)
+	Application* Application::s_Instance = nullptr;
 }
 
 PlagC::Application::Application()
 {
+	PC_CORE_ASSERT(!s_Instance, "APPLCATION INSTANCE ALREADY EXISTS");
+	s_Instance = this;
 	m_Window = std::unique_ptr<Window>(Window::Create());
 	m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 }
@@ -37,11 +40,13 @@ void PlagC::Application::OnEvent(Event& e)
 void PlagC::Application::PushLayer(Layer* layer)
 {
 	m_LayerStack.PushLayer(layer);
+	layer->OnAttach();
 }
 
-void PlagC::Application::PushOverLay(Layer* Layer)
+void PlagC::Application::PushOverLay(Layer* layer)
 {
-	m_LayerStack.PopOverlay(Layer);
+	m_LayerStack.PopOverlay(layer);
+	layer->OnAttach();
 }
 
 bool PlagC::Application::OnWindowClose(WindowCloseEvent& e)

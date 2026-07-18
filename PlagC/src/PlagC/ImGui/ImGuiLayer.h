@@ -4,7 +4,7 @@
 
 namespace PlagC
 {
-	class ImGuiLayer : public  Layer
+	class PC_API ImGuiLayer : public  Layer
 	{
 	public:
 
@@ -18,6 +18,7 @@ namespace PlagC
 
 	private:
 
+		float m_Time;
 
 	};
 

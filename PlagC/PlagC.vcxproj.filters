@@ -46,10 +46,10 @@
     <ClInclude Include="src\PlagC\LayerStack.h">
       <Filter>PlagC</Filter>
     </ClInclude>
-    <ClInclude Include="src\PlagC\Platfrom\OpenGL\ImGuiOpenGLRenderer.h">
+    <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h">
       <Filter>PlagC\Platfrom\OpenGL</Filter>
     </ClInclude>
-    <ClInclude Include="src\PlagC\Platfrom\WindowsWindow.h">
+    <ClInclude Include="src\Platfrom\WindowsWindow.h">
       <Filter>PlagC\Platfrom</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\StartingPoint.h">
@@ -76,10 +76,10 @@
     <ClCompile Include="src\PlagC\LayerStack.cpp">
       <Filter>PlagC</Filter>
     </ClCompile>
-    <ClCompile Include="src\PlagC\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp">
+    <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp">
       <Filter>PlagC\Platfrom\OpenGL</Filter>
     </ClCompile>
-    <ClCompile Include="src\PlagC\Platfrom\WindowsWindow.cpp">
+    <ClCompile Include="src\Platfrom\WindowsWindow.cpp">
       <Filter>PlagC\Platfrom</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\log.cpp">

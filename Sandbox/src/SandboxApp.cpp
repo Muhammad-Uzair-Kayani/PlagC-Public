@@ -28,6 +28,7 @@ public:
 	{
 		// Initialize your application here
 		PushLayer(new ApplcationLayer());
+		PushLayer(new PlagC::ImGuiLayer());
 	}
 	~Sandbox()
 	{

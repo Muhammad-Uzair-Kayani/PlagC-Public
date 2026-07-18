@@ -5,3 +5,4 @@
 #include "PlagC/StartingPoint.h" //To provide the user with the main entry point of the application
 #include "PlagC/log.h" //To provide the user with the logging functionality
 #include "PlagC/Layer.h"
+#include "PlagC/ImGui/ImGuiLayer.h"

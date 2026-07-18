@@ -120,8 +120,8 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\ImGui\ImGuiLayer.h" />
     <ClInclude Include="src\PlagC\Layer.h" />
     <ClInclude Include="src\PlagC\LayerStack.h" />
-    <ClInclude Include="src\PlagC\Platfrom\OpenGL\ImGuiOpenGLRenderer.h" />
-    <ClInclude Include="src\PlagC\Platfrom\WindowsWindow.h" />
+    <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h" />
+    <ClInclude Include="src\Platfrom\WindowsWindow.h" />
     <ClInclude Include="src\PlagC\StartingPoint.h" />
     <ClInclude Include="src\PlagC\Window.h" />
     <ClInclude Include="src\PlagC\log.h" />
@@ -132,8 +132,8 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClCompile Include="src\PlagC\ImGui\ImGuiLayer.cpp" />
     <ClCompile Include="src\PlagC\Layer.cpp" />
     <ClCompile Include="src\PlagC\LayerStack.cpp" />
-    <ClCompile Include="src\PlagC\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp" />
-    <ClCompile Include="src\PlagC\Platfrom\WindowsWindow.cpp" />
+    <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp" />
+    <ClCompile Include="src\Platfrom\WindowsWindow.cpp" />
     <ClCompile Include="src\PlagC\log.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
