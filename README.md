@@ -8,6 +8,7 @@ A hobby game engine written in modern C++ with OpenGL, built to explore real-wor
 
 ## Goals
 
+
 PlagC is a long-term learning project focused on understanding how modern game engines are built from the ground up rather than competing with production engines.
 
 Current areas of focus include:
