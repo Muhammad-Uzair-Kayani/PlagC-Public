@@ -27,7 +27,7 @@ void PlagC::Application::OnEvent(Event& e)
 	EventDispatcher dispatcher(e);
 	dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
 
-	for (auto it = m_LayerStack.end(); it != m_LayerStack.begin(); it++)
+	for (auto it = m_LayerStack.end(); it != m_LayerStack.begin(); it--)
 	{
 		(*--it)->OnEvent(e);
 		if (e.Handled)
