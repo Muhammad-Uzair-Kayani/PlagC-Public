@@ -27,13 +27,14 @@ void PlagC::Application::OnEvent(Event& e)
 	EventDispatcher dispatcher(e);
 	dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
 
-	PC_CORE_INFO(e.ToString() + " Event Dispatched");
-
-	for (auto it = m_LayerStack.end(); it != m_LayerStack.end(); it++)
+	for (auto it = m_LayerStack.end(); it != m_LayerStack.begin(); it++)
 	{
 		(*--it)->OnEvent(e);
 		if (e.Handled)
+		{
+			PC_CORE_INFO(e.ToString() + " Event Dispatched");
 			break;
+		}
 	}
 }
 
@@ -45,7 +46,7 @@ void PlagC::Application::PushLayer(Layer* layer)
 
 void PlagC::Application::PushOverLay(Layer* layer)
 {
-	m_LayerStack.PopOverlay(layer);
+	m_LayerStack.PushOverlay(layer);
 	layer->OnAttach();
 }
 

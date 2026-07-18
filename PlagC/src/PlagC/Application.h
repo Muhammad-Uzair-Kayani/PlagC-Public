@@ -4,6 +4,7 @@
 #include "PlagC/Window.h"
 #include "LayerStack.h"
 
+
 namespace PlagC
 {
 	class PC_API Application

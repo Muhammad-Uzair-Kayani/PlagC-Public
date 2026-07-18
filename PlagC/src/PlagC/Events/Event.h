@@ -33,7 +33,7 @@ namespace PlagC
 		friend class EventDispatcher;
 	public:
 
-		bool Handled;
+		bool Handled = false;
 
 	public:
 		virtual EventType GetEventType() const = 0;

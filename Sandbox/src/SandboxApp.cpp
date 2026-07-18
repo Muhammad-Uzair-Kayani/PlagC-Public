@@ -12,9 +12,8 @@ public:
 
 	void OnUpdate() override
 	{
-		PC_INFO("ExampleLayer::Update");
+		PC_TRACE("APPLICATION");
 	}
-
 	void OnEvent(PlagC::Event& event) override
 	{
 		PC_TRACE("{0}", event.ToString());
@@ -28,7 +27,7 @@ public:
 	{
 		// Initialize your application here
 		PushLayer(new ApplcationLayer());
-		PushLayer(new PlagC::ImGuiLayer());
+		PushOverLay(new PlagC::ImGuiLayer());
 	}
 	~Sandbox()
 	{
