@@ -16,6 +16,9 @@
     <Filter Include="Platfrom\OpenGL">
       <UniqueIdentifier>{7EDDD6CB-EA68-4490-F379-C7845F84A090}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Platfrom\Windows">
+      <UniqueIdentifier>{C467CE9E-B060-EDF0-D992-D275C5EACCFC}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\PlagC.h" />
@@ -40,10 +43,19 @@
     <ClInclude Include="src\PlagC\ImGui\ImGuiLayer.h">
       <Filter>PlagC\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="src\PlagC\Input.h">
+      <Filter>PlagC</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\KeyCodes.h">
+      <Filter>PlagC</Filter>
+    </ClInclude>
     <ClInclude Include="src\PlagC\Layer.h">
       <Filter>PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\LayerStack.h">
+      <Filter>PlagC</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\MouseButtonCodes.h">
       <Filter>PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\StartingPoint.h">
@@ -58,14 +70,13 @@
     <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h">
       <Filter>Platfrom\OpenGL</Filter>
     </ClInclude>
+    <ClInclude Include="src\Platfrom\Windows\WindowsInput.h">
+      <Filter>Platfrom\Windows</Filter>
+    </ClInclude>
     <ClInclude Include="src\Platfrom\WindowsWindow.h">
       <Filter>Platfrom</Filter>
     </ClInclude>
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\PlagC\Input.h" />
-    <ClInclude Include="src\Platfrom\Windows\WindowsInput.h" />
-    <ClInclude Include="src\PlagC\KeyCodes.h" />
-    <ClInclude Include="src\PlagC\MouseButtonCodes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp">
@@ -86,10 +97,12 @@
     <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp">
       <Filter>Platfrom\OpenGL</Filter>
     </ClCompile>
+    <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp">
+      <Filter>Platfrom\Windows</Filter>
+    </ClCompile>
     <ClCompile Include="src\Platfrom\WindowsWindow.cpp">
       <Filter>Platfrom</Filter>
     </ClCompile>
     <ClCompile Include="src\pch.cpp" />
-    <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp" />
   </ItemGroup>
 </Project>

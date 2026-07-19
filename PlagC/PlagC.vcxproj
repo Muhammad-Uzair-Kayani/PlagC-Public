@@ -59,7 +59,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PC_PLATFORM_WINDOWS;PC_BUILD_DLL;PC_ENABLE_ASSERTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;vendor\Glad\include;vendor\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;vendor\Glad\include;vendor\ImGui;vendor\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -84,7 +84,7 @@ IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\b
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PC_PLATFORM_WINDOWS;PC_BUILD_DLL;PC_ENABLE_ASSERTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;vendor\Glad\include;vendor\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;vendor\Glad\include;vendor\ImGui;vendor\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -125,9 +125,9 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\Window.h" />
     <ClInclude Include="src\PlagC\log.h" />
     <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h" />
+    <ClInclude Include="src\Platfrom\Windows\WindowsInput.h" />
     <ClInclude Include="src\Platfrom\WindowsWindow.h" />
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\Platfrom\Windows\WindowsInput.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp" />
@@ -136,11 +136,11 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClCompile Include="src\PlagC\LayerStack.cpp" />
     <ClCompile Include="src\PlagC\log.cpp" />
     <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp" />
+    <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp" />
     <ClCompile Include="src\Platfrom\WindowsWindow.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="vendor\GLFW\GLFW.vcxproj">

@@ -21,7 +21,8 @@ project "PlagC"
 	"src",
         "vendor/GLFW/include",
         "vendor/Glad/include",
-        "vendor/ImGui"
+        "vendor/ImGui",
+	"vendor/glm"
     }
 	
     links

@@ -41,13 +41,11 @@ void PlagC::Application::OnEvent(Event& e)
 void PlagC::Application::PushLayer(Layer* layer)
 {
 	m_LayerStack.PushLayer(layer);
-	layer->OnAttach();
 }
 
 void PlagC::Application::PushOverLay(Layer* layer)
 {
 	m_LayerStack.PushOverlay(layer);
-	layer->OnAttach();
 }
 
 bool PlagC::Application::OnWindowClose(WindowCloseEvent& e)

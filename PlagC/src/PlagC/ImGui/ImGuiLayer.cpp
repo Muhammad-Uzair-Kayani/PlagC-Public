@@ -735,4 +735,3 @@ bool PlagC::ImGuiLayer::OnWindowResizeEvent(WindowResizeEvent& e)
 	return false;
 }
 
-
