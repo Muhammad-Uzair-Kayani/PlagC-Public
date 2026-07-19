@@ -2,7 +2,7 @@ project "PlagC"
     kind "SharedLib"
     language "C++"
     cppdialect "C++17"
-    staticruntime "on"
+    staticruntime "off"
 
     targetdir("../bin/" .. outputdir .. "/%{prj.name}")
     objdir("../bin-int/" .. outputdir .. "/%{prj.name}")
@@ -47,12 +47,10 @@ project "PlagC"
     }
 
     filter { "configurations:Debug" }
-        buildoptions "/MDd"
         runtime "Debug"
         symbols "on"
 
 
     filter { "configurations:Release" }
-        buildoptions "/MD"
         runtime "Release"
         optimize "on"

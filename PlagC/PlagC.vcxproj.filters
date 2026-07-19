@@ -10,11 +10,11 @@
     <Filter Include="PlagC\ImGui">
       <UniqueIdentifier>{B6790117-222F-7A0C-AB23-74E317D87010}</UniqueIdentifier>
     </Filter>
-    <Filter Include="PlagC\Platfrom">
-      <UniqueIdentifier>{C09185EB-AC5F-79F1-95F3-E91781605556}</UniqueIdentifier>
+    <Filter Include="Platfrom">
+      <UniqueIdentifier>{8AD388B4-76A0-E3BF-9FB9-D1678BE5184E}</UniqueIdentifier>
     </Filter>
-    <Filter Include="PlagC\Platfrom\OpenGL">
-      <UniqueIdentifier>{F4C23481-602F-F07B-2923-88D9954E12E4}</UniqueIdentifier>
+    <Filter Include="Platfrom\OpenGL">
+      <UniqueIdentifier>{7EDDD6CB-EA68-4490-F379-C7845F84A090}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -46,12 +46,6 @@
     <ClInclude Include="src\PlagC\LayerStack.h">
       <Filter>PlagC</Filter>
     </ClInclude>
-    <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h">
-      <Filter>PlagC\Platfrom\OpenGL</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Platfrom\WindowsWindow.h">
-      <Filter>PlagC\Platfrom</Filter>
-    </ClInclude>
     <ClInclude Include="src\PlagC\StartingPoint.h">
       <Filter>PlagC</Filter>
     </ClInclude>
@@ -61,7 +55,15 @@
     <ClInclude Include="src\PlagC\log.h">
       <Filter>PlagC</Filter>
     </ClInclude>
+    <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h">
+      <Filter>Platfrom\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platfrom\WindowsWindow.h">
+      <Filter>Platfrom</Filter>
+    </ClInclude>
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\PlagC\Input.h" />
+    <ClInclude Include="src\Platfrom\Windows\WindowsInput.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp">
@@ -76,15 +78,16 @@
     <ClCompile Include="src\PlagC\LayerStack.cpp">
       <Filter>PlagC</Filter>
     </ClCompile>
-    <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp">
-      <Filter>PlagC\Platfrom\OpenGL</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Platfrom\WindowsWindow.cpp">
-      <Filter>PlagC\Platfrom</Filter>
-    </ClCompile>
     <ClCompile Include="src\PlagC\log.cpp">
       <Filter>PlagC</Filter>
     </ClCompile>
+    <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp">
+      <Filter>Platfrom\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Platfrom\WindowsWindow.cpp">
+      <Filter>Platfrom</Filter>
+    </ClCompile>
     <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp" />
   </ItemGroup>
 </Project>

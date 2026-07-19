@@ -62,8 +62,7 @@
       <AdditionalIncludeDirectories>vendor\spdlog\include;src;vendor\GLFW\include;vendor\Glad\include;vendor\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalOptions>/MDd %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -91,8 +90,7 @@ IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\b
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <MinimalRebuild>false</MinimalRebuild>
       <StringPooling>true</StringPooling>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalOptions>/MD %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -118,26 +116,29 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\Events\KeyEvent.h" />
     <ClInclude Include="src\PlagC\Events\MouseEvent.h" />
     <ClInclude Include="src\PlagC\ImGui\ImGuiLayer.h" />
+    <ClInclude Include="src\PlagC\Input.h" />
     <ClInclude Include="src\PlagC\Layer.h" />
     <ClInclude Include="src\PlagC\LayerStack.h" />
-    <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h" />
-    <ClInclude Include="src\Platfrom\WindowsWindow.h" />
     <ClInclude Include="src\PlagC\StartingPoint.h" />
     <ClInclude Include="src\PlagC\Window.h" />
     <ClInclude Include="src\PlagC\log.h" />
+    <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h" />
+    <ClInclude Include="src\Platfrom\WindowsWindow.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\Platfrom\Windows\WindowsInput.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp" />
     <ClCompile Include="src\PlagC\ImGui\ImGuiLayer.cpp" />
     <ClCompile Include="src\PlagC\Layer.cpp" />
     <ClCompile Include="src\PlagC\LayerStack.cpp" />
+    <ClCompile Include="src\PlagC\log.cpp" />
     <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp" />
     <ClCompile Include="src\Platfrom\WindowsWindow.cpp" />
-    <ClCompile Include="src\PlagC\log.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="vendor\GLFW\GLFW.vcxproj">

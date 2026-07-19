@@ -25,8 +25,22 @@ namespace PlagC
 		bool OnMouseScrolledEvent(MouseScrolledEvent& e);
 		bool OnKeyPressedEvent(KeyPressedEvent& e);
 		bool OnKeyReleasedEvent(KeyReleasedEvent& e);
-		//bool OnKeyTypedEvent(KeyTypedEvent& e);
+		bool OnKeyTypedEvent(KeyTypedEvent& e);
 		bool OnWindowResizeEvent(WindowResizeEvent& e);
+
+
+		void Begin();
+		void End();
+
+		void SetDarkThemeColors();
+
+		void DrawDockspace();
+		void DrawMenuBar();
+		void DrawSceneHierarchy();
+		void DrawViewport();
+		void DrawInspector();
+		void DrawConsole();
+		void DrawStatistics();
 
 
 	private:

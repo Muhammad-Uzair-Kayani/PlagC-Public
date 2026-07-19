@@ -19,6 +19,7 @@ namespace PlagC
 
 		virtual inline unsigned int GetWidth() const override { return m_Data.Width; }
 		virtual inline unsigned int GetHeight() const override { return m_Data.Height; }
+		virtual void* GetNativeWindow() { return m_Window; }
 
 		virtual void SetVsync(bool enabled) override;
 		virtual bool IsVsync() const override;
