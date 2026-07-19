@@ -2,9 +2,10 @@
 #include "ImGuiLayer.h"
 
 #include "Platfrom/OpenGL/ImGuiOpenGLRenderer.h"
-#include <GLFW/glfw3.h>
 #include "PlagC/Application.h"
 #include "PlagC/Core.h"
+
+#include <GLFW/glfw3.h>
 
 PlagC::ImGuiLayer::ImGuiLayer() : Layer("ImGui Layer")
 {
@@ -653,7 +654,6 @@ void PlagC::ImGuiLayer::DrawStatistics()
 
 void PlagC::ImGuiLayer::OnEvent(Event& e)
 {
-	PC_CORE_INFO("ImGUI Layer Event");
 	EventDispatcher dispatcher(e);
 	dispatcher.Dispatch<MouseButtonPressedEvent>(PC_BIND_EVENT_FN(ImGuiLayer::OnMouseButtonPressedEvent));
 	dispatcher.Dispatch<MouseButtonReleasedEvent>(PC_BIND_EVENT_FN(ImGuiLayer::OnMouseButtonReleasedEvent));
@@ -662,7 +662,7 @@ void PlagC::ImGuiLayer::OnEvent(Event& e)
 	dispatcher.Dispatch<KeyPressedEvent>(PC_BIND_EVENT_FN(ImGuiLayer::OnKeyPressedEvent));
 	dispatcher.Dispatch<KeyReleasedEvent>(PC_BIND_EVENT_FN(ImGuiLayer::OnKeyReleasedEvent));
 	dispatcher.Dispatch<WindowResizeEvent>(PC_BIND_EVENT_FN(ImGuiLayer::OnWindowResizeEvent));
-	//dispatcher.Dispatch<KeyTypedEvent>(PC_BIND_EVENT_FN(ImGuiLayer::OnKeyTypedEvent));
+	dispatcher.Dispatch<KeyTypedEvent>(PC_BIND_EVENT_FN(ImGuiLayer::OnKeyTypedEvent));
 }
 
 bool PlagC::ImGuiLayer::OnMouseButtonPressedEvent(MouseButtonPressedEvent& e)

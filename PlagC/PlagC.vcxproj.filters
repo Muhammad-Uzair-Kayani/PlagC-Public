@@ -64,6 +64,8 @@
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\PlagC\Input.h" />
     <ClInclude Include="src\Platfrom\Windows\WindowsInput.h" />
+    <ClInclude Include="src\PlagC\KeyCodes.h" />
+    <ClInclude Include="src\PlagC\MouseButtonCodes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp">

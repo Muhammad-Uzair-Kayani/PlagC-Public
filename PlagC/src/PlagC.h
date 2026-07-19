@@ -6,3 +6,6 @@
 #include "PlagC/log.h" //To provide the user with the logging functionality
 #include "PlagC/Layer.h"
 #include "PlagC/ImGui/ImGuiLayer.h"
+#include "PlagC/Input.h"
+#include "PlagC/KeyCodes.h"
+#include "PlagC/MouseButtonCodes.h"

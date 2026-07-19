@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Application.h"
 #include "PlagC/Input.h"
+#include "PlagC/KeyCodes.h"
 
 #include <GLFW/glfw3.h>
 
@@ -28,14 +29,12 @@ void PlagC::Application::OnEvent(Event& e)
 	EventDispatcher dispatcher(e);
 	dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
 
-	for (auto it = m_LayerStack.end(); it != m_LayerStack.begin(); it--)
+	for (auto it = m_LayerStack.end(); it != m_LayerStack.begin(); )
 	{
 		(*--it)->OnEvent(e);
+
 		if (e.Handled)
-		{
-			PC_CORE_INFO(e.ToString() + " Event Dispatched");
 			break;
-		}
 	}
 }
 
@@ -68,8 +67,6 @@ void PlagC::Application::Run()
 		for (Layer* layer : m_LayerStack)
 			layer->OnUpdate();
 
-		auto [x, y] = Input::GetMousePosition();
-		PC_CORE_TRACE("{0}, {1}", x, y);
 		m_Window->OnUpdate();
 	}
 }

@@ -117,8 +117,10 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\Events\MouseEvent.h" />
     <ClInclude Include="src\PlagC\ImGui\ImGuiLayer.h" />
     <ClInclude Include="src\PlagC\Input.h" />
+    <ClInclude Include="src\PlagC\KeyCodes.h" />
     <ClInclude Include="src\PlagC\Layer.h" />
     <ClInclude Include="src\PlagC\LayerStack.h" />
+    <ClInclude Include="src\PlagC\MouseButtonCodes.h" />
     <ClInclude Include="src\PlagC\StartingPoint.h" />
     <ClInclude Include="src\PlagC\Window.h" />
     <ClInclude Include="src\PlagC\log.h" />

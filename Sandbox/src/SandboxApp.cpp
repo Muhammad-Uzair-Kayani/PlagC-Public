@@ -12,11 +12,11 @@ public:
 
 	void OnUpdate() override
 	{
-		PC_TRACE("APPLICATION");
+	
 	}
-	void OnEvent(PlagC::Event& event) override
+	void OnEvent(PlagC::Event& e) override
 	{
-		PC_TRACE("{0}", event.ToString());
+
 	}
 };
 
