@@ -15,8 +15,12 @@ PlagC::Application::Application()
 {
 	PC_CORE_ASSERT(!s_Instance, "APPLCATION INSTANCE ALREADY EXISTS");
 	s_Instance = this;
+
 	m_Window = std::unique_ptr<Window>(Window::Create());
 	m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
+
+	m_ImGuiLayer = new ImGuiLayer();
+	m_LayerStack.PushLayer(m_ImGuiLayer);
 }
 
 PlagC::Application::~Application()
@@ -64,6 +68,11 @@ void PlagC::Application::Run()
 
 		for (Layer* layer : m_LayerStack)
 			layer->OnUpdate();
+
+		m_ImGuiLayer->Begin();
+		for (Layer* layer : m_LayerStack)
+			layer->OnImGuiRender();
+		m_ImGuiLayer->End();
 
 		m_Window->OnUpdate();
 	}

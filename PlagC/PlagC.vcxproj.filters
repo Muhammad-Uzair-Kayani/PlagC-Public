@@ -13,9 +13,6 @@
     <Filter Include="Platfrom">
       <UniqueIdentifier>{8AD388B4-76A0-E3BF-9FB9-D1678BE5184E}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Platfrom\OpenGL">
-      <UniqueIdentifier>{7EDDD6CB-EA68-4490-F379-C7845F84A090}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Platfrom\Windows">
       <UniqueIdentifier>{C467CE9E-B060-EDF0-D992-D275C5EACCFC}</UniqueIdentifier>
     </Filter>
@@ -67,9 +64,6 @@
     <ClInclude Include="src\PlagC\log.h">
       <Filter>PlagC</Filter>
     </ClInclude>
-    <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h">
-      <Filter>Platfrom\OpenGL</Filter>
-    </ClInclude>
     <ClInclude Include="src\Platfrom\Windows\WindowsInput.h">
       <Filter>Platfrom\Windows</Filter>
     </ClInclude>
@@ -82,6 +76,9 @@
     <ClCompile Include="src\PlagC\Application.cpp">
       <Filter>PlagC</Filter>
     </ClCompile>
+    <ClCompile Include="src\PlagC\ImGui\ImGuiBuild.cpp">
+      <Filter>PlagC\ImGui</Filter>
+    </ClCompile>
     <ClCompile Include="src\PlagC\ImGui\ImGuiLayer.cpp">
       <Filter>PlagC\ImGui</Filter>
     </ClCompile>
@@ -93,9 +90,6 @@
     </ClCompile>
     <ClCompile Include="src\PlagC\log.cpp">
       <Filter>PlagC</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp">
-      <Filter>Platfrom\OpenGL</Filter>
     </ClCompile>
     <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp">
       <Filter>Platfrom\Windows</Filter>

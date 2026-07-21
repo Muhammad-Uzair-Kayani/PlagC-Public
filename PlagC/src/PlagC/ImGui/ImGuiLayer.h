@@ -15,33 +15,12 @@ namespace PlagC
 		~ImGuiLayer();
 
 		void OnUpdate() override;
-		void OnEvent(Event& event) override;
 		void OnAttach() override;
 		void OnDetach() override;
-
-		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& e);
-		bool OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& e);
-		bool OnMouseMovedEvent(MouseMovedEvent& e);
-		bool OnMouseScrolledEvent(MouseScrolledEvent& e);
-		bool OnKeyPressedEvent(KeyPressedEvent& e);
-		bool OnKeyReleasedEvent(KeyReleasedEvent& e);
-		bool OnKeyTypedEvent(KeyTypedEvent& e);
-		bool OnWindowResizeEvent(WindowResizeEvent& e);
-
+		void OnImGuiRender();
 
 		void Begin();
 		void End();
-
-		void SetDarkThemeColors();
-
-		void DrawDockspace();
-		void DrawMenuBar();
-		void DrawSceneHierarchy();
-		void DrawViewport();
-		void DrawInspector();
-		void DrawConsole();
-		void DrawStatistics();
-
 
 	private:
 

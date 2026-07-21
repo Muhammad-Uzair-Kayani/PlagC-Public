@@ -3,7 +3,7 @@
 #include "PlagC/Events/ApplicationEvent.h"
 #include "PlagC/Window.h"
 #include "LayerStack.h"
-
+#include "PlagC/ImGui/ImGuiLayer.h"
 
 namespace PlagC
 {
@@ -30,6 +30,7 @@ namespace PlagC
 		std::unique_ptr<Window> m_Window;
 		bool m_Running = true;
 		LayerStack m_LayerStack;
+		ImGuiLayer* m_ImGuiLayer;
 
 	private:
 

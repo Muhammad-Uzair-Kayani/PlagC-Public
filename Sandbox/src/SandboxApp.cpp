@@ -1,4 +1,5 @@
 #include <PlagC.h>
+#include "imgui.h"
 
 class ApplcationLayer : public PlagC::Layer
 {
@@ -9,6 +10,13 @@ public:
 		PC_INFO("APPLICATION LAYER CREATED");
 	}
 	~ApplcationLayer() {}
+
+	void OnImGuiRender()
+	{
+		ImGui::Begin("Test");
+		ImGui::Text("Hello World");
+		ImGui::End();
+	}
 
 	void OnUpdate() override
 	{
@@ -27,7 +35,7 @@ public:
 	{
 		// Initialize your application here
 		PushLayer(new ApplcationLayer());
-		PushOverLay(new PlagC::ImGuiLayer());
+
 	}
 	~Sandbox()
 	{

@@ -13,6 +13,7 @@ namespace PlagC
 
 		virtual void OnUpdate() {};
 		virtual void OnEvent(Event& event) {};
+		virtual void OnImGuiRender() {}
 		virtual void OnAttach() {};
 		virtual void OnDetach() {};
 

@@ -18,7 +18,8 @@ project "Sandbox"
 	"../PlagC",
         "../PlagC/vendor/spdlog/include",
 	"../PlagC/vendor/GLFW/include",
-	"../PlagC/vendor/glm"
+	"../PlagC/vendor/glm",
+		"../PlagC/vendor/ImGui"
     }
 
     links {

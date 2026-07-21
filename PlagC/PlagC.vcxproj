@@ -18,13 +18,13 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
@@ -40,18 +40,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
     <OutDir>..\bin\Debug-windows-x86_64\PlagC\</OutDir>
     <IntDir>..\bin-int\Debug-windows-x86_64\PlagC\</IntDir>
     <TargetName>PlagC</TargetName>
-    <TargetExt>.dll</TargetExt>
+    <TargetExt>.lib</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
     <OutDir>..\bin\Release-windows-x86_64\PlagC\</OutDir>
     <IntDir>..\bin-int\Release-windows-x86_64\PlagC\</IntDir>
     <TargetName>PlagC</TargetName>
-    <TargetExt>.dll</TargetExt>
+    <TargetExt>.lib</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -68,14 +66,15 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ImportLibrary>..\bin\Debug-windows-x86_64\PlagC\PlagC.lib</ImportLibrary>
     </Link>
+    <Lib>
+      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
     <PostBuildEvent>
       <Command>echo Creating Sandbox folder if it does not exist...
 if not exist "$(SolutionDir)/bin/Debug-windows-x86_64/Sandbox/" mkdir "$(SolutionDir)/bin/Debug-windows-x86_64/Sandbox/"
 echo Copying Hazel.dll to Sandbox...
-IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll" "$(SolutionDir)\bin\Debug-windows-x86_64\Sandbox\" &gt; nul) ELSE (xcopy /Q /Y /I "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll" "$(SolutionDir)\bin\Debug-windows-x86_64\Sandbox\" &gt; nul)</Command>
+IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..\bin\Debug-windows-x86_64\PlagC\PlagC.lib" "$(SolutionDir)\bin\Debug-windows-x86_64\Sandbox\" &gt; nul) ELSE (xcopy /Q /Y /I "..\bin\Debug-windows-x86_64\PlagC\PlagC.lib" "$(SolutionDir)\bin\Debug-windows-x86_64\Sandbox\" &gt; nul)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -97,14 +96,15 @@ IF EXIST "..\bin\Debug-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\b
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ImportLibrary>..\bin\Release-windows-x86_64\PlagC\PlagC.lib</ImportLibrary>
     </Link>
+    <Lib>
+      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
     <PostBuildEvent>
       <Command>echo Creating Sandbox folder if it does not exist...
 if not exist "$(SolutionDir)/bin/Release-windows-x86_64/Sandbox/" mkdir "$(SolutionDir)/bin/Release-windows-x86_64/Sandbox/"
 echo Copying Hazel.dll to Sandbox...
-IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..\bin\Release-windows-x86_64\PlagC\PlagC.dll" "$(SolutionDir)\bin\Release-windows-x86_64\Sandbox\" &gt; nul) ELSE (xcopy /Q /Y /I "..\bin\Release-windows-x86_64\PlagC\PlagC.dll" "$(SolutionDir)\bin\Release-windows-x86_64\Sandbox\" &gt; nul)</Command>
+IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..\bin\Release-windows-x86_64\PlagC\PlagC.lib" "$(SolutionDir)\bin\Release-windows-x86_64\Sandbox\" &gt; nul) ELSE (xcopy /Q /Y /I "..\bin\Release-windows-x86_64\PlagC\PlagC.lib" "$(SolutionDir)\bin\Release-windows-x86_64\Sandbox\" &gt; nul)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -124,18 +124,17 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.dll"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\StartingPoint.h" />
     <ClInclude Include="src\PlagC\Window.h" />
     <ClInclude Include="src\PlagC\log.h" />
-    <ClInclude Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.h" />
     <ClInclude Include="src\Platfrom\Windows\WindowsInput.h" />
     <ClInclude Include="src\Platfrom\WindowsWindow.h" />
     <ClInclude Include="src\pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp" />
+    <ClCompile Include="src\PlagC\ImGui\ImGuiBuild.cpp" />
     <ClCompile Include="src\PlagC\ImGui\ImGuiLayer.cpp" />
     <ClCompile Include="src\PlagC\Layer.cpp" />
     <ClCompile Include="src\PlagC\LayerStack.cpp" />
     <ClCompile Include="src\PlagC\log.cpp" />
-    <ClCompile Include="src\Platfrom\OpenGL\ImGuiOpenGLRenderer.cpp" />
     <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp" />
     <ClCompile Include="src\Platfrom\WindowsWindow.cpp" />
     <ClCompile Include="src\pch.cpp">

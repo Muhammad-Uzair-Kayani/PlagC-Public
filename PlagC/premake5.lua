@@ -1,5 +1,5 @@
 project "PlagC"
-    kind "SharedLib"
+    kind "StaticLib"
     language "C++"
     cppdialect "C++17"
     staticruntime "off"
