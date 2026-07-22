@@ -108,6 +108,10 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLBuffer.h" />
+    <ClInclude Include="src\PlagC\Renderer\Buffer.h" />
+    <ClInclude Include="src\PlagC\Renderer\Renderer.h" />
+    <ClInclude Include="src\Platfrom\OpenGL\Shader.h" />
     <ClInclude Include="src\Platfrom\OpenGL\OpenGLContext.h" />
     <ClInclude Include="src\PlagC.h" />
     <ClInclude Include="src\PlagC\Application.h" />
@@ -131,6 +135,10 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLBuffer.cpp" />
+    <ClCompile Include="src\PlagC\Renderer\Buffer.cpp" />
+    <ClCompile Include="src\PlagC\Renderer\Renderer.cpp" />
+    <ClCompile Include="src\Platfrom\OpenGL\Shader.cpp" />
     <ClCompile Include="src\Platfrom\OpenGL\OpenGLContext.cpp" />
     <ClCompile Include="src\PlagC\Application.cpp" />
     <ClCompile Include="src\PlagC\ImGui\ImGuiBuild.cpp" />

@@ -73,6 +73,10 @@
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\PlagC\Renderer\GraphicsContext.h" />
     <ClInclude Include="src\Platfrom\OpenGL\OpenGLContext.h" />
+    <ClInclude Include="src\Platfrom\OpenGL\Shader.h" />
+    <ClInclude Include="src\PlagC\Renderer\Renderer.h" />
+    <ClInclude Include="src\PlagC\Renderer\Buffer.h" />
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp">
@@ -101,5 +105,9 @@
     </ClCompile>
     <ClCompile Include="src\pch.cpp" />
     <ClCompile Include="src\Platfrom\OpenGL\OpenGLContext.cpp" />
+    <ClCompile Include="src\Platfrom\OpenGL\Shader.cpp" />
+    <ClCompile Include="src\PlagC\Renderer\Renderer.cpp" />
+    <ClCompile Include="src\PlagC\Renderer\Buffer.cpp" />
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLBuffer.cpp" />
   </ItemGroup>
 </Project>
