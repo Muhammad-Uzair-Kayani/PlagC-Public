@@ -71,6 +71,8 @@
       <Filter>Platfrom</Filter>
     </ClInclude>
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\PlagC\Renderer\GraphicsContext.h" />
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLContext.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp">
@@ -98,5 +100,6 @@
       <Filter>Platfrom</Filter>
     </ClCompile>
     <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLContext.cpp" />
   </ItemGroup>
 </Project>

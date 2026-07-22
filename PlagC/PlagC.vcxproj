@@ -108,6 +108,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLContext.h" />
     <ClInclude Include="src\PlagC.h" />
     <ClInclude Include="src\PlagC\Application.h" />
     <ClInclude Include="src\PlagC\Core.h" />
@@ -121,6 +122,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\Layer.h" />
     <ClInclude Include="src\PlagC\LayerStack.h" />
     <ClInclude Include="src\PlagC\MouseButtonCodes.h" />
+    <ClInclude Include="src\PlagC\Renderer\GraphicsContext.h" />
     <ClInclude Include="src\PlagC\StartingPoint.h" />
     <ClInclude Include="src\PlagC\Window.h" />
     <ClInclude Include="src\PlagC\log.h" />
@@ -129,6 +131,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLContext.cpp" />
     <ClCompile Include="src\PlagC\Application.cpp" />
     <ClCompile Include="src\PlagC\ImGui\ImGuiBuild.cpp" />
     <ClCompile Include="src\PlagC\ImGui\ImGuiLayer.cpp" />

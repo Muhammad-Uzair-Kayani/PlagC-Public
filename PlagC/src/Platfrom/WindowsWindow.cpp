@@ -4,6 +4,7 @@
 #include "PlagC/Events/ApplicationEvent.h"
 #include "PlagC/Events/KeyEvent.h"
 #include "PlagC/Events/MouseEvent.h"
+#include "Platfrom/OpenGL/OpenGLContext.h"
 
 bool PlagC::WindowsWindow::s_GLFWInitialized = false;
 
@@ -20,7 +21,7 @@ PlagC::WindowsWindow::~WindowsWindow()
 void PlagC::WindowsWindow::OnUpdate()
 {
 	glfwPollEvents();
-	glfwSwapBuffers(m_Window);
+	m_Context->SwapBuffers();
 }
 
 void PlagC::WindowsWindow::SetVsync(bool enabled)
@@ -71,14 +72,8 @@ void PlagC::WindowsWindow::Init(const WindowProps& properties)
 
 	m_Window = glfwCreateWindow((int)properties.Width,
 		(int)properties.Height, properties.Title.c_str(), nullptr, nullptr);
-	glfwMakeContextCurrent(m_Window);
-
-	//Initializing GLAD
-	int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-	PC_CORE_ASSERT(status, "Could not initialize GLFW!");
-	if (status)
-		PC_CORE_TRACE("SUCCESS IN LOADING GLAD ADRESS");
-
+	
+	m_Context = new OpenGLContext(m_Window);
 
 	glfwSetWindowUserPointer(m_Window, &m_Data);
 	SetVsync(1);

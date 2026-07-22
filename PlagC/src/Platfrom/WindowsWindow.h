@@ -1,5 +1,7 @@
 #pragma once
+
 #include "PlagC/Window.h"
+#include "PlagC/Renderer/GraphicsContext.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -48,6 +50,7 @@ namespace PlagC
 		};
 
 		WindowData m_Data;
+		GraphicsContext* m_Context;
 
 	};
 
