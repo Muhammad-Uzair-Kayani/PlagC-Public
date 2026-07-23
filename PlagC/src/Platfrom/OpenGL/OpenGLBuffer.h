@@ -12,9 +12,12 @@ namespace PlagC
 
 		void Bind() const override;
 		void UnBind() const override;
+		const BufferLayout& GetLayout() const override { return m_Layout; }
+		void SetLayout(const BufferLayout& layout) override { m_Layout = layout; }
 
 	private:
 		uint32_t m_RendererID;
+		BufferLayout m_Layout;
 	};
 
 	class OpenGLIndexBuffer :
@@ -22,7 +25,7 @@ namespace PlagC
 	{
 	public:
 
-		OpenGLIndexBuffer(uint32_t* indices, uint32_t size, uint32_t count);
+		OpenGLIndexBuffer(uint32_t* indices, uint32_t count);
 
 		void Bind() const override;
 		void UnBind() const override;

@@ -108,6 +108,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLVertexArray.h" />
     <ClInclude Include="src\Platfrom\OpenGL\OpenGLBuffer.h" />
     <ClInclude Include="src\PlagC\Renderer\Buffer.h" />
     <ClInclude Include="src\PlagC\Renderer\Renderer.h" />
@@ -133,8 +134,10 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\Platfrom\Windows\WindowsInput.h" />
     <ClInclude Include="src\Platfrom\WindowsWindow.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\PlagC\Renderer\VertexArray.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLVertexArray.cpp" />
     <ClCompile Include="src\Platfrom\OpenGL\OpenGLBuffer.cpp" />
     <ClCompile Include="src\PlagC\Renderer\Buffer.cpp" />
     <ClCompile Include="src\PlagC\Renderer\Renderer.cpp" />
@@ -151,6 +154,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\VertexArray.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="vendor\GLFW\GLFW.vcxproj">

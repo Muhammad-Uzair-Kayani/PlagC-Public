@@ -31,7 +31,7 @@ namespace PlagC
 		return nullptr;
 	}
 
-	IndexBuffer* IndexBuffer::Create(uint32_t* indices, uint32_t size, uint32_t count)
+	IndexBuffer* IndexBuffer::Create(uint32_t* indices, uint32_t count)
 	{
 		switch (Renderer::GetAPI())
 		{
@@ -44,7 +44,7 @@ namespace PlagC
 		case RendererAPI::OpenGL:
 		{
 			PC_CORE_TRACE("OPENGL VERTEX BUFFER CREATED");
-			return new OpenGLIndexBuffer(indices, size, count);
+			return new OpenGLIndexBuffer(indices, count);
 		}
 
 		default:

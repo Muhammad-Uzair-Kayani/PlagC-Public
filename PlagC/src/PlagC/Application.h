@@ -6,6 +6,7 @@
 #include "PlagC/ImGui/ImGuiLayer.h"
 #include "Platfrom/OpenGL/Shader.h"
 #include "PlagC/Renderer/Buffer.h"
+#include "PlagC/Renderer/VertexArray.h"
 
 namespace PlagC
 {
@@ -38,10 +39,14 @@ namespace PlagC
 
 		static Application* s_Instance;
 
-		unsigned int m_VertexArray;
 		std::unique_ptr<Shader> m_Shader;
-		std::unique_ptr<VertexBuffer> m_VertexBuffer;
-		std::unique_ptr<IndexBuffer> m_IndexBuffer;
+		std::unique_ptr<Shader> m_BlueShader;
+
+		std::unique_ptr<VertexArray> m_VertexArray;
+		std::unique_ptr<VertexArray> m_SquareVA;
+		
+		std::shared_ptr<VertexBuffer> m_VertexBuffer;
+		std::shared_ptr<IndexBuffer> m_IndexBuffer;
 
 	};
 

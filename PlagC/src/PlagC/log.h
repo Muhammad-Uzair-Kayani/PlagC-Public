@@ -30,8 +30,10 @@ namespace PlagC
 #define PC_CORE_INFO(...)		::PlagC::log::GetCoreLogger()->info(__VA_ARGS__)
 #define PC_CORE_WARN(...)		::PlagC::log::GetCoreLogger()->warn(__VA_ARGS__)
 #define PC_CORE_ERROR(...)		::PlagC::log::GetCoreLogger()->error(__VA_ARGS__)
+#define PC_CORE_FATAL(...)      ::PlagC::log::GetCoreLogger()->critical(__VA_ARGS__)
 
 #define PC_TRACE(...)			::PlagC::log::GetClientLogger()->trace(__VA_ARGS__)
 #define PC_INFO(...)			::PlagC::log::GetClientLogger()->info(__VA_ARGS__)
 #define PC_WARN(...)			::PlagC::log::GetClientLogger()->warn(__VA_ARGS__)
 #define PC_ERROR(...)			::PlagC::log::GetClientLogger()->error(__VA_ARGS__)
+#define PC_FATAL(...)      ::PlagC::log::GetCoreLogger()->critical(__VA_ARGS__)
