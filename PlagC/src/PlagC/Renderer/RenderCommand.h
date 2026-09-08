@@ -3,7 +3,7 @@
 
 namespace PlagC
 {
-	class RendererCommand
+	class RenderCommand
 	{
 
 	public:

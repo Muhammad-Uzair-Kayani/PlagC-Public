@@ -14,7 +14,7 @@ namespace PlagC
 		ImGuiLayer();
 		~ImGuiLayer();
 
-		void OnUpdate() override;
+		void OnUpdate(Timestep ts) override;
 		void OnAttach() override;
 		void OnDetach() override;
 		void OnImGuiRender();

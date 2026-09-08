@@ -65,7 +65,7 @@ void PlagC::ImGuiLayer::OnImGuiRender()
 	ImGui::ShowDemoWindow(&show);
 }
 
-void PlagC::ImGuiLayer::OnUpdate()
+void PlagC::ImGuiLayer::OnUpdate(Timestep ts)
 {
 	
 }

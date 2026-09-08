@@ -4,10 +4,7 @@
 #include "PlagC/Window.h"
 #include "LayerStack.h"
 #include "PlagC/ImGui/ImGuiLayer.h"
-#include "Platfrom/OpenGL/Shader.h"
-#include "PlagC/Renderer/Buffer.h"
-#include "PlagC/Renderer/VertexArray.h"
-#include "PlagC/Renderer/OrthographicCamera.h"
+#include "PlagC/Core/Timestep.h"
 
 namespace PlagC
 {
@@ -35,19 +32,7 @@ namespace PlagC
 		bool m_Running = true;
 		LayerStack m_LayerStack;
 		ImGuiLayer* m_ImGuiLayer;
-
-	private:
-
-		std::shared_ptr<Shader> m_Shader;
-		std::shared_ptr<Shader> m_BlueShader;
-
-		std::shared_ptr<VertexArray> m_VertexArray;
-		std::shared_ptr<VertexArray> m_SquareVA;
-		
-		std::shared_ptr<VertexBuffer> m_VertexBuffer;
-		std::shared_ptr<IndexBuffer> m_IndexBuffer;
-
-		OrthographicCamera m_Camera;
+		float m_LastFrameTime = 0.f;
 
 	private:
 

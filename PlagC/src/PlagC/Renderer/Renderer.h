@@ -1,5 +1,5 @@
 #pragma once
-#include "RendererCommand.h";
+#include "RenderCommand.h";
 #include "PlagC/Renderer/OrthographicCamera.h"
 #include "Platfrom/OpenGL/Shader.h"
 
@@ -22,7 +22,7 @@ namespace PlagC
 			glm::mat4 ViewProjectionMatrix;
 		};
 
-		static SceneData* m_SceneData;
+		static SceneData* s_SceneData;
 	};
 
 }

@@ -108,10 +108,11 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\PlagC\Core\Timestep.h" />
     <ClInclude Include="src\PlagC\Renderer\OrthographicCamera.h" />
     <ClInclude Include="src\Platfrom\OpenGL\OpenGLRendererAPI.h" />
     <ClInclude Include="src\PlagC\Renderer\RendererAPI.h" />
-    <ClInclude Include="src\PlagC\Renderer\RendererCommand.h" />
+    <ClInclude Include="src\PlagC\Renderer\RenderCommand.h" />
     <ClInclude Include="src\Platfrom\OpenGL\OpenGLVertexArray.h" />
     <ClInclude Include="src\Platfrom\OpenGL\OpenGLBuffer.h" />
     <ClInclude Include="src\PlagC\Renderer\Buffer.h" />
@@ -144,7 +145,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClCompile Include="src\PlagC\Renderer\OrthographicCamera.cpp" />
     <ClCompile Include="src\Platfrom\OpenGL\OpenGLRendererAPI.cpp" />
     <ClCompile Include="src\PlagC\Renderer\RendererAPI.cpp" />
-    <ClCompile Include="src\PlagC\Renderer\RendererCommand.cpp" />
+    <ClCompile Include="src\PlagC\Renderer\RenderCommand.cpp" />
     <ClCompile Include="src\Platfrom\OpenGL\OpenGLVertexArray.cpp" />
     <ClCompile Include="src\Platfrom\OpenGL\OpenGLBuffer.cpp" />
     <ClCompile Include="src\PlagC\Renderer\Buffer.cpp" />
