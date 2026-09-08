@@ -11,13 +11,13 @@ namespace PlagC
 	{
 		switch (Renderer::GetAPI())
 		{
-		case RendererAPI::None:
+		case RendererAPI::API::None:
 		{
 			PC_CORE_ASSERT(false, "NONE API NOT SUPPORTED");
 			return nullptr;
 		}
 
-		case RendererAPI::OpenGL:
+		case RendererAPI::API::OpenGL:
 		{
 			PC_CORE_TRACE("OPENGL VERTEX BUFFER CREATED");
 			return new OpenGLVertexBuffer(vertices, size);
@@ -35,13 +35,13 @@ namespace PlagC
 	{
 		switch (Renderer::GetAPI())
 		{
-		case RendererAPI::None:
+		case RendererAPI::API::None:
 		{
 			PC_CORE_ASSERT(false, "NONE API NOT SUPPORTED");
 			return nullptr;
 		}
 
-		case RendererAPI::OpenGL:
+		case RendererAPI::API::OpenGL:
 		{
 			PC_CORE_TRACE("OPENGL VERTEX BUFFER CREATED");
 			return new OpenGLIndexBuffer(indices, count);

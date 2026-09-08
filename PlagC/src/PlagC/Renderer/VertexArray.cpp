@@ -9,13 +9,13 @@ namespace PlagC
 	{
 		switch (Renderer::GetAPI())
 		{
-		case RendererAPI::None:
+		case RendererAPI::API::None:
 		{
 			PC_CORE_ASSERT(false, "NONE API NOT SUPPORTED");
 			return nullptr;
 		}
 
-		case RendererAPI::OpenGL:
+		case RendererAPI::API::OpenGL:
 		{
 			PC_CORE_TRACE("OPENGL VERTEX ARRAY CREATED");
 			return new OpenGLVertexArray();

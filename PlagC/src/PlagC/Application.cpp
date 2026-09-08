@@ -3,8 +3,8 @@
 #include "PlagC/Input.h"
 #include "PlagC/KeyCodes.h"
 #include "Platfrom/OpenGL/Shader.h"
+#include "PlagC/Renderer/Renderer.h"
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 namespace PlagC
@@ -14,7 +14,8 @@ namespace PlagC
 
 }
 
-PlagC::Application::Application()
+PlagC::Application::Application() :
+	m_Camera(-1.6f, 1.6f, -0.9f, 0.9f)
 {
 	PC_CORE_ASSERT(!s_Instance, "APPLCATION INSTANCE ALREADY EXISTS");
 	s_Instance = this;
@@ -77,11 +78,13 @@ PlagC::Application::Application()
 			out vec3 v_Position;
 			out vec4 v_Color;
 
+			uniform mat4 u_ViewProjection;
+
 			void main()
 			{
 				v_Position = a_Position;
 				v_Color = a_Color;
-				gl_Position = vec4(a_Position, 1.0);	
+				gl_Position = u_ViewProjection * vec4(a_Position, 1.0);	
 			}
 		)";
 
@@ -109,10 +112,12 @@ PlagC::Application::Application()
 
 			out vec3 v_Position;
 
+			uniform mat4 u_ViewProjection;
+
 			void main()
 			{
 				v_Position = a_Position;
-				gl_Position = vec4(a_Position, 1.0);	
+				gl_Position = u_ViewProjection * vec4(a_Position, 1.0);	
 			}
 		)";
 
@@ -172,19 +177,21 @@ void PlagC::Application::Run()
 
 	while (m_Running)
 	{
-		glClear(GL_COLOR_BUFFER_BIT);
-		glClearColor(0.1f, 0.1f, 0.4f, 1.0f);
 
-		m_BlueShader->Bind();
-		m_SquareVA->Bind();
-		glDrawElements(GL_TRIANGLES, m_SquareVA->GetIndexBuffer()->GetCount(),
-			GL_UNSIGNED_INT, nullptr);
+		RendererCommand::Clear();
+		RendererCommand::SetClearColor({ 0.1f, 0.1f, 0.4f, 1.0f });
 
 
-		m_Shader->Bind();
-		m_VertexArray->Bind();
-		glDrawElements(GL_TRIANGLES, m_VertexArray->GetIndexBuffer()->GetCount(),
-			GL_UNSIGNED_INT, nullptr);
+		//TESTING PURPOSES
+		m_Camera.SetPosition({ 1.f, 1.f, 0.f });
+		m_Camera.SetRotation(45.f);
+
+		Renderer::BeginScene(m_Camera);
+
+		Renderer::Submit(m_BlueShader, m_SquareVA);
+		Renderer::Submit(m_Shader, m_VertexArray);
+
+		Renderer::EndScene();
 
 		for (Layer* layer : m_LayerStack)
 			layer->OnUpdate();

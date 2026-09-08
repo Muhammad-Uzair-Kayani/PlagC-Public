@@ -1,4 +1,5 @@
 #pragma once
+#include "glm/glm.hpp"
 
 namespace PlagC
 {
@@ -10,6 +11,8 @@ namespace PlagC
 
 		void Bind();
 		void UnBind();
+
+		void UploadUnifromMat4(const std::string& name, const glm::mat4& matrix);
 
 	private:
 
