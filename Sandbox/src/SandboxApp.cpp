@@ -130,6 +130,7 @@ public:
 		)";
 
 		m_Texture = PlagC::Texture2D::Create("assets/textures/Checkerboard.png");
+		m_LogoTexture = PlagC::Texture2D::Create("assets/textures/Logo.png");
 
 		m_BlueShader.reset(PlagC::Shader::Create(blueShaderVertexSrc, blueShaderFragmentSrc));
 		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->Bind();
@@ -192,6 +193,8 @@ public:
 
 		m_Texture->Bind();
 		PlagC::Renderer::Submit(m_BlueShader, m_SquareVA, glm::mat4(1.f));
+		m_LogoTexture->Bind();
+		PlagC::Renderer::Submit(m_BlueShader, m_SquareVA, glm::mat4(1.f));
 
 		//END
 		////TRANSFORMATION TESTING
@@ -215,6 +218,7 @@ private:
 	PlagC::Ref<PlagC::IndexBuffer> m_IndexBuffer;
 
 	PlagC::Ref<PlagC::Texture2D> m_Texture;
+	PlagC::Ref<PlagC::Texture2D> m_LogoTexture;
 
 	glm::vec3 m_SquareColor = { 0.2f, 0.3f, 0.8f };
 

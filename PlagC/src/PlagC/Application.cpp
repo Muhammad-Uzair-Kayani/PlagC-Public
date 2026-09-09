@@ -22,6 +22,8 @@ PlagC::Application::Application()
 	m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 	m_Window->SetVsync(false);
 
+	Renderer::Init();
+
 	m_ImGuiLayer = new ImGuiLayer();
 	m_LayerStack.PushLayer(m_ImGuiLayer);
 
