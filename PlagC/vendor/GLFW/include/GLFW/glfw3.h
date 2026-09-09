@@ -904,9 +904,9 @@ extern "C" {
 #define GLFW_SRGB_CAPABLE           0x0002100E
 /*! @brief Monitor refresh rate hint.
  *
- *  Monitor refresh rate [hint](@ref GLFW_REFRESH_RATE).
+ *  Monitor refresh rate [hint](@ref GLFW_refRESH_RATE).
  */
-#define GLFW_REFRESH_RATE           0x0002100F
+#define GLFW_refRESH_RATE           0x0002100F
 /*! @brief Framebuffer double buffering hint.
  *
  *  Framebuffer double buffering [hint](@ref GLFW_DOUBLEBUFFER).
@@ -1268,7 +1268,7 @@ typedef void (* GLFWwindowclosefun)(GLFWwindow*);
  *  @param[in] window The window whose content needs to be refreshed.
  *
  *  @sa @ref window_refresh
- *  @sa @ref glfwSetWindowRefreshCallback
+ *  @sa @ref glfwSetWindowrefreshCallback
  *
  *  @since Added in version 2.5.
  *  @glfw3 Added window handle parameter.
@@ -2590,7 +2590,7 @@ GLFWAPI void glfwWindowHintString(int hint, const char* value);
  *  @remark @macos The GLFW window has no icon, as it is not a document
  *  window, but the dock icon will be the same as the application bundle's icon.
  *  For more information on bundles, see the
- *  [Bundle Programming Guide](https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/)
+ *  [Bundle Programming Guide](https://developer.apple.com/library/mac/documentation/Corefoundation/Conceptual/CFBundles/)
  *  in the Mac Developer Library.
  *
  *  @remark @macos The first time a window is created the menu bar is created.
@@ -2781,7 +2781,7 @@ GLFWAPI void glfwSetWindowTitle(GLFWwindow* window, const char* title);
  *  @remark @macos The GLFW window has no icon, as it is not a document
  *  window, so this function does nothing.  The dock icon will be the same as
  *  the application bundle's icon.  For more information on bundles, see the
- *  [Bundle Programming Guide](https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/)
+ *  [Bundle Programming Guide](https://developer.apple.com/library/mac/documentation/Corefoundation/Conceptual/CFBundles/)
  *  in the Mac Developer Library.
  *
  *  @remark @wayland There is no existing protocol to change an icon, the
@@ -3712,7 +3712,7 @@ GLFWAPI GLFWwindowclosefun glfwSetWindowCloseCallback(GLFWwindow* window, GLFWwi
  *
  *  @ingroup window
  */
-GLFWAPI GLFWwindowrefreshfun glfwSetWindowRefreshCallback(GLFWwindow* window, GLFWwindowrefreshfun callback);
+GLFWAPI GLFWwindowrefreshfun glfwSetWindowrefreshCallback(GLFWwindow* window, GLFWwindowrefreshfun callback);
 
 /*! @brief Sets the focus callback for the specified window.
  *

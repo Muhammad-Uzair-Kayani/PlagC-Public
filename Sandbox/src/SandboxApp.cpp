@@ -1,6 +1,9 @@
 #include <PlagC.h>
 #include "imgui.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 class ApplcationLayer : public PlagC::Layer
 {
 
@@ -18,7 +21,7 @@ public:
 			 0.0f,  0.5f, 0.0f, 0.8f, 0.8f, 0.2f, 1.0f
 		};
 
-		std::shared_ptr<PlagC::VertexBuffer> vertexBuffer;
+		PlagC::Ref<PlagC::VertexBuffer> vertexBuffer;
 		vertexBuffer.reset(PlagC::VertexBuffer::Create(vertices, sizeof(vertices)));
 		PlagC::BufferLayout layout = {
 			{ PlagC::ShaderDataType::Float3, "a_Position" },
@@ -28,28 +31,29 @@ public:
 		m_VertexArray->AddVertexBuffer(vertexBuffer);
 
 		uint32_t indices[3] = { 0, 1, 2 };
-		std::shared_ptr<PlagC::IndexBuffer> indexBuffer;
+		PlagC::Ref<PlagC::IndexBuffer> indexBuffer;
 		indexBuffer.reset(PlagC::IndexBuffer::Create(indices, sizeof(indices) / sizeof(uint32_t)));
 		m_VertexArray->SetIndexBuffer(indexBuffer);
 
 		m_SquareVA.reset(PlagC::VertexArray::Create());
 
-		float squareVertices[3 * 4] = {
-			-0.75f, -0.75f, 0.0f,
-			 0.75f, -0.75f, 0.0f,
-			 0.75f,  0.75f, 0.0f,
-			-0.75f,  0.75f, 0.0f
+		float squareVertices[5 * 4] = {
+			-0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
+			 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+			 0.5f,  0.5f, 0.0f, 1.0f, 1.0f,
+			-0.5f,  0.5f, 0.0f, 0.0f, 1.0f
 		};
 
-		std::shared_ptr<PlagC::VertexBuffer> squareVB;
+		PlagC::Ref<PlagC::VertexBuffer> squareVB;
 		squareVB.reset(PlagC::VertexBuffer::Create(squareVertices, sizeof(squareVertices)));
 		squareVB->SetLayout({
-			{ PlagC::ShaderDataType::Float3, "a_Position" }
+			{ PlagC::ShaderDataType::Float3, "a_Position" },
+			{ PlagC::ShaderDataType::Float2, "a_TexCoord" }
 			});
 		m_SquareVA->AddVertexBuffer(squareVB);
 
 		uint32_t squareIndices[6] = { 0, 1, 2, 2, 3, 0 };
-		std::shared_ptr<PlagC::IndexBuffer> squareIB;
+		PlagC::Ref<PlagC::IndexBuffer> squareIB;
 		squareIB.reset(PlagC::IndexBuffer::Create(squareIndices, sizeof(squareIndices) / sizeof(uint32_t)));
 		m_SquareVA->SetIndexBuffer(squareIB);
 
@@ -63,12 +67,13 @@ public:
 			out vec4 v_Color;
 
 			uniform mat4 u_ViewProjection;
+			uniform mat4 u_Transform;
 
 			void main()
 			{
 				v_Position = a_Position;
 				v_Color = a_Color;
-				gl_Position = u_ViewProjection * vec4(a_Position, 1.0);	
+				gl_Position = u_ViewProjection * u_Transform * vec4(a_Position, 1.0);	
 			}
 		)";
 
@@ -78,55 +83,64 @@ public:
 			layout(location = 0) out vec4 color;
 
 			in vec3 v_Position;
-			in vec4 v_Color;
+			
+			uniform vec3 u_Color;
 
 			void main()
 			{
-				color = vec4(v_Position * 0.5 + 0.5, 1.0);
-				color = v_Color;
+				color = vec4(u_Color, 1.0);
 			}
 		)";
 
-		m_Shader.reset(new PlagC::Shader(vertexSrc, fragmentSrc));
+		m_Shader.reset(PlagC::Shader::Create(vertexSrc, fragmentSrc));
 
 		std::string blueShaderVertexSrc = R"(
 			#version 330 core
-			
+
 			layout(location = 0) in vec3 a_Position;
-
-			out vec3 v_Position;
-
+			layout(location = 1) in vec2 a_TexCoord;
+			
+			out vec2 v_TexCoord;
+			
 			uniform mat4 u_ViewProjection;
-
+			uniform mat4 u_Transform;
+			
 			void main()
 			{
-				v_Position = a_Position;
-				gl_Position = u_ViewProjection * vec4(a_Position, 1.0);	
+			    v_TexCoord = a_TexCoord;
+			
+			    gl_Position = u_ViewProjection * u_Transform * vec4(a_Position, 1.0);
 			}
 		)";
 
 		std::string blueShaderFragmentSrc = R"(
+			
 			#version 330 core
 			
 			layout(location = 0) out vec4 color;
 
-			in vec3 v_Position;
+			in vec2 v_TexCoord;
+			
+			uniform sampler2D u_Texture;
 
 			void main()
 			{
-				color = vec4(0.2, 0.3, 0.8, 1.0);
+				color = texture(u_Texture, v_TexCoord);
 			}
 		)";
 
-		m_BlueShader.reset(new PlagC::Shader(blueShaderVertexSrc, blueShaderFragmentSrc));
+		m_Texture = PlagC::Texture2D::Create("assets/textures/Checkerboard.png");
 
+		m_BlueShader.reset(PlagC::Shader::Create(blueShaderVertexSrc, blueShaderFragmentSrc));
+		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->Bind();
+		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->UploadUniformInt("u_Texture", 0);
 	}
 	~ApplcationLayer() {}
 
 	void OnImGuiRender()
 	{
-		ImGui::Begin("Test");
-		ImGui::Text("Hello World");
+		ImGui::Begin("Colors Settings");
+		ImGui::ColorEdit3("Square Color", glm::value_ptr(m_SquareColor));
 		ImGui::End();
 	}
 
@@ -138,19 +152,19 @@ public:
 		PC_TRACE("Delta Time: {0}s ({1}s)", ts, ts.GetMiliSeconds());
 
 		if (PlagC::Input::IsKeyPressed(PC_KEY_LEFT))
-			m_CameraPosition.x += m_CameraMoveSpeed * ts;
-		else if (PlagC::Input::IsKeyPressed(PC_KEY_RIGHT))
 			m_CameraPosition.x -= m_CameraMoveSpeed * ts;
+		else if (PlagC::Input::IsKeyPressed(PC_KEY_RIGHT))
+			m_CameraPosition.x += m_CameraMoveSpeed * ts;
 
 		if (PlagC::Input::IsKeyPressed(PC_KEY_UP))
-			m_CameraPosition.y -= m_CameraMoveSpeed * ts;
-		else if (PlagC::Input::IsKeyPressed(PC_KEY_DOWN))
 			m_CameraPosition.y += m_CameraMoveSpeed * ts;
+		else if (PlagC::Input::IsKeyPressed(PC_KEY_DOWN))
+			m_CameraPosition.y -= m_CameraMoveSpeed * ts;
 
 		if (PlagC::Input::IsKeyPressed(PC_KEY_A))
-			m_CameraRotation -= m_CameraRotationSpeed * ts;
-		if (PlagC::Input::IsKeyPressed(PC_KEY_D))
 			m_CameraRotation += m_CameraRotationSpeed * ts;
+		if (PlagC::Input::IsKeyPressed(PC_KEY_D))
+			m_CameraRotation -= m_CameraRotationSpeed * ts;
 
 		PlagC::RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
 		PlagC::RenderCommand::Clear();
@@ -161,10 +175,28 @@ public:
 
 		PlagC::Renderer::BeginScene(m_Camera);
 
-		PlagC::Renderer::Submit(m_BlueShader, m_SquareVA);
-		PlagC::Renderer::Submit(m_Shader, m_VertexArray);
+		//TRANSFORMATION TESTING
+		//BEGIN
+		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->Bind();
+		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->UploadUniformFloat3("u_Color", m_SquareColor);
 
+		for(int i = 0; i < 20; ++i)
+		{
+			for (int j = 0; j < 20; ++j)
+			{
+				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(i * 0.11f, j * 0.11f, 0.f)) *
+					glm::mat4(glm::scale(glm::mat4(1.f), glm::vec3(0.1f)));
+				PlagC::Renderer::Submit(m_BlueShader, m_SquareVA, transform);
+			}
+		}
+
+		m_Texture->Bind();
+		PlagC::Renderer::Submit(m_BlueShader, m_SquareVA, glm::mat4(1.f));
+
+		//END
+		////TRANSFORMATION TESTING
 		PlagC::Renderer::EndScene();
+
 	}
 	void OnEvent(PlagC::Event& e) override
 	{
@@ -173,14 +205,18 @@ public:
 
 private:
 
-	std::shared_ptr<PlagC::Shader> m_Shader;
-	std::shared_ptr<PlagC::Shader> m_BlueShader;
+	PlagC::Ref<PlagC::Shader> m_Shader;
+	PlagC::Ref<PlagC::Shader> m_BlueShader;
 
-	std::shared_ptr<PlagC::VertexArray> m_VertexArray;
-	std::shared_ptr<PlagC::VertexArray> m_SquareVA;
+	PlagC::Ref<PlagC::VertexArray> m_VertexArray;
+	PlagC::Ref<PlagC::VertexArray> m_SquareVA;
 
-	std::shared_ptr<PlagC::VertexBuffer> m_VertexBuffer;
-	std::shared_ptr<PlagC::IndexBuffer> m_IndexBuffer;
+	PlagC::Ref<PlagC::VertexBuffer> m_VertexBuffer;
+	PlagC::Ref<PlagC::IndexBuffer> m_IndexBuffer;
+
+	PlagC::Ref<PlagC::Texture2D> m_Texture;
+
+	glm::vec3 m_SquareColor = { 0.2f, 0.3f, 0.8f };
 
 	PlagC::OrthographicCamera m_Camera;
 	glm::vec3 m_CameraPosition;

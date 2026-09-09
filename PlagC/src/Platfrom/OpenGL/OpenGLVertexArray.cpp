@@ -46,7 +46,7 @@ void PlagC::OpenGLVertexArray::UnBind() const
 	glBindVertexArray(0);
 }
 
-void PlagC::OpenGLVertexArray::AddVertexBuffer(const std::shared_ptr<VertexBuffer>& vertexBuffer)
+void PlagC::OpenGLVertexArray::AddVertexBuffer(const Ref<VertexBuffer>& vertexBuffer)
 {
 	PC_CORE_ASSERT(vertexBuffer->GetLayout().GetElements().size(), "Vertex Buffer has no layout!");
 
@@ -64,7 +64,7 @@ void PlagC::OpenGLVertexArray::AddVertexBuffer(const std::shared_ptr<VertexBuffe
 	m_VertexBuffer.push_back(vertexBuffer);
 }
 
-void PlagC::OpenGLVertexArray::SetIndexBuffer(const std::shared_ptr<IndexBuffer>& indexBuffer)
+void PlagC::OpenGLVertexArray::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
 {
 	glBindVertexArray(m_RendererID);
 	indexBuffer->Bind();

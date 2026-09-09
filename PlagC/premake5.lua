@@ -11,8 +11,10 @@ project "PlagC"
     pchsource "src/pch.cpp"
 	
     files {
-       "src/**.h",
+	"src/**.h",
 	"src/**.cpp",
+	"vendor/stb_image/**.h",
+	"vendor/stb_image/**.cpp"
     }
 
     includedirs
@@ -22,7 +24,8 @@ project "PlagC"
         "vendor/GLFW/include",
         "vendor/Glad/include",
         "vendor/ImGui",
-	"vendor/glm"
+	"vendor/glm",
+	"vendor/stb_image" 
     }
 	
     links

@@ -2,7 +2,6 @@
 #include "Application.h"
 #include "PlagC/Input.h"
 #include "PlagC/KeyCodes.h"
-#include "Platfrom/OpenGL/Shader.h"
 #include "PlagC/Renderer/Renderer.h"
 
 #include <GLFW/glfw3.h>

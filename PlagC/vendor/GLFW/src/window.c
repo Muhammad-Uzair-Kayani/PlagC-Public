@@ -221,7 +221,7 @@ GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height,
 
     if (ctxconfig.client != GLFW_NO_API)
     {
-        if (!_glfwRefreshContextAttribs(window, &ctxconfig))
+        if (!_glfwrefreshContextAttribs(window, &ctxconfig))
         {
             glfwDestroyWindow((GLFWwindow*) window);
             return NULL;
@@ -405,7 +405,7 @@ GLFWAPI void glfwWindowHint(int hint, int value)
         case GLFW_CONTEXT_RELEASE_BEHAVIOR:
             _glfw.hints.context.release = value;
             return;
-        case GLFW_REFRESH_RATE:
+        case GLFW_refRESH_RATE:
             _glfw.hints.refreshRate = value;
             return;
     }
@@ -1000,7 +1000,7 @@ GLFWAPI GLFWwindowclosefun glfwSetWindowCloseCallback(GLFWwindow* handle,
     return cbfun;
 }
 
-GLFWAPI GLFWwindowrefreshfun glfwSetWindowRefreshCallback(GLFWwindow* handle,
+GLFWAPI GLFWwindowrefreshfun glfwSetWindowrefreshCallback(GLFWwindow* handle,
                                                           GLFWwindowrefreshfun cbfun)
 {
     _GLFWwindow* window = (_GLFWwindow*) handle;

@@ -1,126 +1,222 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="PlagC">
-      <UniqueIdentifier>{8C8BE30D-F89F-0BBF-C121-AF1E2DF507F0}</UniqueIdentifier>
+    <Filter Include="src">
+      <UniqueIdentifier>{2DAB880B-99B4-887C-2230-9F7C8E38947C}</UniqueIdentifier>
     </Filter>
-    <Filter Include="PlagC\Events">
-      <UniqueIdentifier>{F0418FEE-DCA4-1E93-852A-5749716CEA15}</UniqueIdentifier>
+    <Filter Include="src\PlagC">
+      <UniqueIdentifier>{E399A0B3-4F04-552A-9842-06D004EC327F}</UniqueIdentifier>
     </Filter>
-    <Filter Include="PlagC\ImGui">
-      <UniqueIdentifier>{B6790117-222F-7A0C-AB23-74E317D87010}</UniqueIdentifier>
+    <Filter Include="src\PlagC\Core">
+      <UniqueIdentifier>{1B64E4F1-0732-D8F7-F0C5-481EDC32B45C}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Platfrom">
-      <UniqueIdentifier>{8AD388B4-76A0-E3BF-9FB9-D1678BE5184E}</UniqueIdentifier>
+    <Filter Include="src\PlagC\Events">
+      <UniqueIdentifier>{67E8AF01-53E1-CE53-7C13-B4D8686BAE5F}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Platfrom\Windows">
-      <UniqueIdentifier>{C467CE9E-B060-EDF0-D992-D275C5EACCFC}</UniqueIdentifier>
+    <Filter Include="src\PlagC\ImGui">
+      <UniqueIdentifier>{4DADDB2E-B938-49F3-C249-CCE72E54A5F3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\PlagC\Renderer">
+      <UniqueIdentifier>{E9AC4624-D590-077A-3EF1-01CD2AF4F1FB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Platfrom">
+      <UniqueIdentifier>{81D602E5-6D39-9289-16BF-CA3F02015E0C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Platfrom\OpenGL">
+      <UniqueIdentifier>{95043FE6-0166-1CF4-8AD3-62A6F63353B3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Platfrom\Windows">
+      <UniqueIdentifier>{BB713B06-A700-C5CF-501F-D9CA3C8DD575}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vendor">
+      <UniqueIdentifier>{B3738122-9F15-ACF8-88D0-BF4C74113349}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vendor\stb_image">
+      <UniqueIdentifier>{0DA0BA59-F998-D9AB-22CB-BE300E23B9B7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\PlagC.h" />
+    <ClInclude Include="src\PlagC.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\PlagC\Application.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Core.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\Timestep.h">
+      <Filter>src\PlagC\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Events\ApplicationEvent.h">
-      <Filter>PlagC\Events</Filter>
+      <Filter>src\PlagC\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Events\Event.h">
-      <Filter>PlagC\Events</Filter>
+      <Filter>src\PlagC\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Events\KeyEvent.h">
-      <Filter>PlagC\Events</Filter>
+      <Filter>src\PlagC\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Events\MouseEvent.h">
-      <Filter>PlagC\Events</Filter>
+      <Filter>src\PlagC\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\ImGui\ImGuiLayer.h">
-      <Filter>PlagC\ImGui</Filter>
+      <Filter>src\PlagC\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Input.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\KeyCodes.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Layer.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\LayerStack.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\MouseButtonCodes.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\Buffer.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\GraphicsContext.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\OrthographicCamera.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\RenderCommand.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\Renderer.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\RendererAPI.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\Shader.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\Texture.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\VertexArray.h">
+      <Filter>src\PlagC\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\StartingPoint.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Window.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\log.h">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLBuffer.h">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLContext.h">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLRendererAPI.h">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLShader.h">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLTexture.h">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platfrom\OpenGL\OpenGLVertexArray.h">
+      <Filter>src\Platfrom\OpenGL</Filter>
     </ClInclude>
     <ClInclude Include="src\Platfrom\Windows\WindowsInput.h">
-      <Filter>Platfrom\Windows</Filter>
+      <Filter>src\Platfrom\Windows</Filter>
     </ClInclude>
     <ClInclude Include="src\Platfrom\WindowsWindow.h">
-      <Filter>Platfrom</Filter>
+      <Filter>src\Platfrom</Filter>
     </ClInclude>
-    <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\PlagC\Renderer\GraphicsContext.h" />
-    <ClInclude Include="src\Platfrom\OpenGL\OpenGLContext.h" />
-    <ClInclude Include="src\Platfrom\OpenGL\Shader.h" />
-    <ClInclude Include="src\PlagC\Renderer\Renderer.h" />
-    <ClInclude Include="src\PlagC\Renderer\Buffer.h" />
-    <ClInclude Include="src\Platfrom\OpenGL\OpenGLBuffer.h" />
-    <ClInclude Include="src\PlagC\Renderer\VertexArray.h" />
-    <ClInclude Include="src\Platfrom\OpenGL\OpenGLVertexArray.h" />
-    <ClInclude Include="src\PlagC\Renderer\RenderCommand.h" />
-    <ClInclude Include="src\PlagC\Renderer\RendererAPI.h" />
-    <ClInclude Include="src\Platfrom\OpenGL\OpenGLRendererAPI.h" />
-    <ClInclude Include="src\PlagC\Renderer\OrthographicCamera.h" />
-    <ClInclude Include="src\PlagC\Core\Timestep.h" />
+    <ClInclude Include="src\pch.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\stb_image\stb_image.h">
+      <Filter>vendor\stb_image</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Application.cpp">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\ImGui\ImGuiBuild.cpp">
-      <Filter>PlagC\ImGui</Filter>
+      <Filter>src\PlagC\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\ImGui\ImGuiLayer.cpp">
-      <Filter>PlagC\ImGui</Filter>
+      <Filter>src\PlagC\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\Layer.cpp">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\LayerStack.cpp">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\Buffer.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\OrthographicCamera.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\RenderCommand.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\Renderer.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\RendererAPI.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\Shader.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\Texture.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\VertexArray.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\log.cpp">
-      <Filter>PlagC</Filter>
+      <Filter>src\PlagC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLBuffer.cpp">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLContext.cpp">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLRendererAPI.cpp">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLShader.cpp">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLTexture.cpp">
+      <Filter>src\Platfrom\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Platfrom\OpenGL\OpenGLVertexArray.cpp">
+      <Filter>src\Platfrom\OpenGL</Filter>
     </ClCompile>
     <ClCompile Include="src\Platfrom\Windows\WindowsInput.cpp">
-      <Filter>Platfrom\Windows</Filter>
+      <Filter>src\Platfrom\Windows</Filter>
     </ClCompile>
     <ClCompile Include="src\Platfrom\WindowsWindow.cpp">
-      <Filter>Platfrom</Filter>
+      <Filter>src\Platfrom</Filter>
     </ClCompile>
-    <ClCompile Include="src\pch.cpp" />
-    <ClCompile Include="src\Platfrom\OpenGL\OpenGLContext.cpp" />
-    <ClCompile Include="src\Platfrom\OpenGL\Shader.cpp" />
-    <ClCompile Include="src\PlagC\Renderer\Renderer.cpp" />
-    <ClCompile Include="src\PlagC\Renderer\Buffer.cpp" />
-    <ClCompile Include="src\Platfrom\OpenGL\OpenGLBuffer.cpp" />
-    <ClCompile Include="src\PlagC\Renderer\VertexArray.cpp" />
-    <ClCompile Include="src\Platfrom\OpenGL\OpenGLVertexArray.cpp" />
-    <ClCompile Include="src\PlagC\Renderer\RenderCommand.cpp" />
-    <ClCompile Include="src\PlagC\Renderer\RendererAPI.cpp" />
-    <ClCompile Include="src\Platfrom\OpenGL\OpenGLRendererAPI.cpp" />
-    <ClCompile Include="src\PlagC\Renderer\OrthographicCamera.cpp" />
+    <ClCompile Include="src\pch.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="vendor\stb_image\stb_image.cpp">
+      <Filter>vendor\stb_image</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
