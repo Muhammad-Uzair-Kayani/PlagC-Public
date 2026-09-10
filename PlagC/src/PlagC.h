@@ -19,3 +19,5 @@
 #include "PlagC/Renderer/Renderer.h"
 #include "PlagC/Renderer/Texture.h"
 #include "Platfrom/OpenGL/OpenGLShader.h"
+
+//-------------ASSESTS MANAGER-------------------

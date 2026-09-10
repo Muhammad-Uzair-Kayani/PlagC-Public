@@ -13,28 +13,6 @@ public:
 	{
 		PC_INFO("APPLICATION LAYER CREATED");
 
-		m_VertexArray.reset(PlagC::VertexArray::Create());
-
-		float vertices[3 * 7] = {
-			-0.5f, -0.5f, 0.0f, 0.8f, 0.2f, 0.8f, 1.0f,
-			 0.5f, -0.5f, 0.0f, 0.2f, 0.3f, 0.8f, 1.0f,
-			 0.0f,  0.5f, 0.0f, 0.8f, 0.8f, 0.2f, 1.0f
-		};
-
-		PlagC::Ref<PlagC::VertexBuffer> vertexBuffer;
-		vertexBuffer.reset(PlagC::VertexBuffer::Create(vertices, sizeof(vertices)));
-		PlagC::BufferLayout layout = {
-			{ PlagC::ShaderDataType::Float3, "a_Position" },
-			{ PlagC::ShaderDataType::Float4, "a_Color" }
-		};
-		vertexBuffer->SetLayout(layout);
-		m_VertexArray->AddVertexBuffer(vertexBuffer);
-
-		uint32_t indices[3] = { 0, 1, 2 };
-		PlagC::Ref<PlagC::IndexBuffer> indexBuffer;
-		indexBuffer.reset(PlagC::IndexBuffer::Create(indices, sizeof(indices) / sizeof(uint32_t)));
-		m_VertexArray->SetIndexBuffer(indexBuffer);
-
 		m_SquareVA.reset(PlagC::VertexArray::Create());
 
 		float squareVertices[5 * 4] = {
@@ -57,84 +35,13 @@ public:
 		squareIB.reset(PlagC::IndexBuffer::Create(squareIndices, sizeof(squareIndices) / sizeof(uint32_t)));
 		m_SquareVA->SetIndexBuffer(squareIB);
 
-		std::string vertexSrc = R"(
-			#version 330 core
-			
-			layout(location = 0) in vec3 a_Position;
-			layout(location = 1) in vec4 a_Color;
-
-			out vec3 v_Position;
-			out vec4 v_Color;
-
-			uniform mat4 u_ViewProjection;
-			uniform mat4 u_Transform;
-
-			void main()
-			{
-				v_Position = a_Position;
-				v_Color = a_Color;
-				gl_Position = u_ViewProjection * u_Transform * vec4(a_Position, 1.0);	
-			}
-		)";
-
-		std::string fragmentSrc = R"(
-			#version 330 core
-			
-			layout(location = 0) out vec4 color;
-
-			in vec3 v_Position;
-			
-			uniform vec3 u_Color;
-
-			void main()
-			{
-				color = vec4(u_Color, 1.0);
-			}
-		)";
-
-		m_Shader.reset(PlagC::Shader::Create(vertexSrc, fragmentSrc));
-
-		std::string blueShaderVertexSrc = R"(
-			#version 330 core
-
-			layout(location = 0) in vec3 a_Position;
-			layout(location = 1) in vec2 a_TexCoord;
-			
-			out vec2 v_TexCoord;
-			
-			uniform mat4 u_ViewProjection;
-			uniform mat4 u_Transform;
-			
-			void main()
-			{
-			    v_TexCoord = a_TexCoord;
-			
-			    gl_Position = u_ViewProjection * u_Transform * vec4(a_Position, 1.0);
-			}
-		)";
-
-		std::string blueShaderFragmentSrc = R"(
-			
-			#version 330 core
-			
-			layout(location = 0) out vec4 color;
-
-			in vec2 v_TexCoord;
-			
-			uniform sampler2D u_Texture;
-
-			void main()
-			{
-				color = texture(u_Texture, v_TexCoord);
-			}
-		)";
-
 		m_Texture = PlagC::Texture2D::Create("assets/textures/Checkerboard.png");
 		m_LogoTexture = PlagC::Texture2D::Create("assets/textures/Logo.png");
 
-		m_BlueShader.reset(PlagC::Shader::Create(blueShaderVertexSrc, blueShaderFragmentSrc));
-		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->Bind();
-		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->UploadUniformInt("u_Texture", 0);
+		auto textureshader = m_ShaderLibrary.Load("assets/shaders/texture.glsl");
+		auto colorshader = m_ShaderLibrary.Load("assets/shaders/color.glsl");
+		std::dynamic_pointer_cast<PlagC::OpenGLShader>(textureshader)->Bind();
+		std::dynamic_pointer_cast<PlagC::OpenGLShader>(textureshader)->UploadUniformInt("u_Texture", 0);
 	}
 	~ApplcationLayer() {}
 
@@ -178,8 +85,6 @@ public:
 
 		//TRANSFORMATION TESTING
 		//BEGIN
-		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->Bind();
-		std::dynamic_pointer_cast<PlagC::OpenGLShader>(m_BlueShader)->UploadUniformFloat3("u_Color", m_SquareColor);
 
 		for(int i = 0; i < 20; ++i)
 		{
@@ -187,14 +92,14 @@ public:
 			{
 				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(i * 0.11f, j * 0.11f, 0.f)) *
 					glm::mat4(glm::scale(glm::mat4(1.f), glm::vec3(0.1f)));
-				PlagC::Renderer::Submit(m_BlueShader, m_SquareVA, transform);
+				PlagC::Renderer::Submit(m_ShaderLibrary.Get("color"), m_SquareVA, transform);
 			}
 		}
 
 		m_Texture->Bind();
-		PlagC::Renderer::Submit(m_BlueShader, m_SquareVA, glm::mat4(1.f));
+		PlagC::Renderer::Submit(m_ShaderLibrary.Get("texture"), m_SquareVA, glm::mat4(1.f));
 		m_LogoTexture->Bind();
-		PlagC::Renderer::Submit(m_BlueShader, m_SquareVA, glm::mat4(1.f));
+		PlagC::Renderer::Submit(m_ShaderLibrary.Get("texture"), m_SquareVA, glm::mat4(1.f));
 
 		//END
 		////TRANSFORMATION TESTING
@@ -208,8 +113,7 @@ public:
 
 private:
 
-	PlagC::Ref<PlagC::Shader> m_Shader;
-	PlagC::Ref<PlagC::Shader> m_BlueShader;
+	PlagC::ShaderLibrary m_ShaderLibrary;
 
 	PlagC::Ref<PlagC::VertexArray> m_VertexArray;
 	PlagC::Ref<PlagC::VertexArray> m_SquareVA;

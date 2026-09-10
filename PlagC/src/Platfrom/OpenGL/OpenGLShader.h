@@ -3,15 +3,19 @@
 
 namespace PlagC
 {
+	typedef unsigned int GLenum;
+
 	class OpenGLShader : public Shader
 	{
 	public:
 
-		OpenGLShader(const std::string& vertexSource, const std::string& fragmentSource);
-		virtual ~OpenGLShader() = default;
+		OpenGLShader(const std::string& filepath);
+		OpenGLShader(const std::string& name, const std::string& vertexSource, const std::string& fragmentSource);
+		virtual ~OpenGLShader();
 
-		void Bind() override;
-		void UnBind() override;
+		void Bind() const override;
+		void UnBind() const override;
+		const std::string& GetName() const override { return m_Name; }
 
 		void UploadUniformMat4(const std::string& name, const glm::mat4& matrix);
 		void UploadUniformMat3(const std::string& name, const glm::mat3& matrix);
@@ -25,12 +29,14 @@ namespace PlagC
 
 	private:
 
-		void CreateShader(std::string, int, unsigned int&);
-		void CreateShaderProg(unsigned int, unsigned int);
+		std::string ReadFile(const std::string& filepath);
+		std::unordered_map<GLenum, std::string> PreProcess(const std::string& source);
+		void Compile(const std::unordered_map<GLenum, std::string>& shaderSources);
 
 	private:
 
 		unsigned int m_RendererID;
+		std::string m_Name;
 
 	};
 }
