@@ -9,7 +9,7 @@ class ApplcationLayer : public PlagC::Layer
 
 public:
 	ApplcationLayer() :
-		m_Camera(-1.6f, 1.6f, -0.9f, 0.9f), m_CameraPosition(0.0f)
+		m_CameraController(1280.f / 720.f, true)
 	{
 		PC_INFO("APPLICATION LAYER CREATED");
 
@@ -56,36 +56,15 @@ public:
 	{
 		//TESTING PURPOSES
 		//START
-
-		PC_TRACE("Delta Time: {0}s ({1}s)", ts, ts.GetMiliSeconds());
-
-		if (PlagC::Input::IsKeyPressed(PC_KEY_LEFT))
-			m_CameraPosition.x -= m_CameraMoveSpeed * ts;
-		else if (PlagC::Input::IsKeyPressed(PC_KEY_RIGHT))
-			m_CameraPosition.x += m_CameraMoveSpeed * ts;
-
-		if (PlagC::Input::IsKeyPressed(PC_KEY_UP))
-			m_CameraPosition.y += m_CameraMoveSpeed * ts;
-		else if (PlagC::Input::IsKeyPressed(PC_KEY_DOWN))
-			m_CameraPosition.y -= m_CameraMoveSpeed * ts;
-
-		if (PlagC::Input::IsKeyPressed(PC_KEY_A))
-			m_CameraRotation += m_CameraRotationSpeed * ts;
-		if (PlagC::Input::IsKeyPressed(PC_KEY_D))
-			m_CameraRotation -= m_CameraRotationSpeed * ts;
+		m_CameraController.OnUpdate(ts);
 
 		PlagC::RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
 		PlagC::RenderCommand::Clear();
 
-		m_Camera.SetPosition(m_CameraPosition);
-		m_Camera.SetRotation(m_CameraRotation);
-		//END
-
-		PlagC::Renderer::BeginScene(m_Camera);
+		PlagC::Renderer::BeginScene(m_CameraController.GetCamera());
 
 		//TRANSFORMATION TESTING
 		//BEGIN
-
 		for(int i = 0; i < 20; ++i)
 		{
 			for (int j = 0; j < 20; ++j)
@@ -95,20 +74,21 @@ public:
 				PlagC::Renderer::Submit(m_ShaderLibrary.Get("color"), m_SquareVA, transform);
 			}
 		}
-
 		m_Texture->Bind();
 		PlagC::Renderer::Submit(m_ShaderLibrary.Get("texture"), m_SquareVA, glm::mat4(1.f));
 		m_LogoTexture->Bind();
 		PlagC::Renderer::Submit(m_ShaderLibrary.Get("texture"), m_SquareVA, glm::mat4(1.f));
-
 		//END
 		////TRANSFORMATION TESTING
+
 		PlagC::Renderer::EndScene();
+
+		//END
 
 	}
 	void OnEvent(PlagC::Event& e) override
 	{
-
+		m_CameraController.OnEvent(e);
 	}
 
 private:
@@ -126,12 +106,7 @@ private:
 
 	glm::vec3 m_SquareColor = { 0.2f, 0.3f, 0.8f };
 
-	PlagC::OrthographicCamera m_Camera;
-	glm::vec3 m_CameraPosition;
-	float m_CameraMoveSpeed = 0.1f;
-
-	float m_CameraRotation = 0.0f;
-	float m_CameraRotationSpeed = 1.f;
+	PlagC::OrthographicCameraController m_CameraController;
 
 };
 

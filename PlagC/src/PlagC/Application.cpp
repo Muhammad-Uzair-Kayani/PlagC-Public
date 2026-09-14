@@ -21,6 +21,7 @@ PlagC::Application::Application()
 	m_Window = std::unique_ptr<Window>(Window::Create());
 	m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 	m_Window->SetVsync(false);
+	m_LastFrameTime = glfwGetTime();
 
 	Renderer::Init();
 
@@ -38,6 +39,7 @@ void PlagC::Application::OnEvent(Event& e)
 {
 	EventDispatcher dispatcher(e);
 	dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
+	dispatcher.Dispatch<WindowResizeEvent>(BIND_EVENT_FN(OnWindowResize));
 
 	for (auto it = m_LayerStack.end(); it != m_LayerStack.begin(); )
 	{
@@ -64,16 +66,34 @@ bool PlagC::Application::OnWindowClose(WindowCloseEvent& e)
 	return true;
 }
 
+bool PlagC::Application::OnWindowResize(WindowResizeEvent& e)
+{
+	if (e.GetWidth() == 0 || e.GetHeight() == 0)
+	{
+		m_Minimized = true;
+		return false;
+	}
+
+	m_Minimized = false;
+	Renderer::OnWindowResize(e.GetWidth(), e.GetHeight());
+	return false;
+}
+
 void PlagC::Application::Run()
 {
-	float time = glfwGetTime();
-	Timestep timestep = time - m_LastFrameTime;
-	m_LastFrameTime = time;
 
 	while (m_Running)
 	{
-		for (Layer* layer : m_LayerStack)
-			layer->OnUpdate(timestep);
+
+		float time = glfwGetTime();
+		Timestep timestep = time - m_LastFrameTime;
+		m_LastFrameTime = time;
+
+		if (!m_Minimized)
+		{
+			for (Layer* layer : m_LayerStack)
+				layer->OnUpdate(timestep);
+		}
 
 		m_ImGuiLayer->Begin();
 		for (Layer* layer : m_LayerStack)

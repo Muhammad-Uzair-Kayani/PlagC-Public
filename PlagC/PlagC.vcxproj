@@ -122,6 +122,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="src\PlagC\Layer.h" />
     <ClInclude Include="src\PlagC\LayerStack.h" />
     <ClInclude Include="src\PlagC\MouseButtonCodes.h" />
+    <ClInclude Include="src\PlagC\OrthographicCameraController.h" />
     <ClInclude Include="src\PlagC\Renderer\Buffer.h" />
     <ClInclude Include="src\PlagC\Renderer\GraphicsContext.h" />
     <ClInclude Include="src\PlagC\Renderer\OrthographicCamera.h" />
@@ -151,6 +152,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClCompile Include="src\PlagC\ImGui\ImGuiLayer.cpp" />
     <ClCompile Include="src\PlagC\Layer.cpp" />
     <ClCompile Include="src\PlagC\LayerStack.cpp" />
+    <ClCompile Include="src\PlagC\OrthographicCameraController.cpp" />
     <ClCompile Include="src\PlagC\Renderer\Buffer.cpp" />
     <ClCompile Include="src\PlagC\Renderer\OrthographicCamera.cpp" />
     <ClCompile Include="src\PlagC\Renderer\RenderCommand.cpp" />

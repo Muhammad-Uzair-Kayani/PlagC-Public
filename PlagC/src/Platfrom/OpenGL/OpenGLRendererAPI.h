@@ -12,6 +12,7 @@ namespace PlagC
 	public:
 
 		void Init() override;
+		void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 		void SetClearColor(const glm::vec4& color) override;
 		void Clear() override;
 

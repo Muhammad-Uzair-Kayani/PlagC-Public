@@ -78,6 +78,9 @@
     <ClInclude Include="src\PlagC\MouseButtonCodes.h">
       <Filter>src\PlagC</Filter>
     </ClInclude>
+    <ClInclude Include="src\PlagC\OrthographicCameraController.h">
+      <Filter>src\PlagC</Filter>
+    </ClInclude>
     <ClInclude Include="src\PlagC\Renderer\Buffer.h">
       <Filter>src\PlagC\Renderer</Filter>
     </ClInclude>
@@ -159,6 +162,9 @@
       <Filter>src\PlagC</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\LayerStack.cpp">
+      <Filter>src\PlagC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\OrthographicCameraController.cpp">
       <Filter>src\PlagC</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\Renderer\Buffer.cpp">

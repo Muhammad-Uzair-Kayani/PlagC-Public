@@ -15,7 +15,7 @@
 #include "PlagC/Renderer/Shader.h"
 #include "PlagC/Renderer/Buffer.h"
 #include "PlagC/Renderer/VertexArray.h"
-#include "PlagC/Renderer/OrthographicCamera.h"
+#include "PlagC/OrthographicCameraController.h"
 #include "PlagC/Renderer/Renderer.h"
 #include "PlagC/Renderer/Texture.h"
 #include "Platfrom/OpenGL/OpenGLShader.h"
