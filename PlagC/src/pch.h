@@ -25,6 +25,6 @@
 
 //Headers for PlagC Cores
 //Start of headers
-#include "PlagC/log.h"
+#include "PlagC/Core/log.h"
 //End of headers
 

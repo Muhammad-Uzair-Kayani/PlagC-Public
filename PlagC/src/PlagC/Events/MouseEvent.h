@@ -57,7 +57,7 @@ namespace PlagC
 
 		MouseButtonEvent(int button) : m_MouseButton(button) { }
 
-		inline float GetMouseButton() const { return m_MouseButton; }
+		inline int GetMouseButton() const { return m_MouseButton; }
 
 		EVENT_CLASS_CATEGORY(EventCategoryMouse | EventCategoryInput)
 

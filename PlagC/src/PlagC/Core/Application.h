@@ -1,8 +1,8 @@
 #pragma once
 #include "PlagC/Events/Event.h"
 #include "PlagC/Events/ApplicationEvent.h"
-#include "PlagC/Window.h"
-#include "LayerStack.h"
+#include "PlagC/Core/Window.h"
+#include "PlagC/Core/LayerStack.h"
 #include "PlagC/ImGui/ImGuiLayer.h"
 #include "PlagC/Core/Timestep.h"
 

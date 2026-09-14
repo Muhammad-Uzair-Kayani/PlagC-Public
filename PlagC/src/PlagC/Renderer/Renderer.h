@@ -1,5 +1,5 @@
 #pragma once
-#include "RenderCommand.h";
+#include "PlagC/Renderer/RenderCommand.h";
 #include "PlagC/Renderer/OrthographicCamera.h"
 #include "PlagC/Renderer/Shader.h"
 

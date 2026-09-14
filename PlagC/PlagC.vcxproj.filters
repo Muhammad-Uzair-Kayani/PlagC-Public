@@ -39,13 +39,37 @@
     <ClInclude Include="src\PlagC.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\PlagC\Application.h">
-      <Filter>src\PlagC</Filter>
+    <ClInclude Include="src\PlagC\Core\Application.h">
+      <Filter>src\PlagC\Core</Filter>
     </ClInclude>
-    <ClInclude Include="src\PlagC\Core.h">
-      <Filter>src\PlagC</Filter>
+    <ClInclude Include="src\PlagC\Core\Core.h">
+      <Filter>src\PlagC\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\Input.h">
+      <Filter>src\PlagC\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\KeyCodes.h">
+      <Filter>src\PlagC\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\Layer.h">
+      <Filter>src\PlagC\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\LayerStack.h">
+      <Filter>src\PlagC\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\MouseButtonCodes.h">
+      <Filter>src\PlagC\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\StartingPoint.h">
+      <Filter>src\PlagC\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Core\Timestep.h">
+      <Filter>src\PlagC\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\Window.h">
+      <Filter>src\PlagC\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Core\log.h">
       <Filter>src\PlagC\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Events\ApplicationEvent.h">
@@ -63,24 +87,6 @@
     <ClInclude Include="src\PlagC\ImGui\ImGuiLayer.h">
       <Filter>src\PlagC\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="src\PlagC\Input.h">
-      <Filter>src\PlagC</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PlagC\KeyCodes.h">
-      <Filter>src\PlagC</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PlagC\Layer.h">
-      <Filter>src\PlagC</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PlagC\LayerStack.h">
-      <Filter>src\PlagC</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PlagC\MouseButtonCodes.h">
-      <Filter>src\PlagC</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PlagC\OrthographicCameraController.h">
-      <Filter>src\PlagC</Filter>
-    </ClInclude>
     <ClInclude Include="src\PlagC\Renderer\Buffer.h">
       <Filter>src\PlagC\Renderer</Filter>
     </ClInclude>
@@ -88,6 +94,9 @@
       <Filter>src\PlagC\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Renderer\OrthographicCamera.h">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PlagC\Renderer\OrthographicCameraController.h">
       <Filter>src\PlagC\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Renderer\RenderCommand.h">
@@ -107,15 +116,6 @@
     </ClInclude>
     <ClInclude Include="src\PlagC\Renderer\VertexArray.h">
       <Filter>src\PlagC\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PlagC\StartingPoint.h">
-      <Filter>src\PlagC</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PlagC\Window.h">
-      <Filter>src\PlagC</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PlagC\log.h">
-      <Filter>src\PlagC</Filter>
     </ClInclude>
     <ClInclude Include="src\Platfrom\OpenGL\OpenGLBuffer.h">
       <Filter>src\Platfrom\OpenGL</Filter>
@@ -149,8 +149,17 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\PlagC\Application.cpp">
-      <Filter>src\PlagC</Filter>
+    <ClCompile Include="src\PlagC\Core\Application.cpp">
+      <Filter>src\PlagC\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Core\Layer.cpp">
+      <Filter>src\PlagC\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Core\LayerStack.cpp">
+      <Filter>src\PlagC\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Core\log.cpp">
+      <Filter>src\PlagC\Core</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\ImGui\ImGuiBuild.cpp">
       <Filter>src\PlagC\ImGui</Filter>
@@ -158,19 +167,13 @@
     <ClCompile Include="src\PlagC\ImGui\ImGuiLayer.cpp">
       <Filter>src\PlagC\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="src\PlagC\Layer.cpp">
-      <Filter>src\PlagC</Filter>
-    </ClCompile>
-    <ClCompile Include="src\PlagC\LayerStack.cpp">
-      <Filter>src\PlagC</Filter>
-    </ClCompile>
-    <ClCompile Include="src\PlagC\OrthographicCameraController.cpp">
-      <Filter>src\PlagC</Filter>
-    </ClCompile>
     <ClCompile Include="src\PlagC\Renderer\Buffer.cpp">
       <Filter>src\PlagC\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\Renderer\OrthographicCamera.cpp">
+      <Filter>src\PlagC\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PlagC\Renderer\OrthographicCameraController.cpp">
       <Filter>src\PlagC\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\PlagC\Renderer\RenderCommand.cpp">
@@ -190,9 +193,6 @@
     </ClCompile>
     <ClCompile Include="src\PlagC\Renderer\VertexArray.cpp">
       <Filter>src\PlagC\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="src\PlagC\log.cpp">
-      <Filter>src\PlagC</Filter>
     </ClCompile>
     <ClCompile Include="src\Platfrom\OpenGL\OpenGLBuffer.cpp">
       <Filter>src\Platfrom\OpenGL</Filter>

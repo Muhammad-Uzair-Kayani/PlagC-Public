@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PlagC/Window.h"
+#include "PlagC/Core/Window.h"
 #include "PlagC/Renderer/GraphicsContext.h"
 
 #include <glad/glad.h>

@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Application.h"
-#include "PlagC/Input.h"
-#include "PlagC/KeyCodes.h"
+#include "PlagC/Core/Input.h"
+#include "PlagC/Core/KeyCodes.h"
 #include "PlagC/Renderer/Renderer.h"
 
 #include <GLFW/glfw3.h>
@@ -21,7 +21,6 @@ PlagC::Application::Application()
 	m_Window = std::unique_ptr<Window>(Window::Create());
 	m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 	m_Window->SetVsync(false);
-	m_LastFrameTime = glfwGetTime();
 
 	Renderer::Init();
 
@@ -86,7 +85,7 @@ void PlagC::Application::Run()
 	{
 
 		float time = glfwGetTime();
-		Timestep timestep = time - m_LastFrameTime;
+		Timestep timestep = (float)time - m_LastFrameTime;
 		m_LastFrameTime = time;
 
 		if (!m_Minimized)

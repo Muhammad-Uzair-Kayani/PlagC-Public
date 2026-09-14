@@ -3,8 +3,8 @@
 #include "imgui.h"
 #include "examples/imgui_impl_glfw.h"
 #include "examples/imgui_impl_opengl3.h"
-#include "PlagC/Application.h"
-#include "PlagC/Core.h"
+#include "PlagC/Core/Application.h"
+#include "PlagC/Core/Core.h"
 
 #include <GLFW/glfw3.h>
 

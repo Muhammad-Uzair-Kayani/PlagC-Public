@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "OrthographicCameraController.h"
 
-#include "PlagC/Input.h"
-#include "PlagC/KeyCodes.h"
+#include "PlagC/Core/Input.h"
+#include "PlagC/Core/KeyCodes.h"
 
 PlagC::OrthographicCameraController::OrthographicCameraController(const float aspectRatio, const bool rotation):
 	m_AspectRatio(aspectRatio), m_Camera(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel,

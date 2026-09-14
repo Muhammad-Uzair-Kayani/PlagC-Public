@@ -1,5 +1,5 @@
 #pragma once
-#include "PlagC/Input.h"
+#include "PlagC/Core/Input.h"
 
 namespace PlagC
 {

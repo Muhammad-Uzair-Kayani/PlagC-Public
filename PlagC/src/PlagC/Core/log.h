@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 //Headers for PlagC Cores
-#include "PlagC/Core.h"
+#include "PlagC/Core/Core.h"
 
 namespace PlagC
 {

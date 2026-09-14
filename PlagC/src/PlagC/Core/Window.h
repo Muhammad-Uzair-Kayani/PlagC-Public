@@ -1,5 +1,5 @@
 #pragma once
-#include "PlagC/Core.h"
+#include "PlagC/Core/Core.h"
 #include "PlagC/Events/Event.h"
 
 namespace PlagC

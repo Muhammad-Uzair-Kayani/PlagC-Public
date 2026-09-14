@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PlagC/Core.h"
+#include "PlagC/Core/Core.h"
 
 namespace PlagC
 {

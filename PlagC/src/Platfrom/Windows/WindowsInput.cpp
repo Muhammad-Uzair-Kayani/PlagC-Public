@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "WindowsInput.h"
-#include "PlagC/Application.h"
+#include "PlagC/Core/Application.h"
 
 #include <GLFW/glfw3.h>
 
