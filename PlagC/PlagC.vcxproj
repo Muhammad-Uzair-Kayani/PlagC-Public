@@ -108,6 +108,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\PlagC\Renderer\Renderer2D.h" />
     <ClInclude Include="src\PlagC.h" />
     <ClInclude Include="src\PlagC\Core\Application.h" />
     <ClInclude Include="src\PlagC\Core\Core.h" />
@@ -147,6 +148,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     <ClInclude Include="vendor\stb_image\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\PlagC\Renderer\Renderer2D.cpp" />
     <ClCompile Include="src\PlagC\Core\Application.cpp" />
     <ClCompile Include="src\PlagC\Core\Layer.cpp" />
     <ClCompile Include="src\PlagC\Core\LayerStack.cpp" />

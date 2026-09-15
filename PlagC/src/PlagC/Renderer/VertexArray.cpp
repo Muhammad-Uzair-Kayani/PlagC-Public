@@ -5,7 +5,7 @@
 
 namespace PlagC
 {
-	VertexArray* VertexArray::Create()
+	Ref<VertexArray> VertexArray::Create()
 	{
 		switch (Renderer::GetAPI())
 		{
@@ -18,7 +18,7 @@ namespace PlagC
 		case RendererAPI::API::OpenGL:
 		{
 			PC_CORE_TRACE("OPENGL VERTEX ARRAY CREATED");
-			return new OpenGLVertexArray();
+			return std::make_shared <OpenGLVertexArray>();
 		}
 
 		default:

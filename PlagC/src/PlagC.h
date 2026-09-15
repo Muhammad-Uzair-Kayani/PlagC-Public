@@ -2,7 +2,6 @@
 #include "pch.h"
 //--------------Engine Side includes that should be available to the user-----------------
 #include "PlagC/Core/Application.h" //To provide the user with the Application class to create their own application
-#include "PlagC/Core/StartingPoint.h" //To provide the user with the main entry point of the application
 #include "PlagC/Core/log.h" //To provide the user with the logging functionality
 #include "PlagC/Core/Layer.h"
 #include "PlagC/ImGui/ImGuiLayer.h"
@@ -17,6 +16,7 @@
 #include "PlagC/Renderer/VertexArray.h"
 #include "PlagC/Renderer/OrthographicCameraController.h"
 #include "PlagC/Renderer/Renderer.h"
+#include "PlagC/Renderer/Renderer2D.h"
 #include "PlagC/Renderer/Texture.h"
 #include "Platfrom/OpenGL/OpenGLShader.h"
 
