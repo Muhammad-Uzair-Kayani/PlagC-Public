@@ -17,7 +17,6 @@ namespace PlagC
 		void OnUpdate(Timestep ts) override;
 		void OnAttach() override;
 		void OnDetach() override;
-		void OnImGuiRender();
 
 		void Begin();
 		void End();

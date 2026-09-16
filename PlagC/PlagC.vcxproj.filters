@@ -148,6 +148,7 @@
       <Filter>vendor\stb_image</Filter>
     </ClInclude>
     <ClInclude Include="src\PlagC\Renderer\Renderer2D.h" />
+    <ClInclude Include="src\PlagC\Debug\Insrumentor.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\PlagC\Core\Application.cpp">

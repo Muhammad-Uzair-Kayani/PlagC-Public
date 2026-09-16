@@ -28,26 +28,31 @@ namespace PlagC
 
 PlagC::OpenGLVertexArray::OpenGLVertexArray()
 {
+	PC_PROFILE_FUNCTION();
 	glCreateVertexArrays(1, &m_RendererID);
 }
 
 PlagC::OpenGLVertexArray::~OpenGLVertexArray()
 {
+	PC_PROFILE_FUNCTION();
 	glDeleteVertexArrays(1, &m_RendererID);
 }
 
 void PlagC::OpenGLVertexArray::Bind() const
 {
+	PC_PROFILE_FUNCTION();
 	glBindVertexArray(m_RendererID);
 }
 
 void PlagC::OpenGLVertexArray::UnBind() const
 {
+	PC_PROFILE_FUNCTION();
 	glBindVertexArray(0);
 }
 
 void PlagC::OpenGLVertexArray::AddVertexBuffer(const Ref<VertexBuffer>& vertexBuffer)
 {
+	PC_PROFILE_FUNCTION();
 	PC_CORE_ASSERT(vertexBuffer->GetLayout().GetElements().size(), "Vertex Buffer has no layout!");
 
 	glBindVertexArray(m_RendererID);
@@ -66,6 +71,7 @@ void PlagC::OpenGLVertexArray::AddVertexBuffer(const Ref<VertexBuffer>& vertexBu
 
 void PlagC::OpenGLVertexArray::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
 {
+	PC_PROFILE_FUNCTION();
 	glBindVertexArray(m_RendererID);
 	indexBuffer->Bind();
 

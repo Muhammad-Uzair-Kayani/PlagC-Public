@@ -108,6 +108,7 @@ IF EXIST "..\bin\Release-windows-x86_64\PlagC\PlagC.lib"\ (xcopy /Q /E /Y /I "..
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\PlagC\Debug\Insrumentor.h" />
     <ClInclude Include="src\PlagC\Renderer\Renderer2D.h" />
     <ClInclude Include="src\PlagC.h" />
     <ClInclude Include="src\PlagC\Core\Application.h" />

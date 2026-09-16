@@ -17,7 +17,31 @@ PlagC::Ref<PlagC::Texture2D> PlagC::Texture2D::Create(const std::string& path)
 	case RendererAPI::API::OpenGL:
 	{
 		PC_CORE_TRACE("OPENGL VERTEX ARRAY CREATED");
-		return std::make_shared<OpenGLTexture2D>(path);
+		return CreateRef<OpenGLTexture2D>(path);
+	}
+
+	default:
+		break;
+	}
+
+	PC_CORE_ASSERT(false, "INVALID API NOT SUPPORTED");
+	return nullptr;
+}
+
+PlagC::Ref<PlagC::Texture2D> PlagC::Texture2D::Create(uint32_t width, uint32_t height)
+{
+	switch (Renderer::GetAPI())
+	{
+	case RendererAPI::API::None:
+	{
+		PC_CORE_ASSERT(false, "NONE API NOT SUPPORTED");
+		return nullptr;
+	}
+
+	case RendererAPI::API::OpenGL:
+	{
+		PC_CORE_TRACE("OPENGL VERTEX ARRAY CREATED");
+		return CreateRef<OpenGLTexture2D>(width, height);
 	}
 
 	default:

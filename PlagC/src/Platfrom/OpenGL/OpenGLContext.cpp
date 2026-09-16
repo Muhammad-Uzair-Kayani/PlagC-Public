@@ -11,6 +11,7 @@ PlagC::OpenGLContext::OpenGLContext(GLFWwindow* windowHandle) : m_WindowHandle(w
 
 void PlagC::OpenGLContext::Init()
 {
+	PC_PROFILE_FUNCTION();
 	glfwMakeContextCurrent(m_WindowHandle);
 
 	//Initializing GLAD
@@ -26,5 +27,6 @@ void PlagC::OpenGLContext::Init()
 
 void PlagC::OpenGLContext::SwapBuffers()
 {
+	PC_PROFILE_FUNCTION();
 	glfwSwapBuffers(m_WindowHandle);
 }

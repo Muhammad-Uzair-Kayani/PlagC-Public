@@ -16,7 +16,6 @@ void PlagC::LayerStack::PushLayer(Layer* layer)
 {
 	m_Layers.emplace(m_Layers.begin() + m_LayerInsert, layer);
 	m_LayerInsert++;
-	layer->OnAttach();
 }
 
 void PlagC::LayerStack::PopLayer(Layer* layer)
@@ -32,7 +31,6 @@ void PlagC::LayerStack::PopLayer(Layer* layer)
 void PlagC::LayerStack::PushOverlay(Layer* overlay)
 {
 	m_Layers.emplace_back(overlay);
-	overlay->OnAttach();
 }
 
 void PlagC::LayerStack::PopOverlay(Layer* overlay)

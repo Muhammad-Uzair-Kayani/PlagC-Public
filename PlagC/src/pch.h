@@ -26,5 +26,6 @@
 //Headers for PlagC Cores
 //Start of headers
 #include "PlagC/Core/log.h"
+#include "PlagC/Debug/Insrumentor.h"
 //End of headers
 

@@ -8,11 +8,12 @@ PlagC::OrthographicCameraController::OrthographicCameraController(const float as
 	m_AspectRatio(aspectRatio), m_Camera(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel,
 		-m_ZoomLevel, m_ZoomLevel), m_Rotation(rotation)
 {
-
+	PC_PROFILE_FUNCTION();
 }
 
 void PlagC::OrthographicCameraController::OnUpdate(const Timestep ts)
 {
+	PC_PROFILE_FUNCTION();
 	if (Input::IsKeyPressed(PC_KEY_A))
 		m_CameraPosition.x -= m_CameraTranslationSpeed * ts;
 	else if (Input::IsKeyPressed(PC_KEY_D))
@@ -40,6 +41,7 @@ void PlagC::OrthographicCameraController::OnUpdate(const Timestep ts)
 
 void PlagC::OrthographicCameraController::OnEvent(Event& e)
 {
+	PC_PROFILE_FUNCTION();
 	EventDispatcher dispatcher(e);
 	dispatcher.Dispatch<MouseScrolledEvent>(PC_BIND_EVENT_FN(PlagC::OrthographicCameraController::OnMouseScrolled));
 	dispatcher.Dispatch<WindowResizeEvent>(PC_BIND_EVENT_FN(PlagC::OrthographicCameraController::OnWindowResized));
@@ -47,6 +49,7 @@ void PlagC::OrthographicCameraController::OnEvent(Event& e)
 
 bool PlagC::OrthographicCameraController::OnMouseScrolled(MouseScrolledEvent& e)
 {
+	PC_PROFILE_FUNCTION();
 	m_ZoomLevel -= e.GetYOffset();
 	m_ZoomLevel = std::max(m_ZoomLevel, 0.25f);
 
@@ -58,6 +61,7 @@ bool PlagC::OrthographicCameraController::OnMouseScrolled(MouseScrolledEvent& e)
 
 bool PlagC::OrthographicCameraController::OnWindowResized(WindowResizeEvent& e)
 {
+	PC_PROFILE_FUNCTION();
 	m_AspectRatio = (float)e.GetWidth() / (float)e.GetHeight();
 	m_Camera.SetProjection(-m_AspectRatio * m_ZoomLevel, 
 		m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);

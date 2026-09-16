@@ -15,6 +15,7 @@ namespace PlagC
 
 PlagC::Application::Application()
 {
+	PC_PROFILE_FUNCTION();
 	PC_CORE_ASSERT(!s_Instance, "APPLCATION INSTANCE ALREADY EXISTS");
 	s_Instance = this;
 
@@ -25,17 +26,19 @@ PlagC::Application::Application()
 	Renderer::Init();
 
 	m_ImGuiLayer = new ImGuiLayer();
-	m_LayerStack.PushLayer(m_ImGuiLayer);
+	PushOverLay(m_ImGuiLayer);
 
 }
 
 PlagC::Application::~Application()
 {
-
+	PC_PROFILE_FUNCTION();
+	Renderer::Shutdown();
 }
 
 void PlagC::Application::OnEvent(Event& e)
 {
+	PC_PROFILE_FUNCTION();
 	EventDispatcher dispatcher(e);
 	dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
 	dispatcher.Dispatch<WindowResizeEvent>(BIND_EVENT_FN(OnWindowResize));
@@ -51,12 +54,16 @@ void PlagC::Application::OnEvent(Event& e)
 
 void PlagC::Application::PushLayer(Layer* layer)
 {
+	PC_PROFILE_FUNCTION();
 	m_LayerStack.PushLayer(layer);
+	layer->OnAttach();
 }
 
 void PlagC::Application::PushOverLay(Layer* layer)
 {
+	PC_PROFILE_FUNCTION();
 	m_LayerStack.PushOverlay(layer);
+	layer->OnAttach();
 }
 
 bool PlagC::Application::OnWindowClose(WindowCloseEvent& e)
@@ -67,6 +74,7 @@ bool PlagC::Application::OnWindowClose(WindowCloseEvent& e)
 
 bool PlagC::Application::OnWindowResize(WindowResizeEvent& e)
 {
+	PC_PROFILE_FUNCTION();
 	if (e.GetWidth() == 0 || e.GetHeight() == 0)
 	{
 		m_Minimized = true;
@@ -80,24 +88,28 @@ bool PlagC::Application::OnWindowResize(WindowResizeEvent& e)
 
 void PlagC::Application::Run()
 {
-
+	PC_PROFILE_FUNCTION();
 	while (m_Running)
 	{
-
+		PC_PROFILE_SCOPE("Application Run Loop");
 		float time = glfwGetTime();
 		Timestep timestep = (float)time - m_LastFrameTime;
 		m_LastFrameTime = time;
 
 		if (!m_Minimized)
 		{
+			PC_PROFILE_SCOPE("LayerStack OnUpdate");
 			for (Layer* layer : m_LayerStack)
 				layer->OnUpdate(timestep);
-		}
 
-		m_ImGuiLayer->Begin();
-		for (Layer* layer : m_LayerStack)
-			layer->OnImGuiRender();
-		m_ImGuiLayer->End();
+			{
+				PC_PROFILE_SCOPE("LayerStack on ImGui-Render");
+				m_ImGuiLayer->Begin();
+				for (Layer* layer : m_LayerStack)
+					layer->OnImGuiRender();
+				m_ImGuiLayer->End();
+			}
+		}
 
 		m_Window->OnUpdate();
 	}

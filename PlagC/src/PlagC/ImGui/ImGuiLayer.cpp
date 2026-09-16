@@ -21,6 +21,7 @@ PlagC::ImGuiLayer::~ImGuiLayer()
 
 void PlagC::ImGuiLayer::OnAttach()
 {
+	PC_PROFILE_FUNCTION();
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -54,15 +55,10 @@ void PlagC::ImGuiLayer::OnAttach()
 
 void PlagC::ImGuiLayer::OnDetach()
 {
+	PC_PROFILE_FUNCTION();
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-}
-
-void PlagC::ImGuiLayer::OnImGuiRender()
-{
-	static bool show = true;
-	ImGui::ShowDemoWindow(&show);
 }
 
 void PlagC::ImGuiLayer::OnUpdate(Timestep ts)
@@ -72,6 +68,7 @@ void PlagC::ImGuiLayer::OnUpdate(Timestep ts)
 
 void PlagC::ImGuiLayer::Begin()
 {
+	PC_PROFILE_FUNCTION();
 	ImGuiIO& io = ImGui::GetIO();
 	io.IniFilename = nullptr;
 	ImGui_ImplOpenGL3_NewFrame();
@@ -81,6 +78,7 @@ void PlagC::ImGuiLayer::Begin()
 
 void PlagC::ImGuiLayer::End()
 {
+	PC_PROFILE_FUNCTION();
 	ImGuiIO& io = ImGui::GetIO();
 	Application& app = Application::Get();
 	io.DisplaySize = ImVec2(app.GetWindow().GetWidth(), app.GetWindow().GetHeight());

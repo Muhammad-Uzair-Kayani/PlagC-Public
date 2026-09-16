@@ -10,11 +10,19 @@ extern PlagC::Application* PlagC::CreateApplication();
 int main(int argc, char** argv)
 {
 	PlagC::log::Init();
-	PC_CORE_INFO("Initializing PlagC Engine");
+	
 
-	PlagC::Application* app = PlagC::CreateApplication();
+	PC_PROFILE_BEGIN_SESSION("Startup", "PlagCProfile-Startup.json");
+	auto app = PlagC::CreateApplication();
+	PC_PROFILE_END_SESSION();
+
+	PC_PROFILE_BEGIN_SESSION("Runtime", "PlagCProfile-Runtime.json");
 	app->Run();
+	PC_PROFILE_END_SESSION();
+
+	PC_PROFILE_BEGIN_SESSION("Startup", "PlagCProfile-Shutdown.json");
 	delete app;
+	PC_PROFILE_END_SESSION();
 }
 
 

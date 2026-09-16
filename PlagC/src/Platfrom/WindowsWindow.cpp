@@ -10,16 +10,19 @@ bool PlagC::WindowsWindow::s_GLFWInitialized = false;
 
 PlagC::WindowsWindow::WindowsWindow(const WindowProps& properties)
 {
+	PC_PROFILE_FUNCTION();
 	Init(properties);
 }
 
 PlagC::WindowsWindow::~WindowsWindow()
 {
+	PC_PROFILE_FUNCTION();
 	OnShutdown();
 }
 
 void PlagC::WindowsWindow::OnUpdate()
 {
+	PC_PROFILE_FUNCTION();
 	glfwPollEvents();
 	m_Context->SwapBuffers();
 }
@@ -52,6 +55,7 @@ PlagC::Window* PlagC::Window::Create(const WindowProps& properties)
 
 void PlagC::WindowsWindow::Init(const WindowProps& properties)
 {
+	PC_PROFILE_FUNCTION();
 	//GLFW initializations
 	m_Data.Title = properties.Title;
 	m_Data.Width = properties.Width;
@@ -169,6 +173,7 @@ void PlagC::WindowsWindow::Init(const WindowProps& properties)
 
 void PlagC::WindowsWindow::OnShutdown()
 {
+	PC_PROFILE_FUNCTION();
 	//GLFW shutdown/Destroy window
 	glfwDestroyWindow(m_Window);
 }

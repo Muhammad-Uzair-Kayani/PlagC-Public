@@ -21,5 +21,6 @@ private:
 	PlagC::OrthographicCameraController m_CameraController;
 
 	PlagC::Ref<PlagC::Texture> m_CheckerBoardTexture;
+
 };
 
