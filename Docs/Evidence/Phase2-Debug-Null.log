@@ -1,0 +1,148 @@
+[2026-10-22 12:22:34.610] [info] [CORE] [Main:140672017179648] PlagC Phase 2 bootstrap
+[2026-10-22 12:22:34.610] [info] [CORE] [Main:140672017179648] Configuration: Debug
+[2026-10-22 12:22:34.610] [info] [CORE] [Main:140672017179648] Platform: Linux
+[2026-10-22 12:22:34.610] [info] [JOB] [Main:140672017179648] Workers: 4
+Creating resource group General
+Creating resource group Internal
+Creating resource group Autodetect
+SceneManagerFactory for type 'DefaultSceneManager' registered.
+Registering ResourceManager for type Material
+Registering ResourceManager for type Mesh
+Registering ResourceManager for type Mesh2
+Registering ResourceManager for type OldSkeleton
+MovableObjectFactory for type 'ParticleSystem' registered.
+ArchiveFactory for archive type FileSystem registered.
+DDS codec registering
+stb_image - v2.27 - public domain JPEG/PNG reader
+Supported formats: jpeg,jpg,png,bmp,psd,tga,gif,pic,ppm,pgm
+OITD codec registering
+Registering ResourceManager for type HighLevelGpuProgram
+MovableObjectFactory for type 'Decal' registered.
+MovableObjectFactory for type 'InternalCubemapProbe' registered.
+MovableObjectFactory for type 'Entity' registered.
+MovableObjectFactory for type 'Item' registered.
+MovableObjectFactory for type 'Light' registered.
+MovableObjectFactory for type 'Rectangle2Dv2' registered.
+MovableObjectFactory for type 'BillboardSet' registered.
+MovableObjectFactory for type 'ManualObject2' registered.
+MovableObjectFactory for type 'BillboardChain' registered.
+MovableObjectFactory for type 'RibbonTrail' registered.
+MovableObjectFactory for type 'WireAabb' registered.
+*-*-* OGRE Initialising
+*-*-* Version 3.0.0 (Eris)
+Installing plugin: NULL RenderSystem
+Plugin successfully installed
+CPU Identifier & Features
+-------------------------
+ *   CPU ID: AuthenticAMD: AMD EPYC 9V74 80-Core Processor
+ *   Logical cores: 9
+ *      SSE: yes
+ *     SSE2: yes
+ *     SSE3: yes
+ *      MMX: yes
+ *   MMXEXT: yes
+ *    3DNOW: no
+ * 3DNOWEXT: no
+ *     CMOV: yes
+ *      TSC: yes
+ *      FPU: yes
+ *      PRO: yes
+ *       HT: no
+-------------------------
+DefaultWorkQueue('Root') initialising on thread 140672017179648.
+DefaultWorkQueue('Root')::WorkerFunc - thread 140671970633408 starting.
+DefaultWorkQueue('Root')::WorkerFunc - thread 140671962240704 starting.
+Particle Renderer Type 'billboard' registered
+Added resource location 'Assets/Textures' of type 'FileSystem' to resource group 'General'
+Added resource location 'Assets/Compositors' of type 'FileSystem' to resource group 'General'
+Added resource location 'Vendor/ogre-next/Samples/Media/models' of type 'FileSystem' to resource group 'General'
+Parsing scripts for resource group Autodetect
+Finished parsing scripts for resource group Autodetect
+Creating resources for group Autodetect
+All done
+Parsing scripts for resource group General
+Parsing script PlagC.compositor
+Finished parsing scripts for resource group General
+Creating resources for group General
+All done
+Parsing scripts for resource group Internal
+Finished parsing scripts for resource group Internal
+Creating resources for group Internal
+All done
+[PASS] unsubscribe during dispatch; new subscription deferred
+[PASS] subscriptions become visible next dispatch
+[PASS] synchronous event dispatch supports reentrancy
+[PASS] cross-thread events preserve each producer's order
+[PASS] bounded event queue reports overflow
+[PASS] dispatch enforces owning thread
+[PASS] connection safely outlives bus
+[PASS] throwing callback restores dispatcher state
+[PASS] 24,000 jobs, four concurrent producers, exactly once
+[PASS] nested worker submission and helping waits
+[PASS] job exception counted; worker survives
+[PASS] self-group wait rejected instead of deadlocking
+[PASS] idle workers wake repeatedly without lost jobs
+[PASS] workers steal owner-queued jobs
+[PASS] submitted/executed accounting agrees after waits
+[STATS] submitted=26147 executed=26147 stolen=732 failed=2
+[PASS] bounded pool reports Full without allocation or blocking
+[PASS] shutdown drains all accepted jobs
+[PASS] submission rejected after shutdown
+[PASS] shutdown is idempotent
+[PASS] shutdown races safely with four active producers
+[2026-10-22 12:22:34.705] [info] [SANDBOX] [Worker-0:140672017163968] worker logging validation
+[2026-10-22 12:22:34.705] [info] [SANDBOX] [Worker-3:140671991985856] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-2:140672000378560] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-1:140672008771264] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-0:140672017163968] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-3:140671991985856] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-0:140672017163968] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-2:140672000378560] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-3:140671991985856] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-0:140672017163968] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-3:140671991985856] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-0:140672017163968] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-1:140672008771264] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-0:140672017163968] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-3:140671991985856] worker logging validation
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Worker-2:140672000378560] worker logging validation
+[PASS] worker identity and structured logging snapshots
+[PASS] GLFW window creation, title and resize
+[2026-10-22 12:22:34.706] [info] [SANDBOX] [Main:140672017179648] All automated Phase 1 checks passed
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] in-use renderer resources cannot be destroyed
+[PASS] stale renderer handle is rejected
+[PASS] invalid mesh index rejected before GPU upload
+[PASS] renderer enforces main-thread ownership
+Mesh: Loading robot.mesh.
+Skeleton: Loading robot.skeleton
+WARNING: robot.mesh is an older format ([MeshSerializer_v1.8]); you should upgrade it as soon as possible using the OgreMeshTool tool.
+Can't assign material Examples/Robot because this Material does not exist. Have you forgotten to define it in a .material script?
+[PASS] legacy model imports skeletal animation
+[PASS] animation request on static mesh is rejected
+[PASS] invalid target resize preserves live target
+[PASS] zero-size framebuffer pauses rendering
+[PASS] scene resource counts match client ownership
+[INFO] Scene ready; W wireframe, S shadows, Escape closes
+[2026-10-22 12:22:34.711] [info] [EVENT] [Main:140672017179648] FramebufferResize code=0 x=960.000000 y=540.000000
+[2026-10-22 12:22:34.711] [info] [EVENT] [Main:140672017179648] Resize code=0 x=960.000000 y=540.000000
+[PASS] Ogre advances frames through Sandbox
+[PASS] client releases every scene resource before renderer shutdown
+[PASS] programmatic close request
+DefaultWorkQueue('Root') shutting down on thread 140672017179648.
+DefaultWorkQueue('Root')::WorkerFunc - thread 140671970633408 stopped.
+DefaultWorkQueue('Root')::WorkerFunc - thread 140671962240704 stopped.
+*-*-* OGRE Shutdown
+Unregistering ResourceManager for type OldSkeleton
+Unregistering ResourceManager for type Mesh2
+Unregistering ResourceManager for type Mesh
+Unregistering ResourceManager for type Material
+Unregistering ResourceManager for type HighLevelGpuProgram
+[2026-10-22 12:22:34.724] [info] [CORE] [Main:140672017179648] Shutdown complete

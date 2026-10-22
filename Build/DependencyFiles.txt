@@ -1,0 +1,9 @@
+# Required source markers. Paths are relative to the repository root.
+Vendor/glfw/include/GLFW/glfw3.h
+Vendor/glfw/src/platform.c
+Vendor/spdlog/include/spdlog/spdlog.h
+Vendor/spdlog/src/spdlog.cpp
+Vendor/rapidjson/include/rapidjson/document.h
+Vendor/ogre-next/OgreMain/include/OgreRoot.h
+Vendor/ogre-next/Components/Hlms/Pbs/include/OgreHlmsPbs.h
+Vendor/ogre-next/RenderSystems/GL3Plus/include/OgreGL3PlusRenderSystem.h

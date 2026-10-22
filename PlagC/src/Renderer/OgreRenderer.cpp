@@ -1,0 +1,686 @@
+#include <PlagC/Renderer/Renderer.h>
+#include <PlagC/Window.h>
+#include <PlagC/Thread.h>
+#include <OgreRoot.h>
+#include <OgreWorkQueue.h>
+#include <OgreImage2.h>
+#include <OgreWindow.h>
+#include <OgreRenderSystem.h>
+#include <OgreSceneManager.h>
+#include <OgreSceneNode.h>
+#include <OgreCamera.h>
+#include <OgreItem.h>
+#include <OgreLight.h>
+#include <OgreMeshManager.h>
+#include <OgreMeshManager2.h>
+#include <OgreMesh2.h>
+#include <OgreSubMesh2.h>
+#include <OgreArchiveManager.h>
+#include <OgreResourceGroupManager.h>
+#include <OgreHlmsManager.h>
+#include <OgreHlmsPbs.h>
+#include <OgreHlmsPbsDatablock.h>
+#include <OgreHlmsUnlit.h>
+#include <OgreHlmsUnlitDatablock.h>
+#include <OgreTextureGpu.h>
+#include <OgreTextureGpuManager.h>
+#include <OgreNULLPlugin.h>
+#ifndef PC_OGRE_NULL_ONLY
+#include <OgreGL3PlusPlugin.h>
+#endif
+#include <Compositor/OgreCompositorManager2.h>
+#include <Animation/OgreSkeletonInstance.h>
+#include <Animation/OgreSkeletonAnimation.h>
+#include <Vao/OgreVaoManager.h>
+#include <Vao/OgreVertexArrayObject.h>
+#include <Vao/OgreVertexBufferPacked.h>
+#include <Vao/OgreIndexBufferPacked.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <stdexcept>
+#include <unordered_map>
+namespace PlagC
+{
+namespace
+{
+std::atomic<std::uint64_t> sequence{1};
+std::uint64_t ID()
+{
+    return sequence.fetch_add(1);
+}
+Ogre::Vector3 V(Vec3 v)
+{
+    return {v.x, v.y, v.z};
+}
+Ogre::ColourValue C(Vec3 v)
+{
+    return Ogre::ColourValue(v.x, v.y, v.z, 1);
+}
+bool Finite(Vec3 v)
+{
+    return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+}
+void Require(bool ok, const char *text)
+{
+    if (!ok)
+        throw std::invalid_argument(text);
+}
+template <class Map, class Handle> auto &Get(Map &map, Handle h)
+{
+    Thread::RequireMain();
+    auto i = map.find(h.value);
+    if (i == map.end())
+        throw std::invalid_argument("invalid or stale renderer handle");
+    return i->second;
+}
+std::string Name(const char *kind, std::uint64_t id)
+{
+    return std::string("PlagC/") + kind + std::to_string(id);
+}
+template <class T> T *RegisterHlms(Ogre::Root &root, const std::string &media)
+{
+    Ogre::String main;
+    Ogre::StringVector libs;
+    T::getDefaultPaths(main, libs);
+    auto &archives = Ogre::ArchiveManager::getSingleton();
+    Ogre::ArchiveVec paths;
+    for (const auto &lib : libs)
+        paths.push_back(archives.load(media + "/" + lib, "FileSystem", true));
+    auto result =
+        std::make_unique<T>(archives.load(media + "/" + main, "FileSystem", true), &paths);
+    auto *ptr = result.get();
+    root.getHlmsManager()->registerHlms(result.release());
+    return ptr;
+}
+} // namespace
+struct Renderer::Impl
+{
+    // Root is destroyed before its externally owned static plugin.
+    std::unique_ptr<Ogre::Plugin> plugin;
+    std::unique_ptr<Ogre::Root> root;
+    Ogre::Window *output = nullptr;
+    Ogre::SceneManager *scene = nullptr;
+    Ogre::Camera *camera = nullptr;
+    Ogre::SceneNode *cameraNode = nullptr;
+    Ogre::HlmsPbs *pbs = nullptr;
+    Ogre::HlmsUnlit *unlit = nullptr;
+    Ogre::CompositorWorkspace *workspace = nullptr;
+    bool nullBackend = false, offscreen = false, paused = false;
+    RenderSettings settings;
+    RenderStats stats;
+    std::string workspaceName;
+    struct Mesh
+    {
+        Ogre::MeshPtr value;
+    };
+    struct Material
+    {
+        Ogre::HlmsDatablock *value;
+        MaterialModel model;
+    };
+    struct Object
+    {
+        Ogre::Item *value;
+        Ogre::SceneNode *node;
+        MeshHandle mesh;
+        MaterialHandle material;
+        Ogre::SkeletonAnimation *animation = nullptr;
+        float speed = 1;
+    };
+    struct Light
+    {
+        Ogre::Light *value;
+        Ogre::SceneNode *node;
+    };
+    struct Target
+    {
+        Ogre::TextureGpu *value;
+        Ogre::CompositorWorkspace *workspace;
+        unsigned width, height;
+    };
+    std::unordered_map<std::uint64_t, Mesh> meshes;
+    std::unordered_map<std::uint64_t, Material> materials;
+    std::unordered_map<std::uint64_t, Object> objects;
+    std::unordered_map<std::uint64_t, Light> lights;
+    std::unordered_map<std::uint64_t, Target> targets;
+    ~Impl()
+    {
+        if (root && scene)
+        {
+            root->getCompositorManager2()->removeAllWorkspaces();
+            workspace = nullptr;
+            for (auto &[id, t] : targets)
+                root->getRenderSystem()->getTextureGpuManager()->destroyTexture(t.value);
+            targets.clear();
+            root->destroySceneManager(scene);
+            scene = nullptr;
+            objects.clear();
+            lights.clear();
+            meshes.clear();
+            materials.clear();
+        }
+        root.reset();
+    }
+    void Workspaces()
+    {
+        auto *cm = root->getCompositorManager2();
+        if (workspace)
+        {
+            cm->removeWorkspace(workspace);
+            workspace = nullptr;
+        }
+        for (auto &[id, t] : targets)
+        {
+            cm->removeWorkspace(t.workspace);
+            t.workspace = nullptr;
+        }
+        if (!workspaceName.empty())
+        {
+            cm->removeWorkspaceDefinition(workspaceName);
+            cm->removeNodeDefinition("AutoGen " +
+                                     Ogre::IdString(workspaceName + "/Node").getReleaseText());
+        }
+        workspaceName = Name("Workspace", ID());
+        cm->createBasicWorkspaceDef(workspaceName, C(settings.background),
+                                    settings.shadows ? Ogre::IdString("PlagCShadow")
+                                                     : Ogre::IdString());
+        // Ogre 3.0 NULL has incomplete window-depth and VAO draw behavior.
+        // NULL tests resource/lifecycle APIs; only real GL backends execute draws.
+        if (output && !nullBackend)
+            workspace = cm->addWorkspace(scene, output->getTexture(), camera, workspaceName, true);
+        for (auto &[id, t] : targets)
+            t.workspace = cm->addWorkspace(scene, t.value, camera, workspaceName, !nullBackend);
+    }
+};
+Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::make_unique<Impl>())
+{
+    Thread::RequireMain();
+    auto &p = *impl_;
+    p.nullBackend = config.nullBackend;
+    p.offscreen = config.offscreen;
+    Require(config.nullBackend || config.offscreen || (window && window->NativeHandle().value),
+            "native renderer needs a native window");
+    Require(std::filesystem::is_directory(config.mediaRoot + "/Hlms"),
+            "Ogre media missing; initialize submodules and run from project root");
+    p.root = std::make_unique<Ogre::Root>(nullptr, "", "", "Logs/Ogre.log", "PlagC");
+    if (config.nullBackend)
+        p.plugin = std::make_unique<Ogre::NULLPlugin>();
+#ifndef PC_OGRE_NULL_ONLY
+    else
+        p.plugin = std::make_unique<Ogre::GL3PlusPlugin>();
+#else
+    else
+        throw std::runtime_error("native renderer excluded by --null-platform build");
+#endif
+    static_cast<Ogre::DefaultWorkQueueBase *>(p.root->getWorkQueue())->setWorkerThreadCount(2);
+    p.root->installPlugin(p.plugin.get(), nullptr);
+    p.root->setRenderSystem(p.root->getAvailableRenderers().front());
+    if (config.offscreen)
+    {
+#if defined(__linux__) && !defined(PC_OGRE_NULL_ONLY)
+        p.root->getRenderSystem()->setConfigOption("Interface", "Headless EGL / PBuffer");
+#else
+        throw std::invalid_argument("--offscreen requires a native Linux build with EGL");
+#endif
+    }
+    p.root->initialise(false);
+    Ogre::NameValuePairList options;
+    options["vsync"] = "true";
+    if (!config.nullBackend && !config.offscreen)
+    {
+        options["externalWindowHandle"] = std::to_string(window->NativeHandle().value);
+#ifdef __APPLE__
+        options["macAPI"] = "cocoa";
+        options["macAPICocoaUseNSView"] = "false";
+#endif
+    }
+    p.output =
+        p.root->createRenderWindow("PlagC", window ? unsigned(window->Width()) : 640,
+                                   window ? unsigned(window->Height()) : 360, false, &options);
+    p.pbs = RegisterHlms<Ogre::HlmsPbs>(*p.root, config.mediaRoot);
+    p.unlit = RegisterHlms<Ogre::HlmsUnlit>(*p.root, config.mediaRoot);
+    auto &resources = Ogre::ResourceGroupManager::getSingleton();
+    for (const auto &dir : {config.assetsRoot + "/Textures", config.assetsRoot + "/Compositors",
+                            config.mediaRoot + "/models"})
+        resources.addResourceLocation(dir, "FileSystem", "General");
+    resources.initialiseAllResourceGroups(true);
+    p.scene = p.root->createSceneManager(Ogre::ST_GENERIC, 1, "PlagCScene");
+    p.scene->setShadowDirectionalLightExtrusionDistance(50);
+    p.scene->setShadowFarDistance(50);
+    p.scene->setAmbientLight(Ogre::ColourValue(.3f, .3f, .35f), Ogre::ColourValue(.1f, .1f, .12f),
+                             Ogre::Vector3::UNIT_Y);
+    p.camera = p.scene->createCamera("PlagCCamera");
+    p.camera->detachFromParent();
+    p.cameraNode = p.scene->getRootSceneNode()->createChildSceneNode();
+    p.cameraNode->attachObject(p.camera);
+    SetCamera({});
+    SetSettings({});
+}
+Renderer::~Renderer()
+{
+    Thread::RequireMain();
+}
+MeshHandle Renderer::CreateMesh(const MeshData &data)
+{
+    Thread::RequireMain();
+    Require(!data.vertices.empty() && !data.indices.empty() && data.indices.size() % 3 == 0,
+            "mesh must contain triangles");
+    for (const auto &v : data.vertices)
+        Require(Finite(v.position) && Finite(v.normal) && std::isfinite(v.u) && std::isfinite(v.v),
+                "nonfinite vertex");
+    for (auto i : data.indices)
+        Require(i < data.vertices.size(), "mesh index out of range");
+    auto &p = *impl_;
+    auto id = ID();
+    auto &manager = Ogre::MeshManager::getSingleton();
+    auto mesh = manager.createManual(Name("Mesh", id), "General");
+    auto *vm = p.root->getRenderSystem()->getVaoManager();
+    Ogre::VertexBufferPacked *vb = nullptr;
+    Ogre::IndexBufferPacked *ib = nullptr;
+    Ogre::VertexArrayObject *vao = nullptr;
+    try
+    {
+        Ogre::VertexElement2Vec elements{{Ogre::VET_FLOAT3, Ogre::VES_POSITION},
+                                         {Ogre::VET_FLOAT3, Ogre::VES_NORMAL},
+                                         {Ogre::VET_FLOAT2, Ogre::VES_TEXTURE_COORDINATES}};
+        vb = vm->createVertexBuffer(elements, data.vertices.size(), Ogre::BT_IMMUTABLE,
+                                    const_cast<Vertex *>(data.vertices.data()), false);
+        ib = vm->createIndexBuffer(Ogre::IndexBufferPacked::IT_32BIT, data.indices.size(),
+                                   Ogre::BT_IMMUTABLE,
+                                   const_cast<std::uint32_t *>(data.indices.data()), false);
+        vao = vm->createVertexArrayObject({vb}, ib, Ogre::OT_TRIANGLE_LIST);
+        auto *sub = mesh->createSubMesh();
+        sub->mVao[Ogre::VpNormal].push_back(vao);
+        sub->mVao[Ogre::VpShadow].push_back(vao);
+        vao = nullptr;
+        vb = nullptr;
+        ib = nullptr;
+        Ogre::Vector3 lo = V(data.vertices[0].position), hi = lo;
+        for (const auto &v : data.vertices)
+        {
+            lo.makeFloor(V(v.position));
+            hi.makeCeil(V(v.position));
+        }
+        mesh->_setBounds(Ogre::Aabb((lo + hi) * .5f, (hi - lo) * .5f), false);
+        mesh->_setBoundingSphereRadius(std::max(lo.length(), hi.length()));
+        p.meshes.emplace(id, Impl::Mesh{mesh});
+    }
+    catch (...)
+    {
+        if (vao)
+            vm->destroyVertexArrayObject(vao);
+        if (ib)
+            vm->destroyIndexBuffer(ib);
+        if (vb)
+            vm->destroyVertexBuffer(vb);
+        manager.remove(mesh->getHandle());
+        throw;
+    }
+    return {id};
+}
+MeshHandle Renderer::LoadModel(const std::string &resource, bool legacy)
+{
+    Thread::RequireMain();
+    auto id = ID();
+    Ogre::MeshPtr mesh;
+    if (legacy)
+    {
+        auto old = Ogre::v1::MeshManager::getSingleton().load(resource, "General");
+        mesh = Ogre::MeshManager::getSingleton().createByImportingV1(Name("Model", id), "General",
+                                                                     old.get(), true, true, true);
+    }
+    else
+        mesh = Ogre::MeshManager::getSingleton().load(resource, "General");
+    impl_->meshes.emplace(id, Impl::Mesh{mesh});
+    return {id};
+}
+void Renderer::DestroyMesh(MeshHandle h)
+{
+    auto &p = *impl_;
+    auto &m = Get(p.meshes, h);
+    for (auto &[id, o] : p.objects)
+        if (o.mesh.value == h.value)
+            throw std::logic_error("mesh still referenced by object");
+    Ogre::MeshManager::getSingleton().remove(m.value->getHandle());
+    p.meshes.erase(h.value);
+}
+MaterialHandle Renderer::CreateMaterial(const MaterialDesc &d)
+{
+    Thread::RequireMain();
+    auto &p = *impl_;
+    auto id = ID();
+    auto name = Name("Material", id);
+    Ogre::Hlms *hlms = d.model == MaterialModel::Pbr ? static_cast<Ogre::Hlms *>(p.pbs) : p.unlit;
+    Ogre::HlmsMacroblock macro;
+    macro.mPolygonMode = p.settings.wireframe ? Ogre::PM_WIREFRAME : Ogre::PM_SOLID;
+    auto *db = hlms->createDatablock(name, name, macro, Ogre::HlmsBlendblock(), {});
+    p.materials.emplace(id, Impl::Material{db, d.model});
+    try
+    {
+        UpdateMaterial({id}, d);
+    }
+    catch (...)
+    {
+        p.materials.erase(id);
+        hlms->destroyDatablock(name);
+        throw;
+    }
+    return {id};
+}
+void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
+{
+    auto &m = Get(impl_->materials, h);
+    Require(m.model == d.model, "material model is immutable");
+    Require(Finite(d.colour) && std::isfinite(d.roughness) && std::isfinite(d.metallic) &&
+                d.roughness >= 0 && d.roughness <= 1 && d.metallic >= 0 && d.metallic <= 1,
+            "invalid material values");
+    if (d.model == MaterialModel::Pbr)
+    {
+        auto *b = static_cast<Ogre::HlmsPbsDatablock *>(m.value);
+        b->setWorkflow(Ogre::HlmsPbsDatablock::MetallicWorkflow);
+        b->setDiffuse(V(d.colour));
+        b->setRoughness(std::max(.02f, d.roughness));
+        b->setMetalness(d.metallic);
+        b->setTexture(Ogre::PBSM_DIFFUSE, d.colourTexture);
+    }
+    else
+    {
+        auto *b = static_cast<Ogre::HlmsUnlitDatablock *>(m.value);
+        b->setUseColour(true);
+        b->setColour(C(d.colour));
+        b->setTexture(0, d.colourTexture);
+    }
+}
+void Renderer::DestroyMaterial(MaterialHandle h)
+{
+    auto &p = *impl_;
+    auto &m = Get(p.materials, h);
+    for (auto &[id, o] : p.objects)
+        if (o.material.value == h.value)
+            throw std::logic_error("material still referenced by object");
+    m.value->getCreator()->destroyDatablock(m.value->getName());
+    p.materials.erase(h.value);
+}
+ObjectHandle Renderer::CreateObject(MeshHandle mesh, MaterialHandle material, const Transform &t)
+{
+    auto &p = *impl_;
+    auto &m = Get(p.meshes, mesh);
+    auto &d = Get(p.materials, material);
+    auto id = ID();
+    auto *item = p.scene->createItem(m.value, Ogre::SCENE_DYNAMIC);
+    Ogre::SceneNode *node = nullptr;
+    try
+    {
+        item->setDatablock(d.value);
+        node = p.scene->getRootSceneNode()->createChildSceneNode();
+        node->attachObject(item);
+        p.objects.emplace(id, Impl::Object{item, node, mesh, material});
+        SetTransform({id}, t);
+    }
+    catch (...)
+    {
+        p.objects.erase(id);
+        p.scene->destroyItem(item);
+        if (node)
+            p.scene->destroySceneNode(node);
+        throw;
+    }
+    return {id};
+}
+void Renderer::SetTransform(ObjectHandle h, const Transform &t)
+{
+    auto &o = Get(impl_->objects, h);
+    Require(Finite(t.position) && Finite(t.rotationDegrees) && Finite(t.scale) && t.scale.x > 0 &&
+                t.scale.y > 0 && t.scale.z > 0,
+            "invalid transform");
+    o.node->setPosition(V(t.position));
+    o.node->setScale(V(t.scale));
+    o.node->setOrientation(
+        Ogre::Quaternion(Ogre::Degree(t.rotationDegrees.y), Ogre::Vector3::UNIT_Y) *
+        Ogre::Quaternion(Ogre::Degree(t.rotationDegrees.x), Ogre::Vector3::UNIT_X) *
+        Ogre::Quaternion(Ogre::Degree(t.rotationDegrees.z), Ogre::Vector3::UNIT_Z));
+}
+void Renderer::SetVisible(ObjectHandle h, bool v)
+{
+    Get(impl_->objects, h).value->setVisible(v);
+}
+void Renderer::SetCastShadows(ObjectHandle h, bool v)
+{
+    Get(impl_->objects, h).value->setCastShadows(v);
+}
+void Renderer::SetRenderQueue(ObjectHandle h, std::uint8_t q)
+{
+    Require(q > 0 && q < 200, "queue must be a v2 scene queue 1..199");
+    Get(impl_->objects, h).value->setRenderQueueGroup(q);
+}
+void Renderer::DestroyObject(ObjectHandle h)
+{
+    auto &p = *impl_;
+    auto o = Get(p.objects, h);
+    p.scene->destroyItem(o.value);
+    p.scene->destroySceneNode(o.node);
+    p.objects.erase(h.value);
+}
+LightHandle Renderer::CreateLight(const LightDesc &d)
+{
+    Thread::RequireMain();
+    auto &p = *impl_;
+    auto id = ID();
+    auto *light = p.scene->createLight();
+    auto *node = p.scene->getRootSceneNode()->createChildSceneNode();
+    node->attachObject(light);
+    p.lights.emplace(id, Impl::Light{light, node});
+    try
+    {
+        UpdateLight({id}, d);
+    }
+    catch (...)
+    {
+        DestroyLight({id});
+        throw;
+    }
+    return {id};
+}
+void Renderer::UpdateLight(LightHandle h, const LightDesc &d)
+{
+    auto &l = Get(impl_->lights, h);
+    Require(Finite(d.position) && Finite(d.direction) && V(d.direction).squaredLength() > 0 &&
+                Finite(d.colour) && std::isfinite(d.power) && d.power >= 0 &&
+                std::isfinite(d.radius) && d.radius > 0 && d.innerAngle > 0 &&
+                d.outerAngle > d.innerAngle && d.outerAngle < 180,
+            "invalid light");
+    l.node->setPosition(V(d.position));
+    l.value->setType(d.type == LightType::Directional ? Ogre::Light::LT_DIRECTIONAL
+                     : d.type == LightType::Point     ? Ogre::Light::LT_POINT
+                                                      : Ogre::Light::LT_SPOTLIGHT);
+    l.value->setDirection(V(d.direction).normalisedCopy());
+    l.value->setDiffuseColour(C(d.colour));
+    l.value->setSpecularColour(C(d.colour));
+    l.value->setPowerScale(d.power);
+    l.value->setAttenuationBasedOnRadius(d.radius, .01f);
+    l.value->setSpotlightRange(Ogre::Degree(d.innerAngle), Ogre::Degree(d.outerAngle));
+}
+void Renderer::DestroyLight(LightHandle h)
+{
+    auto &p = *impl_;
+    auto l = Get(p.lights, h);
+    p.scene->destroyLight(l.value);
+    p.scene->destroySceneNode(l.node);
+    p.lights.erase(h.value);
+}
+void Renderer::SetCamera(const CameraDesc &d)
+{
+    Thread::RequireMain();
+    Require(Finite(d.position) && Finite(d.target) &&
+                (V(d.position) - V(d.target)).squaredLength() > 0 && d.fov > 1 && d.fov < 179 &&
+                d.nearClip > 0 && d.farClip > d.nearClip,
+            "invalid camera");
+    auto &p = *impl_;
+    p.cameraNode->setPosition(V(d.position));
+    p.cameraNode->lookAt(V(d.target), Ogre::Node::TS_PARENT);
+    p.camera->setFOVy(Ogre::Degree(d.fov));
+    p.camera->setNearClipDistance(d.nearClip);
+    p.camera->setFarClipDistance(d.farClip);
+    p.camera->setAutoAspectRatio(true);
+}
+void Renderer::SetSettings(const RenderSettings &d)
+{
+    Thread::RequireMain();
+    Require(Finite(d.background), "nonfinite background");
+    auto &p = *impl_;
+    p.settings = d;
+    for (auto &[id, m] : p.materials)
+    {
+        auto block = *m.value->getMacroblock();
+        block.mPolygonMode = d.wireframe ? Ogre::PM_WIREFRAME : Ogre::PM_SOLID;
+        m.value->setMacroblock(block);
+    }
+    if (p.output)
+        p.output->setVSync(d.vsync, 1);
+    p.Workspaces();
+}
+std::vector<std::string> Renderer::Animations(ObjectHandle h) const
+{
+    auto &o = Get(impl_->objects, h);
+    std::vector<std::string> result;
+    if (auto *skeleton = o.value->getSkeletonInstance())
+        for (auto &a : skeleton->getAnimations())
+            result.push_back(a.getName().getFriendlyText());
+    return result;
+}
+void Renderer::StopAnimation(ObjectHandle h)
+{
+    auto &o = Get(impl_->objects, h);
+    if (o.animation)
+        o.animation->setEnabled(false);
+    o.animation = nullptr;
+}
+void Renderer::PlayAnimation(ObjectHandle h, const std::string &name, bool loop, float speed)
+{
+    auto &o = Get(impl_->objects, h);
+    Require(std::isfinite(speed), "nonfinite animation speed");
+    auto *skeleton = o.value->getSkeletonInstance();
+    Require(skeleton != nullptr, "object has no skeleton");
+    for (auto &a : skeleton->getAnimationsNonConst())
+        if (a.getName() == Ogre::IdString(name))
+        {
+            StopAnimation(h);
+            o.animation = &a;
+            o.speed = speed;
+            a.setLoop(loop);
+            a.setTime(0);
+            a.setEnabled(true);
+            return;
+        }
+    throw std::invalid_argument("animation not found");
+}
+TargetHandle Renderer::CreateTarget(unsigned w, unsigned h)
+{
+    Thread::RequireMain();
+    Require(w && h && w <= 8192 && h <= 8192, "invalid render target size");
+    auto &p = *impl_;
+    auto id = ID();
+    auto *tm = p.root->getRenderSystem()->getTextureGpuManager();
+    auto *t = tm->createTexture(Name("Target", id), Ogre::GpuPageOutStrategy::Discard,
+                                Ogre::TextureFlags::RenderToTexture, Ogre::TextureTypes::Type2D);
+    try
+    {
+        t->_setDepthBufferDefaults(1, true, Ogre::PFG_D32_FLOAT);
+        t->setResolution(w, h);
+        t->setPixelFormat(Ogre::PFG_RGBA8_UNORM_SRGB);
+        t->scheduleTransitionTo(Ogre::GpuResidency::Resident);
+        auto *ws = p.root->getCompositorManager2()->addWorkspace(p.scene, t, p.camera,
+                                                                 p.workspaceName, !p.nullBackend);
+        p.targets.emplace(id, Impl::Target{t, ws, w, h});
+    }
+    catch (...)
+    {
+        tm->destroyTexture(t);
+        throw;
+    }
+    return {id};
+}
+void Renderer::ResizeTarget(TargetHandle h, unsigned w, unsigned height)
+{
+    auto &p = *impl_;
+    Get(p.targets, h);
+    auto replacement = CreateTarget(w, height);
+    auto value = p.targets.at(replacement.value);
+    DestroyTarget(h);
+    p.targets.emplace(h.value, value);
+    p.targets.erase(replacement.value);
+}
+void Renderer::DestroyTarget(TargetHandle h)
+{
+    auto &p = *impl_;
+    auto t = Get(p.targets, h);
+    p.root->getCompositorManager2()->removeWorkspace(t.workspace);
+    p.root->getRenderSystem()->getTextureGpuManager()->destroyTexture(t.value);
+    p.targets.erase(h.value);
+}
+void Renderer::CaptureTarget(TargetHandle h, const std::string &path)
+{
+    auto &t = Get(impl_->targets, h);
+    if (impl_->nullBackend)
+        throw std::logic_error("NULL renderer cannot capture pixels");
+    Ogre::Image2 image;
+    image.convertFromTexture(t.value, 0, 0);
+    std::ofstream file(path, std::ios::binary);
+    file << "P6\n" << image.getWidth() << " " << image.getHeight() << "\n255\n";
+    for (unsigned y = 0; y < image.getHeight(); ++y)
+        for (unsigned x = 0; x < image.getWidth(); ++x)
+        {
+            auto c = image.getColourAt(x, y, 0);
+            for (float v : {c.r, c.g, c.b})
+                file.put(static_cast<char>(std::clamp(v, 0.f, 1.f) * 255.f));
+        }
+    if (!file)
+        throw std::runtime_error("capture write failed");
+}
+void Renderer::Resize(unsigned w, unsigned h)
+{
+    Thread::RequireMain();
+    auto &p = *impl_;
+    p.paused = !w || !h;
+    if (p.paused)
+        return;
+    if (p.output)
+    {
+        if (p.nullBackend || p.offscreen)
+            p.output->requestResolution(w, h);
+        else
+            p.output->windowMovedOrResized();
+    }
+}
+void Renderer::Render(double dt)
+{
+    Thread::RequireMain();
+    Require(std::isfinite(dt) && dt >= 0, "invalid frame delta");
+    auto &p = *impl_;
+    if (p.paused)
+        return;
+    auto start = std::chrono::steady_clock::now();
+    for (auto &[id, o] : p.objects)
+        if (o.animation)
+            o.animation->addTime(float(std::min(dt, .25)) * o.speed);
+    if (!p.root->renderOneFrame())
+        throw std::runtime_error("Ogre stopped rendering");
+    ++p.stats.frames;
+    p.stats.cpuMilliseconds =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+}
+RenderStats Renderer::Statistics() const
+{
+    Thread::RequireMain();
+    auto s = impl_->stats;
+    s.objects = impl_->objects.size();
+    s.meshes = impl_->meshes.size();
+    s.materials = impl_->materials.size();
+    s.lights = impl_->lights.size();
+    return s;
+}
+} // namespace PlagC
