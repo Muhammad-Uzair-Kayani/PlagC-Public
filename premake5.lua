@@ -53,24 +53,34 @@ project "PlagC"
     cppdialect "C++20"
     common()
     warnings "Extra"
+    filter "toolset:msc*"
+        -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
+        disablewarnings { "4324" }
+    filter {}
     files { "PlagC/include/**.h", "PlagC/src/**.cpp" }
     enginePch("PlagC/src/pgcpch.cpp")
     includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include" }
     defines { "SPDLOG_COMPILED_LIB" }
     ogreIncludes()
-    ogreLinks()
-    links { "GLFW", "spdlog" }
+    -- Static archives contain only their own object files.
+    dependson { "GLFW", "spdlog", "OgreMain", "OgreHlmsCommon", "OgreHlmsPbs", "OgreHlmsUnlit", "OgreRenderNULL" }
+    if not _OPTIONS["null-platform"] then dependson { "OgreRenderGL3Plus" } end
 project "Sandbox"
     kind "ConsoleApp"
     language "C++"
     cppdialect "C++20"
     common()
     warnings "Extra"
+    filter "toolset:msc*"
+        -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
+        disablewarnings { "4324" }
+    filter {}
     files { "Sandbox/src/**.cpp", "Sandbox/src/**.h" }
     enginePch("Sandbox/src/pgcpch.cpp")
     includedirs { "PlagC/include" }
     links { "PlagC", "GLFW", "spdlog" }
     ogreLinks()
+    ogreSystemLinks()
     debugdir "%{wks.location}/../.."
     filter "system:windows"
         links { "gdi32", "user32", "shell32" }

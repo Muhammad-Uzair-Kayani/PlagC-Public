@@ -73,3 +73,38 @@ message has not been suppressed. Native Windows/GLX/Cocoa behavior is unverified
 
 The lifecycle and APIs are ready for those checks. Skybox/environment-map support
 and the broader rendering scope listed above remain open work, not completed items.
+
+## PCH and Windows build correction
+
+PlagC and Sandbox now include `pgcpch.h` first in each translation unit.
+`Build/Pch/pgcpch.h` collects stable standard-library headers; each target owns
+its `pgcpch.cpp` and compiler-generated PCH. Public headers keep their direct
+includes and remain independently includable. Ogre, GLFW and spdlog headers
+remain in backend implementation files; vendor projects do not use the engine
+PCH. Premake configures PCH creation/use for both engine and Sandbox.
+
+The Windows integration uses MBCS for the pinned Ogre narrow Win32 API code,
+sets `_CRT_SECURE_NO_WARNINGS` only on Ogre's MSVC targets, and excludes the
+MinGW CRT shim from MSVC. Missing OgreMain.lib was a downstream symptom of
+Ogre compilation failures. System import libraries are linked only into the
+final Sandbox executable, not folded into static archives. Engine target
+warning 4324 is disabled for intentional cache-line padding; Ogre header
+CRT, macro-redefinition, conversion and alignment warnings are scoped around
+the vendor includes. Engine code keeps its CRT diagnostics.
+
+After pulling on Windows, close Visual Studio, rerun `GenerateProjects.bat`,
+open the regenerated solution, and use **Rebuild Solution** (Debug/x64 first).
+This removes old archives that may contain imported system-library members.
+Then run `Scripts\Validate.bat` in a VS2022 Developer Command Prompt and the
+native rendering checks above. Do not copy an OgreMain.lib from a different
+configuration to work around a compile failure.
+
+Verification (2026-10-22): generated VS2022 Debug/Release/Dist projects checked
+for PCH Create/Use, Ogre MBCS and CRT definitions, MSVC shim exclusion, and
+system imports only on the executable. All public engine headers passed
+standalone GCC C++20 syntax checks. Linux Debug Null-backend build succeeded
+with real PCH compilation; Sandbox `--headless --workers 1` and
+`--null --workers 4` both exited successfully after automated checks and clean
+shutdown. Existing Ogre GCC visibility/unused-parameter warnings remain.
+Windows/MSVC execution and native graphics validation are still pending on a
+Windows host; generating a VS solution is not an MSVC build.

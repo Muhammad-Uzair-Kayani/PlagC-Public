@@ -6,7 +6,9 @@ function ogreIncludes()
     if _OPTIONS['null-platform'] then defines {'PC_OGRE_NULL_ONLY'} end
     filter 'system:windows'
         includedirs {base..'/OgreMain/include/WIN32'}
-        defines {'NOMINMAX','WIN32_LEAN_AND_MEAN'}
+        defines {'NOMINMAX'}
+        -- This Ogre revision uses narrow strings with generic Win32 APIs.
+        characterset 'MBCS'
     filter 'system:linux'
         includedirs {base..'/OgreMain/include/GLX'}
     filter 'system:macosx'
@@ -23,6 +25,7 @@ local function library(name)
     ogreIncludes()
     filter 'toolset:msc*'
         buildoptions {'/bigobj'}
+        defines {'_CRT_SECURE_NO_WARNINGS'}
     filter {}
 end
 project 'rapidjson'
@@ -38,6 +41,9 @@ library('OgreMain')
     filter 'system:windows'
         files {base..'/OgreMain/src/WIN32/*.cpp',base..'/OgreMain/src/WIN32/OgreWin32Resources.rc',base..'/OgreMain/src/Threading/*Win.cpp'}
         removefiles {base..'/OgreMain/src/WIN32/*WinRT.cpp'}
+    filter {'system:windows', 'toolset:msc*'}
+        -- MinGW-only CRT shims conflict with MSVC's real security cookie.
+        removefiles {base..'/OgreMain/src/WIN32/OgreMinGWSupport.cpp'}
     filter 'system:linux'
         files {base..'/OgreMain/src/GLX/OgreTimer.cpp',base..'/OgreMain/src/GLX/OgreErrorDialog.cpp',base..'/OgreMain/src/GLX/OgreFileSystemLayer.cpp',base..'/OgreMain/src/OgreSearchOps.cpp',base..'/OgreMain/src/Threading/*PThreads.cpp'}
     filter 'system:macosx'
@@ -48,14 +54,14 @@ library('OgreHlmsCommon')
 library('OgreHlmsPbs')
     files {base..'/Components/Hlms/Pbs/src/**.cpp'}
     defines {'OgreHlmsPbs_EXPORTS'}
-    links {'OgreHlmsCommon','OgreMain'}
+    dependson {'OgreHlmsCommon','OgreMain'}
 library('OgreHlmsUnlit')
     files {base..'/Components/Hlms/Unlit/src/*.cpp'}
     defines {'OgreHlmsUnlit_EXPORTS'}
-    links {'OgreHlmsCommon','OgreMain'}
+    dependson {'OgreHlmsCommon','OgreMain'}
 library('OgreRenderNULL')
     files {base..'/RenderSystems/NULL/src/**.cpp'}
-    links {'OgreMain'}
+    dependson {'OgreMain'}
 if not _OPTIONS['null-platform'] then
     library('OgreRenderGL3Plus')
     local gl=base..'/RenderSystems/GL3Plus'
@@ -71,12 +77,14 @@ if not _OPTIONS['null-platform'] then
         includedirs {gl..'/include/windowing/'..entry[2],gl..'/src/windowing/'..entry[2]}
     end
     filter {}
-    links {'OgreMain'}
+    dependson {'OgreMain'}
 end
 function ogreLinks()
     links {'OgreHlmsPbs','OgreHlmsUnlit','OgreHlmsCommon','OgreRenderNULL'}
     if not _OPTIONS['null-platform'] then links {'OgreRenderGL3Plus'} end
     links {'OgreMain'}
+end
+function ogreSystemLinks()
     filter 'system:windows'
         links {'opengl32','gdi32','user32','shell32','advapi32','ole32'}
     filter 'system:linux'

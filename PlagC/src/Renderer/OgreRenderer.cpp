@@ -2,6 +2,13 @@
 #include <PlagC/Renderer/Renderer.h>
 #include <PlagC/Window.h>
 #include <PlagC/Thread.h>
+// Warnings in the pinned vendor headers must not weaken checks in engine code.
+#ifdef _MSC_VER
+#pragma warning(push)
+// Vendor headers contain CRT calls, intentional padding/narrowing and
+// inconsistent WIN32_LEAN_AND_MEAN definitions in generated GL headers.
+#pragma warning(disable : 4005 4244 4324 4996)
+#endif
 #include <OgreRoot.h>
 #include <OgreWorkQueue.h>
 #include <OgreImage2.h>
@@ -36,6 +43,9 @@
 #include <Vao/OgreVertexArrayObject.h>
 #include <Vao/OgreVertexBufferPacked.h>
 #include <Vao/OgreIndexBufferPacked.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 namespace PlagC
 {
 namespace
