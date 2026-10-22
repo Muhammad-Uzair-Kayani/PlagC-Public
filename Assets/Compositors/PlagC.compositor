@@ -1,0 +1,23 @@
+compositor_node_shadow PlagCShadow
+{
+    technique focused
+    texture atlas 2048 2048 PFG_D32_FLOAT
+    shadow_map 0 atlas light 0
+    shadow_map_target_type directional spot
+    {
+        shadow_map 0
+        {
+            pass render_scene
+            {
+                load
+                {
+                    all clear
+                }
+                store
+                {
+                    depth store
+                }
+            }
+        }
+    }
+}

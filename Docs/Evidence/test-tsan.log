@@ -1,0 +1,48 @@
+[2026-10-21 11:04:14.603] [info] [CORE] [Main:140305077166016] PlagC Phase 1 bootstrap
+[2026-10-21 11:04:14.603] [info] [CORE] [Main:140305077166016] Configuration: Debug
+[2026-10-21 11:04:14.603] [info] [CORE] [Main:140305077166016] Platform: Linux
+[2026-10-21 11:04:14.605] [info] [JOB] [Main:140305077166016] Workers: 4
+[PASS] unsubscribe during dispatch; new subscription deferred
+[PASS] subscriptions become visible next dispatch
+[PASS] synchronous event dispatch supports reentrancy
+[PASS] cross-thread events preserve each producer's order
+[PASS] bounded event queue reports overflow
+[PASS] dispatch enforces owning thread
+[PASS] connection safely outlives bus
+[PASS] throwing callback restores dispatcher state
+[PASS] 24,000 jobs, four concurrent producers, exactly once
+[PASS] nested worker submission and helping waits
+[PASS] job exception counted; worker survives
+[PASS] self-group wait rejected instead of deadlocking
+[PASS] idle workers wake repeatedly without lost jobs
+[PASS] workers steal owner-queued jobs
+[PASS] submitted/executed accounting agrees after waits
+[STATS] submitted=26147 executed=26147 stolen=697 failed=2
+[PASS] bounded pool reports Full without allocation or blocking
+[PASS] shutdown drains all accepted jobs
+[PASS] submission rejected after shutdown
+[PASS] shutdown is idempotent
+[PASS] shutdown races safely with four active producers
+[2026-10-21 11:04:15.439] [info] [SANDBOX] [Worker-2:140305003169472] worker logging validation
+[2026-10-21 11:04:15.439] [info] [SANDBOX] [Worker-1:140305011562176] worker logging validation
+[2026-10-21 11:04:15.440] [info] [SANDBOX] [Worker-1:140305011562176] worker logging validation
+[2026-10-21 11:04:15.440] [info] [SANDBOX] [Worker-2:140305003169472] worker logging validation
+[2026-10-21 11:04:15.441] [info] [SANDBOX] [Worker-0:140305019954880] worker logging validation
+[2026-10-21 11:04:15.441] [info] [SANDBOX] [Worker-2:140305003169472] worker logging validation
+[2026-10-21 11:04:15.442] [info] [SANDBOX] [Worker-1:140305011562176] worker logging validation
+[2026-10-21 11:04:15.442] [info] [SANDBOX] [Worker-3:140304994776768] worker logging validation
+[2026-10-21 11:04:15.442] [info] [SANDBOX] [Worker-0:140305019954880] worker logging validation
+[2026-10-21 11:04:15.442] [info] [SANDBOX] [Worker-2:140305003169472] worker logging validation
+[2026-10-21 11:04:15.442] [info] [SANDBOX] [Worker-1:140305011562176] worker logging validation
+[2026-10-21 11:04:15.442] [info] [SANDBOX] [Worker-3:140304994776768] worker logging validation
+[2026-10-21 11:04:15.443] [info] [SANDBOX] [Worker-3:140304994776768] worker logging validation
+[2026-10-21 11:04:15.443] [info] [SANDBOX] [Worker-0:140305019954880] worker logging validation
+[2026-10-21 11:04:15.443] [info] [SANDBOX] [Worker-1:140305011562176] worker logging validation
+[2026-10-21 11:04:15.446] [info] [SANDBOX] [Worker-2:140305003169472] worker logging validation
+[PASS] worker identity and structured logging snapshots
+[PASS] GLFW window creation, title and resize
+[2026-10-21 11:04:15.447] [info] [SANDBOX] [Main:140305077166016] All automated Phase 1 checks passed
+[2026-10-21 11:04:15.448] [info] [EVENT] [Main:140305077166016] FramebufferResize code=0 x=960.000000 y=540.000000
+[2026-10-21 11:04:15.448] [info] [EVENT] [Main:140305077166016] Resize code=0 x=960.000000 y=540.000000
+[PASS] programmatic close request
+[2026-10-21 11:04:15.453] [info] [CORE] [Main:140305077166016] Shutdown complete
