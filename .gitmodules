@@ -1,0 +1,12 @@
+[submodule "Vendor/glfw"]
+	path = Vendor/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Vendor/spdlog"]
+	path = Vendor/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "Vendor/ogre-next"]
+	path = Vendor/ogre-next
+	url = https://github.com/OGRECave/ogre-next.git
+[submodule "Vendor/rapidjson"]
+	path = Vendor/rapidjson
+	url = https://github.com/Tencent/rapidjson.git

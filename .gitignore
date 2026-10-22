@@ -1,17 +1,16 @@
-# Target project folders
-bin/
-bin-int/
-.vs/
-
-# Visual Studio build artifacts and logs
+/Bin*/
+/Bin-Int*/
+/Build/Generated/
+/Build/Bin*/
+/Build/Bin-Int*/
+/Tools/
+/Logs/
 *.user
-*.userosscache
-*.sln.docstates
 *.suo
+.vs/
+.DS_Store
+/Docs/test-*.log
+/Docs/build-*.log
 
-# Compiler outputs
-*.obj
-*.exe
-*.pdb
-*.ilk
-*.lib
+# Ogre generated shader diagnostics
+/[0-9]*Shader_*.glsl
