@@ -1,0 +1,35 @@
+vertex_program PlagC/SkyVS glsl
+{
+    source PlagCSky_vs.glsl
+    default_params
+    {
+        param_named_auto worldViewProj worldviewproj_matrix
+    }
+}
+fragment_program PlagC/SkyPS glsl
+{
+    source PlagCSky_ps.glsl
+    default_params
+    {
+        param_named skyCubemap int 0
+    }
+}
+material PlagC/Sky
+{
+    technique
+    {
+        pass
+        {
+            depth_check on
+            depth_write off
+            cull_hardware none
+            vertex_program_ref PlagC/SkyVS {}
+            fragment_program_ref PlagC/SkyPS {}
+            texture_unit
+            {
+                filtering trilinear
+                tex_address_mode clamp
+            }
+        }
+    }
+}

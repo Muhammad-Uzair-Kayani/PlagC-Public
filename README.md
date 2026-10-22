@@ -15,7 +15,7 @@ Download Premake from https://github.com/premake/premake-core/releases and place
 `premake5.exe` in `Tools/` or on PATH. No CMake is used.
 
 1. Clone the development branch (no recursive clone needed):
-   `git clone --branch phase2-ogre-reboot https://github.com/Muhammad-Uzair-Kayani/PlagC-Public.git`
+   `git clone --branch prototype https://github.com/Muhammad-Uzair-Kayani/PlagC-Public.git`
    then `cd PlagC-Public`.
 2. Run `GenerateProjects.bat`. It calls `FetchDependencies.bat`, shallow-fetches exact pinned dependencies with four parallel jobs, verifies them, then runs Premake. Git for Windows supplies the required Bash.
 3. Open `Build/Generated/PlagC.sln` in VS2022.
@@ -79,7 +79,7 @@ vendor HEAD or update pins automatically.
 
 Logs are written to `Logs/PlagC.log` relative to the working directory, with
 rotation. Structured snapshots are bounded at 4,096 records for future editor use.
-Published in Muhammad-Uzair-Kayani/PlagC-Public on the phase2-ogre-reboot branch.
+Published in Muhammad-Uzair-Kayani/PlagC-Public on the prototype branch.
 PlagC uses the repository's existing MIT license; dependencies retain their own licenses.
 
 ## Sanitizers
@@ -117,3 +117,12 @@ to diagnose downloads. Repeated setup reuses existing checkouts. Set
 commit or stash them first. Git errors stop generation with a nonzero exit code.
 See [the permanent dependency policy](Docs/Dependencies.md). Deliveries are
 committed to GitHub; clone the branch above instead of using source ZIPs.
+
+## Skybox and environment validation
+
+Sandbox now loads an original mipmapped DDS cubemap, displays it as the sky,
+and applies it to PBR reflections. Press **E** to toggle the sky and **R** to
+toggle reflections. Startup runs resource/lifecycle checks in all modes and
+pixel comparisons in native / `--offscreen` mode. Inspect `Logs/Environment-*.ppm`.
+The renderer API is `SetEnvironment({"EnvironmentTest.dds", true, true})`;
+`SetEnvironment({})` clears it. See `Docs/Phase2.md` for coverage and limitations.

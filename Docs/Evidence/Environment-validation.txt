@@ -1,0 +1,195 @@
+Environment verification — Linux Debug, 2026-10-22
+Premake 5.0.0-beta2, GCC 13; EGL Mesa software rendering.
+Windows/MSVC and Release/Dist execution of this increment are pending.
+
+
+EGL --offscreen --frames 6 --workers 4
+75 checks passed; exit code 0.
+[PASS] unsubscribe during dispatch; new subscription deferred
+[PASS] subscriptions become visible next dispatch
+[PASS] synchronous event dispatch supports reentrancy
+[PASS] cross-thread events preserve each producer's order
+[PASS] bounded event queue reports overflow
+[PASS] dispatch enforces owning thread
+[PASS] connection safely outlives bus
+[PASS] throwing callback restores dispatcher state
+[PASS] 24,000 jobs, four concurrent producers, exactly once
+[PASS] nested worker submission and helping waits
+[PASS] job exception counted; worker survives
+[PASS] self-group wait rejected instead of deadlocking
+[PASS] idle workers wake repeatedly without lost jobs
+[PASS] workers steal owner-queued jobs
+[PASS] submitted/executed accounting agrees after waits
+[PASS] bounded pool reports Full without allocation or blocking
+[PASS] shutdown drains all accepted jobs
+[PASS] submission rejected after shutdown
+[PASS] shutdown is idempotent
+[PASS] shutdown races safely with four active producers
+[PASS] worker identity and structured logging snapshots
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] in-use renderer resources cannot be destroyed
+[PASS] stale renderer handle is rejected
+[PASS] invalid mesh index rejected before GPU upload
+[PASS] renderer enforces main-thread ownership
+[PASS] legacy model imports skeletal animation
+[PASS] animation request on static mesh is rejected
+[PASS] invalid target resize preserves live target
+[PASS] zero-size framebuffer pauses rendering
+[PASS] scene resource counts match client ownership
+[PASS] mipmapped cubemap loads through renderer API
+[PASS] missing environment rejected synchronously
+[PASS] 2D image rejected as environment
+[PASS] cubemap without mipmaps is rejected
+[PASS] invalid environment preserves the previous configuration
+[PASS] environment mutation enforces renderer thread ownership
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] reflections can be enabled without a visible sky
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] environment reflection changes rendered surface pixels
+[PASS] reflection-only mode preserves the background
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] skybox changes background pixels
+[PASS] skybox respects opaque scene depth
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] sky remains at infinity when the camera translates
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] camera rotation samples a different cubemap direction
+[PASS] skybox can remain visible with reflections disabled
+[PASS] environment can be cleared
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] clearing environment restores the original image within raster tolerance
+[PASS] live environment replacement succeeds
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] replacement cubemap changes rendered pixels
+[PASS] environment reload and repeated configuration succeed
+[PASS] Ogre advances frames through Sandbox
+[PASS] offscreen target produces a capture
+[PASS] client clears environment before shutdown
+[PASS] client releases every scene resource before renderer shutdown
+
+
+Headless --workers 1
+51 checks passed; exit code 0.
+[PASS] unsubscribe during dispatch; new subscription deferred
+[PASS] subscriptions become visible next dispatch
+[PASS] synchronous event dispatch supports reentrancy
+[PASS] cross-thread events preserve each producer's order
+[PASS] bounded event queue reports overflow
+[PASS] dispatch enforces owning thread
+[PASS] connection safely outlives bus
+[PASS] throwing callback restores dispatcher state
+[PASS] 24,000 jobs, four concurrent producers, exactly once
+[PASS] nested worker submission and helping waits
+[PASS] job exception counted; worker survives
+[PASS] self-group wait rejected instead of deadlocking
+[PASS] idle workers wake repeatedly without lost jobs
+[PASS] submitted/executed accounting agrees after waits
+[PASS] bounded pool reports Full without allocation or blocking
+[PASS] shutdown drains all accepted jobs
+[PASS] submission rejected after shutdown
+[PASS] shutdown is idempotent
+[PASS] shutdown races safely with four active producers
+[PASS] worker identity and structured logging snapshots
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] in-use renderer resources cannot be destroyed
+[PASS] stale renderer handle is rejected
+[PASS] invalid mesh index rejected before GPU upload
+[PASS] renderer enforces main-thread ownership
+[PASS] legacy model imports skeletal animation
+[PASS] animation request on static mesh is rejected
+[PASS] invalid target resize preserves live target
+[PASS] zero-size framebuffer pauses rendering
+[PASS] scene resource counts match client ownership
+[PASS] mipmapped cubemap loads through renderer API
+[PASS] missing environment rejected synchronously
+[PASS] 2D image rejected as environment
+[PASS] cubemap without mipmaps is rejected
+[PASS] invalid environment preserves the previous configuration
+[PASS] environment mutation enforces renderer thread ownership
+[PASS] reflections can be enabled without a visible sky
+[PASS] skybox can remain visible with reflections disabled
+[PASS] environment can be cleared
+[PASS] live environment replacement succeeds
+[PASS] environment reload and repeated configuration succeed
+[PASS] Ogre advances frames through Sandbox
+[PASS] client clears environment before shutdown
+[PASS] client releases every scene resource before renderer shutdown
+
+
+NULL window --workers 4
+54 checks passed; exit code 0.
+[PASS] unsubscribe during dispatch; new subscription deferred
+[PASS] subscriptions become visible next dispatch
+[PASS] synchronous event dispatch supports reentrancy
+[PASS] cross-thread events preserve each producer's order
+[PASS] bounded event queue reports overflow
+[PASS] dispatch enforces owning thread
+[PASS] connection safely outlives bus
+[PASS] throwing callback restores dispatcher state
+[PASS] 24,000 jobs, four concurrent producers, exactly once
+[PASS] nested worker submission and helping waits
+[PASS] job exception counted; worker survives
+[PASS] self-group wait rejected instead of deadlocking
+[PASS] idle workers wake repeatedly without lost jobs
+[PASS] workers steal owner-queued jobs
+[PASS] submitted/executed accounting agrees after waits
+[PASS] bounded pool reports Full without allocation or blocking
+[PASS] shutdown drains all accepted jobs
+[PASS] submission rejected after shutdown
+[PASS] shutdown is idempotent
+[PASS] shutdown races safely with four active producers
+[PASS] worker identity and structured logging snapshots
+[PASS] GLFW window creation, title and resize
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] in-use renderer resources cannot be destroyed
+[PASS] stale renderer handle is rejected
+[PASS] invalid mesh index rejected before GPU upload
+[PASS] renderer enforces main-thread ownership
+[PASS] legacy model imports skeletal animation
+[PASS] animation request on static mesh is rejected
+[PASS] invalid target resize preserves live target
+[PASS] zero-size framebuffer pauses rendering
+[PASS] scene resource counts match client ownership
+[PASS] mipmapped cubemap loads through renderer API
+[PASS] missing environment rejected synchronously
+[PASS] 2D image rejected as environment
+[PASS] cubemap without mipmaps is rejected
+[PASS] invalid environment preserves the previous configuration
+[PASS] environment mutation enforces renderer thread ownership
+[PASS] reflections can be enabled without a visible sky
+[PASS] skybox can remain visible with reflections disabled
+[PASS] environment can be cleared
+[PASS] live environment replacement succeeds
+[PASS] environment reload and repeated configuration succeed
+[PASS] Ogre advances frames through Sandbox
+[PASS] client clears environment before shutdown
+[PASS] client releases every scene resource before renderer shutdown
+[PASS] programmatic close request

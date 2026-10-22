@@ -194,6 +194,8 @@ public:
                 if (e.type==EventType::KeyPressed && e.code==256) engine.Stop();
                 if (e.type==EventType::KeyPressed && e.code==87) demo_.ToggleWireframe(engine.Graphics());
                 if (e.type==EventType::KeyPressed && e.code==83) demo_.ToggleShadows(engine.Graphics());
+                if (e.type==EventType::KeyPressed && e.code==69) demo_.ToggleSkybox(engine.Graphics());
+                if (e.type==EventType::KeyPressed && e.code==82) demo_.ToggleReflections(engine.Graphics());
             }));
         }
         engine.Logger().Write(Severity::Info,"SANDBOX","All automated Phase 1 checks passed");
