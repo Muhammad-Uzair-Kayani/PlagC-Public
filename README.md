@@ -14,8 +14,10 @@ Windows SDK, and Premake 5 (tested generator version: 5.0.0-beta2).
 Download Premake from https://github.com/premake/premake-core/releases and place
 `premake5.exe` in `Tools/` or on PATH. No CMake is used.
 
-1. Extract the complete delivery folder, including its `.git` directory.
-2. Run `GenerateProjects.bat`. This downloads the pinned GLFW, spdlog, Ogre-Next and RapidJSON submodules.
+1. Clone the development branch (no recursive clone needed):
+   `git clone --branch phase2-ogre-reboot https://github.com/Muhammad-Uzair-Kayani/PlagC-Public.git`
+   then `cd PlagC-Public`.
+2. Run `GenerateProjects.bat`. It calls `FetchDependencies.bat`, shallow-fetches exact pinned dependencies with four parallel jobs, verifies them, then runs Premake. Git for Windows supplies the required Bash.
 3. Open `Build/Generated/PlagC.sln` in VS2022.
 4. Choose Debug / x64, set Sandbox as startup project, build and run.
 5. Sandbox executes automated checks, then leaves a native window open. Move,
@@ -106,3 +108,12 @@ A native Linux build includes EGL alongside GLX. With a compatible EGL driver:
 This renders real OpenGL pixels without a display server. Logs/Phase2.ppm and
 comparison images use P6 PPM. It does not validate the Windows native-window path.
 NULL modes deliberately disable drawing; they cannot validate shaders or pixels.
+
+## Dependency setup
+
+Run `FetchDependencies.bat` (Windows) or `bash FetchDependencies.sh` separately
+to diagnose downloads. Repeated setup reuses existing checkouts. Set
+`PLAGC_FETCH_JOBS` to change the default of 4. Local vendor edits stop setup;
+commit or stash them first. Git errors stop generation with a nonzero exit code.
+See [the permanent dependency policy](Docs/Dependencies.md). Deliveries are
+committed to GitHub; clone the branch above instead of using source ZIPs.

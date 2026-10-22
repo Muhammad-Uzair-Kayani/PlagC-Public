@@ -1,3 +1,4 @@
+include "Build/VerifyDependencies.lua"
 newoption { trigger = "null-platform", description = "Build GLFW Null backend only (headless validation)" }
 newoption { trigger = "sanitize", description = "Enable Linux sanitizers", value = "KIND", allowed = { {"address", "Address + undefined behavior"}, {"thread", "Thread sanitizer"} } }
 local root = path.getabsolute(".")
@@ -39,7 +40,6 @@ function common()
     objdir (root .. "/Bin-Int" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}")
 end
 include "Build/Dependencies.lua"
-include "Build/Ogre.lua"
 project "PlagC"
     kind "StaticLib"
     language "C++"

@@ -5,3 +5,6 @@
 *.h text eol=lf
 *.lua text eol=lf
 *.md text eol=lf
+Build/DependencyFiles.txt text eol=lf
+*.png binary
+*.ppm binary
