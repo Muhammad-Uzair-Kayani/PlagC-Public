@@ -1,3 +1,4 @@
+#include "pgcpch.h"
 #include <PlagC/Renderer/Renderer.h>
 #include <PlagC/Window.h>
 #include <PlagC/Thread.h>
@@ -35,14 +36,6 @@
 #include <Vao/OgreVertexArrayObject.h>
 #include <Vao/OgreVertexBufferPacked.h>
 #include <Vao/OgreIndexBufferPacked.h>
-#include <algorithm>
-#include <atomic>
-#include <chrono>
-#include <cmath>
-#include <filesystem>
-#include <fstream>
-#include <stdexcept>
-#include <unordered_map>
 namespace PlagC
 {
 namespace

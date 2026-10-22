@@ -1,3 +1,4 @@
+#include "pgcpch.h"
 #include <PlagC/Application.h>
 namespace PlagC {
 Engine::Engine(const EngineConfig& config) {

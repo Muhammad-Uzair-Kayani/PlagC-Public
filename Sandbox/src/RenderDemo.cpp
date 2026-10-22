@@ -1,11 +1,5 @@
+#include "pgcpch.h"
 #include "RenderDemo.h"
-#include <cmath>
-#include <algorithm>
-#include <filesystem>
-#include <iostream>
-#include <stdexcept>
-#include <thread>
-#include <atomic>
 using namespace PlagC;
 namespace
 {

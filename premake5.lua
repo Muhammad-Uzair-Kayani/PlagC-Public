@@ -39,6 +39,13 @@ function common()
     targetdir (root .. "/Bin" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}")
     objdir (root .. "/Bin-Int" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}")
 end
+-- Each target builds its own PCH with its own flags and definitions.
+function enginePch(source)
+    pchheader "pgcpch.h"
+    pchsource(source)
+    includedirs { root .. "/Build/Pch" }
+    files { root .. "/Build/Pch/pgcpch.h" }
+end
 include "Build/Dependencies.lua"
 project "PlagC"
     kind "StaticLib"
@@ -47,6 +54,7 @@ project "PlagC"
     common()
     warnings "Extra"
     files { "PlagC/include/**.h", "PlagC/src/**.cpp" }
+    enginePch("PlagC/src/pgcpch.cpp")
     includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include" }
     defines { "SPDLOG_COMPILED_LIB" }
     ogreIncludes()
@@ -58,7 +66,8 @@ project "Sandbox"
     cppdialect "C++20"
     common()
     warnings "Extra"
-    files { "Sandbox/src/**.cpp" }
+    files { "Sandbox/src/**.cpp", "Sandbox/src/**.h" }
+    enginePch("Sandbox/src/pgcpch.cpp")
     includedirs { "PlagC/include" }
     links { "PlagC", "GLFW", "spdlog" }
     ogreLinks()

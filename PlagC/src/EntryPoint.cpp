@@ -1,9 +1,6 @@
+#include "pgcpch.h"
 #include <PlagC/Application.h>
 #include <PlagC/Thread.h>
-#include <chrono>
-#include <iostream>
-#include <string>
-#include <thread>
 int main(int argc, char** argv) {
     try {
         PlagC::Thread::InitializeMain();

@@ -1,8 +1,6 @@
+#include "pgcpch.h"
 #include <PlagC/Jobs.h>
 #include <PlagC/Thread.h>
-#include <algorithm>
-#include <stdexcept>
-#include <string>
 
 namespace PlagC {
 static_assert(std::atomic<void*>::is_always_lock_free);

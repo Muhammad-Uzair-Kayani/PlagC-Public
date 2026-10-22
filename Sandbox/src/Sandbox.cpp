@@ -1,14 +1,7 @@
+#include "pgcpch.h"
 #include <PlagC/Application.h>
 #include "RenderDemo.h"
 #include <PlagC/Thread.h>
-#include <array>
-#include <atomic>
-#include <chrono>
-#include <iostream>
-#include <stdexcept>
-#include <string>
-#include <thread>
-#include <vector>
 using namespace PlagC;
 namespace {
 void Check(bool condition, const char* description) {
