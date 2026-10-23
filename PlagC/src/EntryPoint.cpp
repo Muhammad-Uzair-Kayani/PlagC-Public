@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
         auto previous = std::chrono::steady_clock::now();
         unsigned frames = 0;
         while (engine.Running()) {
+            const auto frameStart = std::chrono::steady_clock::now();
             auto* window = engine.MainWindow();
             if (window) window->Poll();
             engine.Events().Pump();
@@ -33,10 +34,11 @@ int main(int argc, char** argv) {
             engine.Graphics().Render(std::chrono::duration<double>(now-previous).count());
             previous = now;
             if (config.frameLimit && ++frames >= config.frameLimit) break;
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            engine.PaceFrame(frameStart);
         }
         engine.Jobs().Shutdown();
         application->OnStop(engine);
         return 0;
     } catch (const std::exception& e) { std::cerr << "PlagC fatal: " << e.what() << '\n'; return 1; }
 }
+

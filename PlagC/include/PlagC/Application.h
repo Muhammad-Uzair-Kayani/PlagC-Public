@@ -5,6 +5,7 @@
 #include <PlagC/Window.h>
 #include <PlagC/Renderer/Renderer.h>
 #include <memory>
+#include <PlagC/FrameLimiter.h>
 namespace PlagC {
 struct EngineConfig { bool headless = false, nullPlatform = false, offscreen = false; unsigned workers = 0; unsigned frameLimit = 0; };
 class Engine {
@@ -16,6 +17,10 @@ public:
     JobSystem& Jobs() { return *jobs_; }
     Renderer& Graphics() { return *renderer_; }
     Window* MainWindow() { return window_.get(); }
+    // false removes engine pacing and requests VSync off; true caps at 60 FPS.
+    void SetFPSLocked(bool enabled);
+    bool IsFPSLocked() const;
+    void PaceFrame(FrameLimiter::Clock::time_point start) const;
     void Stop() { running_ = false; }
     bool Running() const { return running_; }
 private:
@@ -26,6 +31,7 @@ private:
     std::unique_ptr<Renderer> renderer_;
     EventBus::Connection resize_;
     bool running_ = true;
+    FrameLimiter limiter_;
 };
 class Application {
 public:
@@ -37,3 +43,4 @@ public:
 // Client implements this; engine provides main and owns initialization.
 std::unique_ptr<Application> CreateApplication(const EngineConfig&);
 }
+

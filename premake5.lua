@@ -57,7 +57,7 @@ project "PlagC"
         -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
         disablewarnings { "4324" }
     filter {}
-    files { "PlagC/include/**.h", "PlagC/src/**.cpp" }
+    files { "PlagC/include/**.h", "PlagC/src/**.h", "PlagC/src/**.cpp" }
     enginePch("PlagC/src/pgcpch.cpp")
     includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include", "Vendor/entt/src" }
     dependson { "EnTT" }
@@ -90,3 +90,4 @@ project "Sandbox"
     filter "system:macosx"
         links { "Cocoa.framework", "IOKit.framework", "CoreFoundation.framework" }
     filter {}
+
