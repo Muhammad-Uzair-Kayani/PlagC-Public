@@ -59,7 +59,8 @@ project "PlagC"
     filter {}
     files { "PlagC/include/**.h", "PlagC/src/**.cpp" }
     enginePch("PlagC/src/pgcpch.cpp")
-    includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include" }
+    includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include", "Vendor/entt/src" }
+    dependson { "EnTT" }
     defines { "SPDLOG_COMPILED_LIB" }
     ogreIncludes()
     -- Static archives contain only their own object files.
