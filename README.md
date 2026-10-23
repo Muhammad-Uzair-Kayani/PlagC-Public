@@ -4,7 +4,8 @@ Cross-platform C++ engine foundation. Phase 1 implements engine-owned startup,
 logging, GLFW windows, typed event categories, thread identity and a bounded
 lock-free work-stealing job system. Sandbox is the client and validation app.
 Phase 2 adds Ogre-Next rendering behind engine APIs, tested through Sandbox.
-ECS, physics, managed assets and editor systems remain future phases.
+Phase 3 adds an EnTT-backed World, typed components and an Ogre scene bridge.
+Physics, managed assets and editor systems remain future phases.
 See Docs/Phase2.md for current verification and limitations.
 
 ## Windows / Visual Studio 2022
@@ -126,3 +127,16 @@ toggle reflections. Startup runs resource/lifecycle checks in all modes and
 pixel comparisons in native / `--offscreen` mode. Inspect `Logs/Environment-*.ppm`.
 The renderer API is `SetEnvironment({"EnvironmentTest.dds", true, true})`;
 `SetEnvironment({})` clears it. See `Docs/Phase2.md` for coverage and limitations.
+
+## Phase 3 — World / ECS
+
+Pull `prototype` and rerun `GenerateProjects.bat`: the build now shallow-fetches
+pinned EnTT and adds its header-only utility project. Build Sandbox normally.
+It runs the earlier regression checks, then displays sixteen cubes controlled
+by World components and animated through four job-system tasks per frame.
+
+`World` owns entities, names and component data. `SceneRenderer` synchronizes
+that data with Ogre and owns its renderer instances. EnTT is private to the
+engine implementation. See `Docs/Phase3.md` for API examples, ownership rules,
+the test checklist and Windows acceptance steps. Captures are in `Logs/World-*.ppm`
+and `Logs/Phase3.ppm`. Existing W/S/E/R controls still work.

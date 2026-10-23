@@ -1,5 +1,9 @@
 # Phase 2 — Ogre renderer
 
+Accepted by the user on 2026-10-23 after reporting that testing worked.
+The acceptance configuration was not specified; historical verification details
+below remain as recorded. Point shadows, cascades and HDR/bloom remain deferred.
+
 Status: renderer increment verified on Linux in Debug, Release and Dist.
 The recovered source was rebuilt and rerun; current logs and rendered images are
 in Docs/Evidence. This is not a claim that the entire Phase 2 scope is closed.

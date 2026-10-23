@@ -1,6 +1,7 @@
 #include "pgcpch.h"
 #include <PlagC/Application.h>
 #include "RenderDemo.h"
+#include "WorldDemo.h"
 #include <PlagC/Thread.h>
 using namespace PlagC;
 namespace {
@@ -169,6 +170,7 @@ class Sandbox final : public Application {
     std::vector<EventBus::Connection> subscriptions_;
     unsigned frames_=0;
     RenderDemo demo_;
+    WorldDemo worldDemo_;
 public:
     explicit Sandbox(EngineConfig config):config_(config){}
     void OnStart(Engine& engine) override {
@@ -186,7 +188,7 @@ public:
         for (const auto& r:records) metadata=metadata && !r.timestamp.empty() && !r.thread.empty() && !r.threadID.empty();
         Check(logged==16 && metadata,"worker identity and structured logging snapshots");
         if (auto* window=engine.MainWindow()) {
-            window->SetTitle("PlagC | Phase 2 renderer | Escape to close");
+            window->SetTitle("PlagC | Phase 3 World/ECS | Escape to close");
             window->Resize(960,540); window->Poll();
             Check(window->Width()==960 && window->Height()==540,"GLFW window creation, title and resize");
             for (int type=0;type<static_cast<int>(EventType::User);++type) subscriptions_.push_back(engine.Events().Subscribe(static_cast<EventType>(type),[this,&engine](const Event& e){
@@ -199,14 +201,22 @@ public:
             }));
         }
         engine.Logger().Write(Severity::Info,"SANDBOX","All automated Phase 1 checks passed");
+        TestWorld(engine.Graphics(), engine.Jobs());
         demo_.Start(engine.Graphics(),!config_.headless&&!config_.nullPlatform);
+        // Preserve Phase 2 regression coverage before switching to the ECS scene.
+        for (int frame = 0; frame < 6; ++frame) {
+            engine.Graphics().Render(.016);
+            demo_.Frame(engine.Graphics(), .016);
+        }
+        demo_.Stop(engine.Graphics());
+        worldDemo_.Start(engine.Graphics(),!config_.headless&&!config_.nullPlatform);
     }
     void OnFrame(Engine& engine,double dt) override {
-        demo_.Frame(engine.Graphics(),dt);
+        worldDemo_.Frame(engine.Graphics(),engine.Jobs(),dt);
         if ((config_.headless || config_.nullPlatform || config_.offscreen) && !config_.frameLimit && ++frames_>=6) engine.Stop();
     }
     void OnStop(Engine& engine) override {
-        demo_.Stop(engine.Graphics());
+        worldDemo_.Stop(engine.Graphics());
         if (auto* window=engine.MainWindow()) { window->RequestClose(); Check(window->ShouldClose(),"programmatic close request"); }
         subscriptions_.clear();
     }

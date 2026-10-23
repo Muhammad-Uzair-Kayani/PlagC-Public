@@ -2,7 +2,7 @@
 #include <PlagC/Application.h>
 namespace PlagC {
 Engine::Engine(const EngineConfig& config) {
-    logger_.Write(Severity::Info,"CORE","PlagC Phase 2 bootstrap");
+    logger_.Write(Severity::Info,"CORE","PlagC Phase 3 bootstrap");
 #ifdef PC_DIST
     logger_.Write(Severity::Info,"CORE","Configuration: Dist");
 #elif defined(NDEBUG)

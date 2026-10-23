@@ -1,0 +1,308 @@
+Phase 3 verification — 2026-10-23
+Linux Debug; GCC 13; Premake 5.0.0-beta2.
+VS2022 project generation verified; MSVC execution pending.
+
+
+Headless / one worker
+87 checks; exit code 0.
+[PASS] unsubscribe during dispatch; new subscription deferred
+[PASS] subscriptions become visible next dispatch
+[PASS] synchronous event dispatch supports reentrancy
+[PASS] cross-thread events preserve each producer's order
+[PASS] bounded event queue reports overflow
+[PASS] dispatch enforces owning thread
+[PASS] connection safely outlives bus
+[PASS] throwing callback restores dispatcher state
+[PASS] 24,000 jobs, four concurrent producers, exactly once
+[PASS] nested worker submission and helping waits
+[PASS] job exception counted; worker survives
+[PASS] self-group wait rejected instead of deadlocking
+[PASS] idle workers wake repeatedly without lost jobs
+[PASS] submitted/executed accounting agrees after waits
+[PASS] bounded pool reports Full without allocation or blocking
+[PASS] shutdown drains all accepted jobs
+[PASS] submission rejected after shutdown
+[PASS] shutdown is idempotent
+[PASS] shutdown races safely with four active producers
+[PASS] worker identity and structured logging snapshots
+[PASS] world scopes entity identities
+[PASS] foreign and null entities rejected
+[PASS] entity names support editor-facing rename
+[PASS] world reads are independent values
+[PASS] invalid transform leaves component unchanged
+[PASS] world rejects nonfinite transforms
+[PASS] active camera requires camera component
+[PASS] world selects active camera
+[PASS] world rejects invalid camera lens
+[PASS] camera position cannot equal target
+[PASS] removing active camera clears selection
+[PASS] world validates light direction
+[PASS] optional component removal is idempotent
+[PASS] world rejects empty render resource handles
+[PASS] world rejects worker-thread reads and mutations
+[PASS] destroy and EnTT slot reuse never revive public entity handles
+[PASS] world clear invalidates all entities
+[PASS] worker snapshots do not mutate live ECS storage
+[PASS] job-produced transform batch updates every entity exactly once
+[PASS] stale entity rejects the whole transform batch without partial writes
+[PASS] duplicate batch entities rejected
+[PASS] invalid batch transform rejected
+[PASS] world snapshots have deterministic identity order
+[PASS] ECS synchronization creates Ogre objects, lights and active camera
+[PASS] repeated ECS sync does not duplicate renderer instances
+[PASS] bridge keeps borrowed mesh in use
+[PASS] renderable replacement updates flags and preserves instance count
+[PASS] invalid borrowed material leaves existing renderer instance intact
+[PASS] component removal releases renderer instances
+[PASS] entity deletion removes rendering and active camera
+[PASS] syncing another world removes previous instances
+[PASS] scene bridge RAII releases all owned renderer instances
+[PASS] ECS tests release their borrowed render resources
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] in-use renderer resources cannot be destroyed
+[PASS] stale renderer handle is rejected
+[PASS] invalid mesh index rejected before GPU upload
+[PASS] renderer enforces main-thread ownership
+[PASS] legacy model imports skeletal animation
+[PASS] animation request on static mesh is rejected
+[PASS] invalid target resize preserves live target
+[PASS] zero-size framebuffer pauses rendering
+[PASS] scene resource counts match client ownership
+[PASS] mipmapped cubemap loads through renderer API
+[PASS] missing environment rejected synchronously
+[PASS] 2D image rejected as environment
+[PASS] cubemap without mipmaps is rejected
+[PASS] invalid environment preserves the previous configuration
+[PASS] environment mutation enforces renderer thread ownership
+[PASS] reflections can be enabled without a visible sky
+[PASS] skybox can remain visible with reflections disabled
+[PASS] environment can be cleared
+[PASS] live environment replacement succeeds
+[PASS] environment reload and repeated configuration succeed
+[PASS] Ogre advances frames through Sandbox
+[PASS] client clears environment before shutdown
+[PASS] client releases every scene resource before renderer shutdown
+[PASS] Phase 3 demo is driven entirely by world components
+[PASS] clearing demo world releases scene instances
+[PASS] Phase 3 client releases all resources before shutdown
+
+
+EGL / four workers
+116 checks; exit code 0.
+[PASS] unsubscribe during dispatch; new subscription deferred
+[PASS] subscriptions become visible next dispatch
+[PASS] synchronous event dispatch supports reentrancy
+[PASS] cross-thread events preserve each producer's order
+[PASS] bounded event queue reports overflow
+[PASS] dispatch enforces owning thread
+[PASS] connection safely outlives bus
+[PASS] throwing callback restores dispatcher state
+[PASS] 24,000 jobs, four concurrent producers, exactly once
+[PASS] nested worker submission and helping waits
+[PASS] job exception counted; worker survives
+[PASS] self-group wait rejected instead of deadlocking
+[PASS] idle workers wake repeatedly without lost jobs
+[PASS] workers steal owner-queued jobs
+[PASS] submitted/executed accounting agrees after waits
+[PASS] bounded pool reports Full without allocation or blocking
+[PASS] shutdown drains all accepted jobs
+[PASS] submission rejected after shutdown
+[PASS] shutdown is idempotent
+[PASS] shutdown races safely with four active producers
+[PASS] worker identity and structured logging snapshots
+[PASS] world scopes entity identities
+[PASS] foreign and null entities rejected
+[PASS] entity names support editor-facing rename
+[PASS] world reads are independent values
+[PASS] invalid transform leaves component unchanged
+[PASS] world rejects nonfinite transforms
+[PASS] active camera requires camera component
+[PASS] world selects active camera
+[PASS] world rejects invalid camera lens
+[PASS] camera position cannot equal target
+[PASS] removing active camera clears selection
+[PASS] world validates light direction
+[PASS] optional component removal is idempotent
+[PASS] world rejects empty render resource handles
+[PASS] world rejects worker-thread reads and mutations
+[PASS] destroy and EnTT slot reuse never revive public entity handles
+[PASS] world clear invalidates all entities
+[PASS] worker snapshots do not mutate live ECS storage
+[PASS] job-produced transform batch updates every entity exactly once
+[PASS] stale entity rejects the whole transform batch without partial writes
+[PASS] duplicate batch entities rejected
+[PASS] invalid batch transform rejected
+[PASS] world snapshots have deterministic identity order
+[PASS] ECS synchronization creates Ogre objects, lights and active camera
+[PASS] repeated ECS sync does not duplicate renderer instances
+[PASS] bridge keeps borrowed mesh in use
+[PASS] renderable replacement updates flags and preserves instance count
+[PASS] invalid borrowed material leaves existing renderer instance intact
+[PASS] component removal releases renderer instances
+[PASS] entity deletion removes rendering and active camera
+[PASS] syncing another world removes previous instances
+[PASS] scene bridge RAII releases all owned renderer instances
+[PASS] ECS tests release their borrowed render resources
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] in-use renderer resources cannot be destroyed
+[PASS] stale renderer handle is rejected
+[PASS] invalid mesh index rejected before GPU upload
+[PASS] renderer enforces main-thread ownership
+[PASS] legacy model imports skeletal animation
+[PASS] animation request on static mesh is rejected
+[PASS] invalid target resize preserves live target
+[PASS] zero-size framebuffer pauses rendering
+[PASS] scene resource counts match client ownership
+[PASS] mipmapped cubemap loads through renderer API
+[PASS] missing environment rejected synchronously
+[PASS] 2D image rejected as environment
+[PASS] cubemap without mipmaps is rejected
+[PASS] invalid environment preserves the previous configuration
+[PASS] environment mutation enforces renderer thread ownership
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] reflections can be enabled without a visible sky
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] environment reflection changes rendered surface pixels
+[PASS] reflection-only mode preserves the background
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] skybox changes background pixels
+[PASS] skybox respects opaque scene depth
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] sky remains at infinity when the camera translates
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] camera rotation samples a different cubemap direction
+[PASS] skybox can remain visible with reflections disabled
+[PASS] environment can be cleared
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] clearing environment restores the original image within raster tolerance
+[PASS] live environment replacement succeeds
+[PASS] environment capture has expected format
+[PASS] environment capture contains all pixels
+[PASS] replacement cubemap changes rendered pixels
+[PASS] environment reload and repeated configuration succeed
+[PASS] Ogre advances frames through Sandbox
+[PASS] offscreen target produces a capture
+[PASS] client clears environment before shutdown
+[PASS] client releases every scene resource before renderer shutdown
+[PASS] Phase 3 demo is driven entirely by world components
+[PASS] ECS visibility changes rendered pixels
+[PASS] ECS transform batches move rendered geometry
+[PASS] ECS light updates affect rendered surfaces
+[PASS] active ECS camera changes rendered viewpoint
+[PASS] ECS scene produces a real rendered capture
+[PASS] clearing demo world releases scene instances
+[PASS] Phase 3 client releases all resources before shutdown
+
+
+NULL window / four workers
+90 checks; exit code 0.
+[PASS] unsubscribe during dispatch; new subscription deferred
+[PASS] subscriptions become visible next dispatch
+[PASS] synchronous event dispatch supports reentrancy
+[PASS] cross-thread events preserve each producer's order
+[PASS] bounded event queue reports overflow
+[PASS] dispatch enforces owning thread
+[PASS] connection safely outlives bus
+[PASS] throwing callback restores dispatcher state
+[PASS] 24,000 jobs, four concurrent producers, exactly once
+[PASS] nested worker submission and helping waits
+[PASS] job exception counted; worker survives
+[PASS] self-group wait rejected instead of deadlocking
+[PASS] idle workers wake repeatedly without lost jobs
+[PASS] workers steal owner-queued jobs
+[PASS] submitted/executed accounting agrees after waits
+[PASS] bounded pool reports Full without allocation or blocking
+[PASS] shutdown drains all accepted jobs
+[PASS] submission rejected after shutdown
+[PASS] shutdown is idempotent
+[PASS] shutdown races safely with four active producers
+[PASS] worker identity and structured logging snapshots
+[PASS] GLFW window creation, title and resize
+[PASS] world scopes entity identities
+[PASS] foreign and null entities rejected
+[PASS] entity names support editor-facing rename
+[PASS] world reads are independent values
+[PASS] invalid transform leaves component unchanged
+[PASS] world rejects nonfinite transforms
+[PASS] active camera requires camera component
+[PASS] world selects active camera
+[PASS] world rejects invalid camera lens
+[PASS] camera position cannot equal target
+[PASS] removing active camera clears selection
+[PASS] world validates light direction
+[PASS] optional component removal is idempotent
+[PASS] world rejects empty render resource handles
+[PASS] world rejects worker-thread reads and mutations
+[PASS] destroy and EnTT slot reuse never revive public entity handles
+[PASS] world clear invalidates all entities
+[PASS] worker snapshots do not mutate live ECS storage
+[PASS] job-produced transform batch updates every entity exactly once
+[PASS] stale entity rejects the whole transform batch without partial writes
+[PASS] duplicate batch entities rejected
+[PASS] invalid batch transform rejected
+[PASS] world snapshots have deterministic identity order
+[PASS] ECS synchronization creates Ogre objects, lights and active camera
+[PASS] repeated ECS sync does not duplicate renderer instances
+[PASS] bridge keeps borrowed mesh in use
+[PASS] renderable replacement updates flags and preserves instance count
+[PASS] invalid borrowed material leaves existing renderer instance intact
+[PASS] component removal releases renderer instances
+[PASS] entity deletion removes rendering and active camera
+[PASS] syncing another world removes previous instances
+[PASS] scene bridge RAII releases all owned renderer instances
+[PASS] ECS tests release their borrowed render resources
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] primitive has vertices and triangles
+[PASS] primitive triangles have outward winding and nonzero area
+[PASS] in-use renderer resources cannot be destroyed
+[PASS] stale renderer handle is rejected
+[PASS] invalid mesh index rejected before GPU upload
+[PASS] renderer enforces main-thread ownership
+[PASS] legacy model imports skeletal animation
+[PASS] animation request on static mesh is rejected
+[PASS] invalid target resize preserves live target
+[PASS] zero-size framebuffer pauses rendering
+[PASS] scene resource counts match client ownership
+[PASS] mipmapped cubemap loads through renderer API
+[PASS] missing environment rejected synchronously
+[PASS] 2D image rejected as environment
+[PASS] cubemap without mipmaps is rejected
+[PASS] invalid environment preserves the previous configuration
+[PASS] environment mutation enforces renderer thread ownership
+[PASS] reflections can be enabled without a visible sky
+[PASS] skybox can remain visible with reflections disabled
+[PASS] environment can be cleared
+[PASS] live environment replacement succeeds
+[PASS] environment reload and repeated configuration succeed
+[PASS] Ogre advances frames through Sandbox
+[PASS] client clears environment before shutdown
+[PASS] client releases every scene resource before renderer shutdown
+[PASS] Phase 3 demo is driven entirely by world components
+[PASS] clearing demo world releases scene instances
+[PASS] Phase 3 client releases all resources before shutdown
+[PASS] programmatic close request
