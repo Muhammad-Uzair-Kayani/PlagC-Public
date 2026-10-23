@@ -57,12 +57,13 @@ project "PlagC"
         -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
         disablewarnings { "4324" }
     filter {}
-    files { "PlagC/include/**.h", "PlagC/src/**.cpp" }
+    files { "PlagC/include/**.h", "PlagC/src/**.h", "PlagC/src/**.cpp" }
     enginePch("PlagC/src/pgcpch.cpp")
     includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include", "Vendor/entt/src" }
-    dependson { "EnTT" }
+    dependson { "EnTT", "Jolt" }
     defines { "SPDLOG_COMPILED_LIB" }
     ogreIncludes()
+    joltIncludes()
     -- Static archives contain only their own object files.
     dependson { "GLFW", "spdlog", "OgreMain", "OgreHlmsCommon", "OgreHlmsPbs", "OgreHlmsUnlit", "OgreRenderNULL" }
     if not _OPTIONS["null-platform"] then dependson { "OgreRenderGL3Plus" } end
@@ -79,7 +80,7 @@ project "Sandbox"
     files { "Sandbox/src/**.cpp", "Sandbox/src/**.h" }
     enginePch("Sandbox/src/pgcpch.cpp")
     includedirs { "PlagC/include" }
-    links { "PlagC", "GLFW", "spdlog" }
+    links { "PlagC", "GLFW", "spdlog", "Jolt" }
     ogreLinks()
     ogreSystemLinks()
     debugdir "%{wks.location}/../.."
@@ -90,3 +91,4 @@ project "Sandbox"
     filter "system:macosx"
         links { "Cocoa.framework", "IOKit.framework", "CoreFoundation.framework" }
     filter {}
+

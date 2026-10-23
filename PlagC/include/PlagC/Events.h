@@ -1,4 +1,6 @@
 #pragma once
+#include <PlagC/Input/KeyCodes.h>
+#include <PlagC/Input/MouseCodes.h>
 #include <algorithm>
 #include <cstdint>
 #include <deque>
@@ -20,7 +22,10 @@ inline const char* EventName(EventType type) {
 struct Event {
     EventType type;
     double x = 0, y = 0;
-    int code = 0, modifiers = 0;
+    int code = 0, modifiers = 0; // Input codes/modifier bits are engine-owned.
+    KeyCode key = KeyCode::Unknown;
+    MouseCode button = MouseCode::Unknown;
+    double dx = 0, dy = 0;
 };
 // Dispatch, subscribe and unsubscribe belong to the creating thread. Post is MPSC.
 class EventBus {
@@ -93,3 +98,4 @@ private:
     }
 };
 }
+

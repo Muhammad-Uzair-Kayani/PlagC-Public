@@ -4,6 +4,7 @@
 #include <PlagC/Thread.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include "Input/GLFWInput.h"
 #ifndef PC_OGRE_NULL_ONLY
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -21,7 +22,17 @@ struct Window::Impl {
     EventBus* events = nullptr;
     bool eventFailure = false;
     bool nullPlatform = false;
-    void Emit(Event event) noexcept { try { if (!events->Post(event)) eventFailure = true; } catch (...) { eventFailure = true; } }
+    void Emit(Event event) noexcept {
+        try {
+            const auto before = Input::state_.GetMouseDelta();
+            Input::state_.Apply(event);
+            if (event.type == EventType::MouseMoved) {
+                const auto after = Input::state_.GetMouseDelta();
+                event.dx = after.x - before.x; event.dy = after.y - before.y;
+            }
+            if (!events->Post(event)) eventFailure = true;
+        } catch (...) { eventFailure = true; }
+    }
     static Impl& Self(GLFWwindow* window) { return *static_cast<Impl*>(glfwGetWindowUserPointer(window)); }
 };
 Window::Window(EventBus& events, const WindowConfig& config) : impl_(std::make_unique<Impl>()) {
@@ -36,6 +47,7 @@ Window::Window(EventBus& events, const WindowConfig& config) : impl_(std::make_u
     impl_->handle = glfwCreateWindow(config.width,config.height,config.title.c_str(),nullptr,nullptr);
     if (!impl_->handle) { glfwTerminate(); throw std::runtime_error("GLFW window creation failed"); }
     activeWindow = true;
+    Input::state_.Reset();
     impl_->events = &events;
     glfwSetWindowUserPointer(impl_->handle, impl_.get());
     glfwSetWindowCloseCallback(impl_->handle, [](GLFWwindow* w){ Impl::Self(w).Emit({EventType::Close}); });
@@ -45,18 +57,25 @@ Window::Window(EventBus& events, const WindowConfig& config) : impl_(std::make_u
     glfwSetWindowFocusCallback(impl_->handle, [](GLFWwindow* w,int value){ Impl::Self(w).Emit({EventType::Focus,0,0,value}); });
     glfwSetWindowIconifyCallback(impl_->handle, [](GLFWwindow* w,int value){ Impl::Self(w).Emit({EventType::Minimize,0,0,value}); });
     glfwSetKeyCallback(impl_->handle, [](GLFWwindow* w,int key,int,int action,int mods){
-        Impl::Self(w).Emit({action == GLFW_RELEASE ? EventType::KeyReleased : action == GLFW_REPEAT ? EventType::KeyRepeated : EventType::KeyPressed,0,0,key,mods});
+        Event e{action == GLFW_RELEASE ? EventType::KeyReleased : action == GLFW_REPEAT ? EventType::KeyRepeated : EventType::KeyPressed};
+        e.key = FromGLFWKey(key); e.code = static_cast<int>(e.key); e.modifiers = FromGLFWModifiers(mods);
+        Impl::Self(w).Emit(e);
     });
     glfwSetCharCallback(impl_->handle, [](GLFWwindow* w,unsigned code){ Impl::Self(w).Emit({EventType::TextInput,0,0,static_cast<int>(code)}); });
     glfwSetCursorPosCallback(impl_->handle, [](GLFWwindow* w,double x,double y){ Impl::Self(w).Emit({EventType::MouseMoved,x,y}); });
     glfwSetScrollCallback(impl_->handle, [](GLFWwindow* w,double x,double y){ Impl::Self(w).Emit({EventType::MouseScrolled,x,y}); });
-    glfwSetMouseButtonCallback(impl_->handle, [](GLFWwindow* w,int button,int action,int mods){ Impl::Self(w).Emit({action == GLFW_PRESS ? EventType::MousePressed : EventType::MouseReleased,0,0,button,mods}); });
+    glfwSetMouseButtonCallback(impl_->handle, [](GLFWwindow* w,int button,int action,int mods){ Event e{action == GLFW_PRESS ? EventType::MousePressed : EventType::MouseReleased}; e.button = FromGLFWButton(button); e.code = static_cast<int>(e.button); e.modifiers = FromGLFWModifiers(mods); Impl::Self(w).Emit(e); });
 }
-Window::~Window() { Thread::RequireMain(); if (impl_->handle) glfwDestroyWindow(impl_->handle); glfwTerminate(); activeWindow = false; }
-void Window::Poll() { Thread::RequireMain(); glfwPollEvents(); if (impl_->eventFailure) { impl_->eventFailure = false; throw std::runtime_error("window event delivery failed/overflowed"); } }
+Window::~Window() { Thread::RequireMain(); if (impl_->handle) glfwDestroyWindow(impl_->handle); glfwTerminate(); activeWindow = false; Input::state_.Reset(); }
+void Window::Poll() { Thread::RequireMain(); Input::state_.BeginFrame(); glfwPollEvents(); if (impl_->eventFailure) { impl_->eventFailure = false; throw std::runtime_error("window event delivery failed/overflowed"); } }
 bool Window::ShouldClose() const { Thread::RequireMain(); return glfwWindowShouldClose(impl_->handle) != 0; }
 void Window::RequestClose() { Thread::RequireMain(); glfwSetWindowShouldClose(impl_->handle, GLFW_TRUE); }
 void Window::SetTitle(const std::string& value) { Thread::RequireMain(); glfwSetWindowTitle(impl_->handle,value.c_str()); }
+void Window::SetCursorCaptured(bool enabled) {
+    Thread::RequireMain();
+    glfwSetInputMode(impl_->handle, GLFW_CURSOR, enabled ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+    Input::state_.RebaseCursor();
+}
 void Window::Resize(int w,int h) { Thread::RequireMain(); if (w<=0 || h<=0) throw std::invalid_argument("window size must be positive"); glfwSetWindowSize(impl_->handle,w,h); }
 int Window::Width() const { Thread::RequireMain(); int w,h; glfwGetWindowSize(impl_->handle,&w,&h); return w; }
 int Window::Height() const { Thread::RequireMain(); int w,h; glfwGetWindowSize(impl_->handle,&w,&h); return h; }
@@ -75,3 +94,4 @@ NativeWindow Window::NativeHandle() const {
 #endif
 }
 }
+

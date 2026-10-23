@@ -1,0 +1,67 @@
+Phase 4 foundation validation (CPU only)
+Platform: Linux-6.18.44-x86_64-with-glibc2.39
+Compiler: g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0
+Jolt: v5.3.0 / 0373ec0dd762e4bc2f6acdb08371ee84fa23c6db
+Build: C++20 -O2 -DNDEBUG, SSE2 baseline, native Jolt pool 0 and 2 workers
+
+[PASS] two seconds at different render rates produces 120 fixed steps
+[PASS] two seconds at different render rates produces 120 fixed steps
+[PASS] two seconds at different render rates produces 120 fixed steps
+[PASS] two seconds at different render rates produces 120 fixed steps
+[PASS] catch-up bounded to four steps, dropped time reported, fraction preserved
+[PASS] invalid frame delta rejected
+[PASS] simulation agrees across render rates and worker counts
+[PASS] batched floor and dynamic body created
+[PASS] gravity advances fixed step and interpolation stays between poses
+[PASS] body collides with floor, sleeps, and publishes final settled pose
+[PASS] sleep transition snaps final presentation pose
+[PASS] sleeping bodies produce no ECS pose work
+[PASS] impulse wakes sleeping body
+[PASS] ray returns engine handle, point and surface normal
+[PASS] ray miss returns empty
+[PASS] motion ownership enforced
+[PASS] invalid final descriptor rejects entire batch
+[PASS] body slot reuse rejects stale public handle
+[PASS] physics handles are world-specific
+[PASS] physics API rejects external threads
+[PASS] batched floor and dynamic body created
+[PASS] gravity advances fixed step and interpolation stays between poses
+[PASS] body collides with floor, sleeps, and publishes final settled pose
+[PASS] sleep transition snaps final presentation pose
+[PASS] sleeping bodies produce no ECS pose work
+[PASS] impulse wakes sleeping body
+[PASS] ray returns engine handle, point and surface normal
+[PASS] ray miss returns empty
+[PASS] motion ownership enforced
+[PASS] invalid final descriptor rejects entire batch
+[PASS] body slot reuse rejects stale public handle
+[PASS] physics handles are world-specific
+[PASS] physics API rejects external threads
+[PASS] primitive collider rests at expected height
+[PASS] primitive collider rests at expected height
+[PASS] primitive collider rests at expected height
+[PASS] Euler Y-X-Z convention round-trips through Jolt quaternion
+[PASS] kinematic target reaches requested pose in one fixed step
+[PASS] teleport resets interpolation history
+[PASS] collision matrix filters simulation and ray queries
+[PASS] capacity overflow leaves existing bodies intact
+[PASS] linear-cast CCD prevents fast sphere crossing thin wall
+[PASS] one physics system owns each ECS world
+[PASS] gameplay transform paths reject physics-owned dynamics
+[PASS] sparse physics writeback separates authoritative and presentation poses
+[PASS] zero-step render frame interpolates without ECS mutation
+[PASS] settled ECS scene has zero physics writes or presentation updates
+[PASS] explicit teleport and impulse update authoritative ECS
+[PASS] query handle maps back to ECS entity
+[PASS] kinematic reaches target then stops during catch-up
+[PASS] component removal releases physics body
+[PASS] entity destruction removes bound body
+[PASS] world clear releases all bound bodies
+[PASS] expired ECS world rejected safely
+[PASS] presentation updates renderer once and leaves authoritative ECS untouched
+[PASS] omitted presentation restores authoritative transform
+Physics foundation tests passed
+
+Existing ECS/render regression suite: 65 checks passed.
+Ogre pixels, Windows/MSVC and macOS were not tested in this environment.
+No hardware-specific FPS or low-end physics budget claim.

@@ -17,6 +17,7 @@ public:
     void RequestClose();
     void SetTitle(const std::string&);
     void Resize(int, int);
+    void SetCursorCaptured(bool);
     int Width() const;
     int Height() const;
     bool Minimized() const;
@@ -26,3 +27,4 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 }
+

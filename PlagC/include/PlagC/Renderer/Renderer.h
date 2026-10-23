@@ -122,6 +122,8 @@ class Renderer
     void DestroyLight(LightHandle);
     void SetCamera(const CameraDesc &);
     void SetSettings(const RenderSettings &);
+    RenderSettings Settings() const;
+    void SetVSync(bool enabled);
     void SetEnvironment(const EnvironmentDesc &);
     EnvironmentDesc Environment() const;
     std::vector<std::string> Animations(ObjectHandle) const;
@@ -140,3 +142,4 @@ class Renderer
     std::unique_ptr<Impl> impl_;
 };
 } // namespace PlagC
+

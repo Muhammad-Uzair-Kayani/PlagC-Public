@@ -634,6 +634,12 @@ void Renderer::SetCamera(const CameraDesc &d)
     p.camera->setFarClipDistance(d.farClip);
     p.camera->setAutoAspectRatio(true);
 }
+RenderSettings Renderer::Settings() const { Thread::RequireMain(); return impl_->settings; }
+void Renderer::SetVSync(bool enabled) {
+    Thread::RequireMain();
+    if (impl_->output) impl_->output->setVSync(enabled, 1);
+    impl_->settings.vsync = enabled;
+}
 void Renderer::SetSettings(const RenderSettings &d)
 {
     Thread::RequireMain();
@@ -791,3 +797,4 @@ RenderStats Renderer::Statistics() const
     return s;
 }
 } // namespace PlagC
+

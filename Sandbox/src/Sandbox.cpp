@@ -2,6 +2,8 @@
 #include <PlagC/Application.h>
 #include "RenderDemo.h"
 #include "WorldDemo.h"
+#include "IntegrationDemo.h"
+#include "PhysicsLab.h"
 #include <PlagC/Thread.h>
 using namespace PlagC;
 namespace {
@@ -167,13 +169,22 @@ void TestEvents() {
 }
 class Sandbox final : public Application {
     EngineConfig config_;
-    std::vector<EventBus::Connection> subscriptions_;
     unsigned frames_=0;
     RenderDemo demo_;
     WorldDemo worldDemo_;
+    IntegrationDemo integration_;
+    PhysicsLab physicsLab_;
 public:
     explicit Sandbox(EngineConfig config):config_(config){}
     void OnStart(Engine& engine) override {
+        if(config_.physicsLab){TestPhysicsFoundation();physicsLab_.Start(engine,config_.physicsWorkers,config_.physicsBodies);return;}
+        TestTransformSystem(); TestSceneSynchronization(engine.Graphics());
+        TestInputAndPacing(); TestIntegrationWork(engine.Jobs());
+        engine.SetFPSLocked(true);
+        Check(engine.IsFPSLocked(),"client enables FPS lock");
+        engine.Graphics().SetVSync(true);
+        engine.SetFPSLocked(false);
+        Check(!engine.IsFPSLocked() && !engine.Graphics().Settings().vsync,"client unlock disables software cap and renderer VSync");
         TestEvents(); TestJobs(engine.Jobs()); TestCapacityAndShutdown(); TestConcurrentShutdown();
         struct LogJob { Log* log; std::atomic<unsigned>* count; };
         std::atomic<unsigned> logged{0}; LogJob context{&engine.Logger(),&logged}; JobGroup group;
@@ -191,14 +202,6 @@ public:
             window->SetTitle("PlagC | Phase 3 World/ECS | Escape to close");
             window->Resize(960,540); window->Poll();
             Check(window->Width()==960 && window->Height()==540,"GLFW window creation, title and resize");
-            for (int type=0;type<static_cast<int>(EventType::User);++type) subscriptions_.push_back(engine.Events().Subscribe(static_cast<EventType>(type),[this,&engine](const Event& e){
-                engine.Logger().Write(Severity::Info,"EVENT",std::string(EventName(e.type))+" code="+std::to_string(e.code)+" x="+std::to_string(e.x)+" y="+std::to_string(e.y));
-                if (e.type==EventType::KeyPressed && e.code==256) engine.Stop();
-                if (e.type==EventType::KeyPressed && e.code==87) demo_.ToggleWireframe(engine.Graphics());
-                if (e.type==EventType::KeyPressed && e.code==83) demo_.ToggleShadows(engine.Graphics());
-                if (e.type==EventType::KeyPressed && e.code==69) demo_.ToggleSkybox(engine.Graphics());
-                if (e.type==EventType::KeyPressed && e.code==82) demo_.ToggleReflections(engine.Graphics());
-            }));
         }
         engine.Logger().Write(Severity::Info,"SANDBOX","All automated Phase 1 checks passed");
         TestWorld(engine.Graphics(), engine.Jobs());
@@ -210,16 +213,24 @@ public:
         }
         demo_.Stop(engine.Graphics());
         worldDemo_.Start(engine.Graphics(),!config_.headless&&!config_.nullPlatform);
+        for (int frame = 0; frame < 6; ++frame) {
+            engine.Graphics().Render(.016);
+            worldDemo_.Frame(engine.Graphics(),engine.Jobs(),.016);
+        }
+        worldDemo_.Stop(engine.Graphics());
+        integration_.Start(engine);
+        integration_.Validate(engine);
+        Check(!engine.IsFPSLocked() && !engine.Graphics().Settings().vsync,"integration scene starts explicitly unlocked");
     }
     void OnFrame(Engine& engine,double dt) override {
-        worldDemo_.Frame(engine.Graphics(),engine.Jobs(),dt);
+        if(config_.physicsLab)physicsLab_.Frame(engine,dt);else integration_.Frame(engine,dt);
         if ((config_.headless || config_.nullPlatform || config_.offscreen) && !config_.frameLimit && ++frames_>=6) engine.Stop();
     }
     void OnStop(Engine& engine) override {
-        worldDemo_.Stop(engine.Graphics());
+        if(config_.physicsLab)physicsLab_.Stop(engine);else integration_.Stop(engine);
         if (auto* window=engine.MainWindow()) { window->RequestClose(); Check(window->ShouldClose(),"programmatic close request"); }
-        subscriptions_.clear();
     }
 };
 }
 std::unique_ptr<Application> PlagC::CreateApplication(const EngineConfig& config) { return std::make_unique<Sandbox>(config); }
+

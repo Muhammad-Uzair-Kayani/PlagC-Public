@@ -1,0 +1,32 @@
+2026-10-23: standalone C++20 O2 CPU suite; real JobSystem + pinned EnTT.
+One and four workers. ASan/UBSan also passed, detect_leaks=0.
+Native Ogre/Windows tests not run for this revision.
+
+[PASS] held/repeated input stays down without repeated press toggles
+[PASS] BeginFrame preserves held keys
+[PASS] key release updates state and event subscriber
+[PASS] mouse button press polling
+[PASS] mouse button release polling
+[PASS] initial cursor position does not cause a jump
+[PASS] mouse movement and scroll accumulate within one frame
+[PASS] new frame clears transient state, retains cursor position
+[PASS] focus loss clears held input
+[PASS] focus restoration rebases mouse delta
+[PASS] unknown and invalid codes safely return false
+[PASS] global input facade rejects worker reads
+[PASS] locked pacing budget is 60 FPS
+[PASS] slow frames never add pacing delay
+[PASS] false disables all software pacing
+[PASS] FPS lock can be re-enabled
+[PASS] stress workload submits and completes all worker chunks
+[PASS] stress jobs leave live ECS unchanged until commit
+[PASS] 1000 job-generated transforms commit exactly once
+[PASS] incremental entity growth updates newly created entities
+[PASS] destroyed entities excluded from next job snapshot
+[PASS] empty scene submits no animation jobs
+[PASS] stress workload submits and completes all worker chunks
+[PASS] stress jobs leave live ECS unchanged until commit
+[PASS] 1000 job-generated transforms commit exactly once
+[PASS] incremental entity growth updates newly created entities
+[PASS] destroyed entities excluded from next job snapshot
+[PASS] empty scene submits no animation jobs

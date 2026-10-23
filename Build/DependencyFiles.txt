@@ -8,3 +8,6 @@ Vendor/ogre-next/OgreMain/include/OgreRoot.h
 Vendor/ogre-next/Components/Hlms/Pbs/include/OgreHlmsPbs.h
 Vendor/ogre-next/RenderSystems/GL3Plus/include/OgreGL3PlusRenderSystem.h
 Vendor/entt/src/entt/entity/registry.hpp
+
+Vendor/jolt/Jolt/Jolt.h
+Vendor/jolt/Jolt/Physics/PhysicsSystem.cpp

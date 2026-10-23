@@ -1,5 +1,6 @@
 #pragma once
 #include <PlagC/Renderer/Renderer.h>
+#include <PlagC/Physics/PhysicsTypes.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -47,6 +48,7 @@ struct EntityRecord
     std::optional<RenderableComponent> renderable;
     std::optional<LightComponent> light;
     std::optional<CameraComponent> camera;
+    std::optional<PhysicsComponent> physics;
 };
 // Main-thread ownership. Public reads return copies, never EnTT references.
 // Registry mutation is not thread safe; jobs may operate on owned snapshots.
@@ -66,6 +68,9 @@ class World
     std::vector<EntityRecord> Snapshot() const;
     void Rename(Entity, std::string);
     void SetTransform(Entity, const Transform &);
+    // Dynamic transforms belong to physics; use PhysicsSystem::Teleport after attachment.
+    void SetPhysics(Entity, const PhysicsComponent &);
+    void RemovePhysics(Entity);
     void SetRenderable(Entity, const RenderableComponent &);
     void RemoveRenderable(Entity);
     void SetLight(Entity, const LightComponent &);
@@ -80,7 +85,11 @@ class World
     void ApplyTransforms(std::span<const TransformUpdate>);
 
   private:
+    friend class SceneRenderer;
+    friend class TransformSystem;
+    friend class PhysicsSystem;
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };
 } // namespace PlagC
+
