@@ -1,7 +1,5 @@
+#include "pgcpch.h"
 #include <PlagC/Renderer/Renderer.h>
-#include <cmath>
-#include <stdexcept>
-#include <utility>
 namespace PlagC
 {
 MeshData MakePrimitive(Primitive type)

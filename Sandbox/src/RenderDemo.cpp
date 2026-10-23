@@ -1,11 +1,5 @@
+#include "pgcpch.h"
 #include "RenderDemo.h"
-#include <cmath>
-#include <algorithm>
-#include <filesystem>
-#include <iostream>
-#include <stdexcept>
-#include <thread>
-#include <atomic>
 using namespace PlagC;
 namespace
 {
@@ -45,6 +39,118 @@ void GeometryChecks(const MeshData &m)
         valid = valid && (n.x * a.normal.x + n.y * a.normal.y + n.z * a.normal.z) > 0;
     }
     Check(valid, "primitive triangles have outward winding and nonzero area");
+}
+// Compare actual pixels rather than treating a NULL draw as renderer evidence.
+std::vector<unsigned char> Capture(Renderer &r, TargetHandle target, const char *file)
+{
+    r.Render(0);
+    r.CaptureTarget(target, file);
+    std::ifstream input(file, std::ios::binary);
+    std::string magic;
+    unsigned width, height, maximum;
+    input >> magic >> width >> height >> maximum;
+    input.get();
+    Check(magic == "P6" && width == 640 && height == 360 && maximum == 255,
+          "environment capture has expected format");
+    std::vector<unsigned char> pixels(width * height * 3);
+    input.read(reinterpret_cast<char *>(pixels.data()), std::streamsize(pixels.size()));
+    Check(bool(input), "environment capture contains all pixels");
+    return pixels;
+}
+void EnvironmentChecks(Renderer &r, TargetHandle target, bool pixels)
+{
+    EnvironmentDesc env{"EnvironmentTest.dds", false, false};
+    r.SetEnvironment(env);
+    Check(r.Environment().cubemap == env.cubemap, "mipmapped cubemap loads through renderer API");
+    auto invalid = env;
+    invalid.cubemap = "missing-environment.dds";
+    Check(Rejected([&] { r.SetEnvironment(invalid); }), "missing environment rejected synchronously");
+    invalid.cubemap = "checker.ppm";
+    Check(Rejected([&] { r.SetEnvironment(invalid); }), "2D image rejected as environment");
+    invalid.cubemap = "EnvironmentNoMips.dds";
+    Check(Rejected([&] { r.SetEnvironment(invalid); }), "cubemap without mipmaps is rejected");
+    Check(r.Environment().cubemap == env.cubemap && !r.Environment().skybox,
+          "invalid environment preserves the previous configuration");
+    std::atomic<bool> rejected{false};
+    std::thread worker([&] { rejected = Rejected([&] { r.SetEnvironment(env); }); });
+    worker.join();
+    Check(rejected, "environment mutation enforces renderer thread ownership");
+    std::vector<unsigned char> none, reflected, sky;
+    if (pixels) none = Capture(r, target, "Logs/Environment-off.ppm");
+    env.reflections = true;
+    r.SetEnvironment(env);
+    Check(!r.Environment().skybox && r.Environment().reflections,
+          "reflections can be enabled without a visible sky");
+    // Materials created and updated after environment activation must inherit it.
+    auto material = r.CreateMaterial({});
+    r.UpdateMaterial(material, {});
+    r.DestroyMaterial(material);
+    if (pixels)
+    {
+        reflected = Capture(r, target, "Logs/Environment-reflections.ppm");
+        unsigned changed = 0;
+        for (std::size_t i = 0; i < none.size(); ++i)
+            changed += std::abs(int(none[i]) - int(reflected[i])) > 3;
+        Check(changed > 100, "environment reflection changes rendered surface pixels");
+        Check(std::equal(none.begin(), none.begin() + 3, reflected.begin()),
+              "reflection-only mode preserves the background");
+    }
+    env.skybox = true;
+    r.SetEnvironment(env);
+    if (pixels)
+    {
+        sky = Capture(r, target, "Logs/Environment-sky.ppm");
+        Check(!std::equal(sky.begin(), sky.begin() + 3, reflected.begin()),
+              "skybox changes background pixels");
+        // A central foreground region must retain opaque depth, not be painted over by sky.
+        unsigned unchanged = 0;
+        for (unsigned y = 180; y < 320; ++y)
+            for (unsigned x = 200; x < 440; ++x)
+            {
+                auto i = (y * 640 + x) * 3;
+                unchanged += sky[i] == reflected[i] && sky[i+1] == reflected[i+1] && sky[i+2] == reflected[i+2];
+            }
+        Check(unchanged > 1000, "skybox respects opaque scene depth");
+        r.SetCamera({{20, 7, 12}, {10, 1, 0}, 55, .1f, 100});
+        auto moved = Capture(r, target, "Logs/Environment-translated.ppm");
+        Check(std::equal(sky.begin(), sky.begin() + 3, moved.begin()),
+              "sky remains at infinity when the camera translates");
+        r.SetCamera({{10, 7, 12}, {20, 7, 0}, 55, .1f, 100});
+        auto turned = Capture(r, target, "Logs/Environment-rotated.ppm");
+        Check(!std::equal(sky.begin(), sky.begin() + 3, turned.begin()),
+              "camera rotation samples a different cubemap direction");
+        r.SetCamera({{10, 7, 12}, {0, 1, 0}, 55, .1f, 100});
+    }
+    env.reflections = false;
+    r.SetEnvironment(env);
+    Check(r.Environment().skybox && !r.Environment().reflections,
+          "skybox can remain visible with reflections disabled");
+    r.SetEnvironment({});
+    Check(r.Environment().cubemap.empty(), "environment can be cleared");
+    if (pixels)
+    {
+        auto cleared = Capture(r, target, "Logs/Environment-cleared.ppm");
+        // Camera round trips and GPU rasterization can differ by a few 8-bit levels.
+        unsigned maxError = 0;
+        for (std::size_t i = 0; i < none.size(); ++i)
+            maxError = std::max(maxError, unsigned(std::abs(int(cleared[i]) - int(none[i]))));
+        Check(maxError <= 4, "clearing environment restores the original image within raster tolerance");
+    }
+    env.reflections = true;
+    r.SetEnvironment(env);
+    auto replacement = env;
+    replacement.cubemap = "EnvironmentWarm.dds";
+    r.SetEnvironment(replacement);
+    Check(r.Environment().cubemap == replacement.cubemap, "live environment replacement succeeds");
+    if (pixels)
+    {
+        auto warm = Capture(r, target, "Logs/Environment-replaced.ppm");
+        Check(warm != sky, "replacement cubemap changes rendered pixels");
+    }
+    r.SetEnvironment(env);
+    r.SetEnvironment(env);
+    Check(r.Environment().skybox && r.Environment().reflections,
+          "environment reload and repeated configuration succeed");
 }
 } // namespace
 void RenderDemo::Start(Renderer &r, bool native)
@@ -142,7 +248,8 @@ void RenderDemo::Start(Renderer &r, bool native)
     auto s = r.Statistics();
     Check(s.objects == 5 && s.meshes == 5 && s.materials == 4 && s.lights == 3,
           "scene resource counts match client ownership");
-    std::cout << "[INFO] Scene ready; W wireframe, S shadows, Escape closes\n";
+    EnvironmentChecks(r, target_, native_);
+    std::cout << "[INFO] Scene ready; W wireframe, S shadows, E skybox, R reflections, Escape closes\n";
 }
 void RenderDemo::Frame(Renderer &r, double dt)
 {
@@ -191,8 +298,22 @@ void RenderDemo::ToggleShadows(Renderer &r)
     settings_.shadows = !settings_.shadows;
     r.SetSettings(settings_);
 }
+void RenderDemo::ToggleSkybox(Renderer &r)
+{
+    auto env = r.Environment();
+    env.skybox = !env.skybox;
+    r.SetEnvironment(env);
+}
+void RenderDemo::ToggleReflections(Renderer &r)
+{
+    auto env = r.Environment();
+    env.reflections = !env.reflections;
+    r.SetEnvironment(env);
+}
 void RenderDemo::Stop(Renderer &r)
 {
+    r.SetEnvironment({});
+    Check(r.Environment().cubemap.empty(), "client clears environment before shutdown");
     for (auto h : objects_)
     {
         r.DestroyObject(h);

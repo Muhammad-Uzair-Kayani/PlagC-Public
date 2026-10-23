@@ -1,13 +1,9 @@
+#include "pgcpch.h"
 #include <PlagC/Log.h>
 #include <PlagC/Thread.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
-#include <chrono>
-#include <deque>
-#include <filesystem>
-#include <mutex>
-#include <sstream>
 namespace PlagC {
 struct Log::Impl {
     mutable std::mutex mutex;

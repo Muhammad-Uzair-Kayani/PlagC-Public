@@ -1,6 +1,21 @@
+#include "pgcpch.h"
 #include <PlagC/Renderer/Renderer.h>
 #include <PlagC/Window.h>
 #include <PlagC/Thread.h>
+// Warnings in the pinned vendor headers must not weaken checks in engine code.
+#ifdef _MSC_VER
+#pragma warning(push)
+// Vendor headers contain CRT calls, intentional padding/narrowing and
+// inconsistent WIN32_LEAN_AND_MEAN definitions in generated GL headers.
+#pragma warning(disable : 4005 4244 4324 4996)
+#endif
+#include <OgreMaterialManager.h>
+#include <OgreMaterial.h>
+#include <OgreTechnique.h>
+#include <OgrePass.h>
+#include <OgreTextureUnitState.h>
+#include <Compositor/OgreCompositorNodeDef.h>
+#include <Compositor/Pass/PassQuad/OgreCompositorPassQuadDef.h>
 #include <OgreRoot.h>
 #include <OgreWorkQueue.h>
 #include <OgreImage2.h>
@@ -35,14 +50,9 @@
 #include <Vao/OgreVertexArrayObject.h>
 #include <Vao/OgreVertexBufferPacked.h>
 #include <Vao/OgreIndexBufferPacked.h>
-#include <algorithm>
-#include <atomic>
-#include <chrono>
-#include <cmath>
-#include <filesystem>
-#include <fstream>
-#include <stdexcept>
-#include <unordered_map>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 namespace PlagC
 {
 namespace
@@ -111,6 +121,9 @@ struct Renderer::Impl
     Ogre::CompositorWorkspace *workspace = nullptr;
     bool nullBackend = false, offscreen = false, paused = false;
     RenderSettings settings;
+    EnvironmentDesc environment;
+    Ogre::TextureGpu *environmentTexture = nullptr;
+    Ogre::MaterialPtr skyMaterial;
     RenderStats stats;
     std::string workspaceName;
     struct Mesh
@@ -156,6 +169,12 @@ struct Renderer::Impl
             for (auto &[id, t] : targets)
                 root->getRenderSystem()->getTextureGpuManager()->destroyTexture(t.value);
             targets.clear();
+            if (skyMaterial)
+            {
+                const auto name = skyMaterial->getName();
+                skyMaterial.reset();
+                Ogre::MaterialManager::getSingleton().remove(name);
+            }
             root->destroySceneManager(scene);
             scene = nullptr;
             objects.clear();
@@ -188,6 +207,17 @@ struct Renderer::Impl
         cm->createBasicWorkspaceDef(workspaceName, C(settings.background),
                                     settings.shadows ? Ogre::IdString("PlagCShadow")
                                                      : Ogre::IdString());
+        if (environmentTexture && environment.skybox && !nullBackend)
+        {
+            auto *node = cm->getNodeDefinitionNonConst(
+                "AutoGen " + Ogre::IdString(workspaceName + "/Node").getReleaseText());
+            auto *target = node->getTargetPass(0);
+            // Preserve opaque depth for the far-plane sky quad. It cannot cover geometry.
+            target->getCompositorPassesNonConst().front()->mStoreActionDepth = Ogre::StoreAction::Store;
+            auto *sky = static_cast<Ogre::CompositorPassQuadDef *>(target->addPass(Ogre::PASS_QUAD));
+            sky->mMaterialName = skyMaterial->getName();
+            sky->mFrustumCorners = Ogre::CompositorPassQuadDef::CAMERA_DIRECTION;
+        }
         // Ogre 3.0 NULL has incomplete window-depth and VAO draw behavior.
         // NULL tests resource/lifecycle APIs; only real GL backends execute draws.
         if (output && !nullBackend)
@@ -245,8 +275,11 @@ Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::ma
     p.unlit = RegisterHlms<Ogre::HlmsUnlit>(*p.root, config.mediaRoot);
     auto &resources = Ogre::ResourceGroupManager::getSingleton();
     for (const auto &dir : {config.assetsRoot + "/Textures", config.assetsRoot + "/Compositors",
+
                             config.mediaRoot + "/models"})
         resources.addResourceLocation(dir, "FileSystem", "General");
+    if (!config.nullBackend)
+        resources.addResourceLocation(config.assetsRoot + "/Shaders", "FileSystem", "General");
     resources.initialiseAllResourceGroups(true);
     p.scene = p.root->createSceneManager(Ogre::ST_GENERIC, 1, "PlagCScene");
     p.scene->setShadowDirectionalLightExtrusionDistance(50);
@@ -386,6 +419,8 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
         b->setRoughness(std::max(.02f, d.roughness));
         b->setMetalness(d.metallic);
         b->setTexture(Ogre::PBSM_DIFFUSE, d.colourTexture);
+        b->setTexture(Ogre::PBSM_REFLECTION,
+                      impl_->environment.reflections ? impl_->environmentTexture : nullptr);
     }
     else
     {
@@ -394,6 +429,78 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
         b->setColour(C(d.colour));
         b->setTexture(0, d.colourTexture);
     }
+}
+void Renderer::SetEnvironment(const EnvironmentDesc &desc)
+{
+    Thread::RequireMain();
+    auto &p = *impl_;
+    if (desc.cubemap == p.environment.cubemap && desc.skybox == p.environment.skybox &&
+        desc.reflections == p.environment.reflections)
+        return;
+    auto *tm = p.root->getRenderSystem()->getTextureGpuManager();
+    Ogre::TextureGpu *next = p.environmentTexture;
+    const bool replace = desc.cubemap != p.environment.cubemap;
+    // Validate and load before touching the live environment. Missing/invalid files
+    // fail synchronously rather than silently becoming a streaming placeholder.
+    if (replace)
+    {
+        next = nullptr;
+        if (!desc.cubemap.empty())
+        {
+            auto image = std::make_unique<Ogre::Image2>();
+            image->load(desc.cubemap, "General");
+            Require(image->getTextureType() == Ogre::TextureTypes::TypeCube,
+                    "environment must be a DDS cubemap, not a 2D texture");
+            Require(image->getNumMipmaps() > 1, "environment cubemap needs mipmaps for rough reflections");
+            next = tm->createTexture(desc.cubemap, Name("Environment", ID()), Ogre::GpuPageOutStrategy::Discard,
+                                     Ogre::TextureFlags::PrefersLoadingFromFileAsSRGB,
+                                     Ogre::TextureTypes::TypeCube, "General");
+            try
+            {
+                next->scheduleTransitionTo(Ogre::GpuResidency::Resident, image.release(), true);
+                tm->waitForStreamingCompletion();
+            }
+            catch (...)
+            {
+                tm->destroyTexture(next);
+                throw;
+            }
+        }
+    }
+    try
+    {
+        if (next && !p.nullBackend && !p.skyMaterial)
+        {
+            auto base = Ogre::MaterialManager::getSingleton().getByName("PlagC/Sky");
+            Require(bool(base), "missing PlagC sky material");
+            p.skyMaterial = base->clone(Name("Sky", ID()));
+        }
+    }
+    catch (...)
+    {
+        if (replace && next) tm->destroyTexture(next);
+        throw;
+    }
+    auto *previous = p.environmentTexture;
+    p.environmentTexture = next;
+    p.environment = desc;
+    if (p.skyMaterial)
+    {
+        auto *unit = p.skyMaterial->getTechnique(0)->getPass(0)->getTextureUnitState(0);
+        if (next) unit->setTexture(next);
+        else unit->setTextureName("");
+    }
+    for (auto &[id, material] : p.materials)
+        if (material.model == MaterialModel::Pbr)
+            static_cast<Ogre::HlmsPbsDatablock *>(material.value)->setTexture(
+                Ogre::PBSM_REFLECTION, desc.reflections ? next : nullptr);
+    p.Workspaces();
+    if (replace && previous) tm->destroyTexture(previous);
+}
+EnvironmentDesc Renderer::Environment() const
+{
+    Thread::RequireMain();
+    return impl_->environment;
 }
 void Renderer::DestroyMaterial(MaterialHandle h)
 {

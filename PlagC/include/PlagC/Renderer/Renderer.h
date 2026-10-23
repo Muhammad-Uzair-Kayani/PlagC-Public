@@ -79,6 +79,13 @@ struct RenderSettings
     bool wireframe = false, vsync = true, shadows = true;
     Vec3 background{.035f, .055f, .09f};
 };
+// Resource name in Assets/Textures. Empty cubemap disables the environment.
+// Supply a mipmapped DDS cubemap; sky and PBR specular reflections are independent.
+struct EnvironmentDesc
+{
+    std::string cubemap;
+    bool skybox = true, reflections = true;
+};
 struct RenderStats
 {
     std::uint64_t frames = 0;
@@ -115,6 +122,8 @@ class Renderer
     void DestroyLight(LightHandle);
     void SetCamera(const CameraDesc &);
     void SetSettings(const RenderSettings &);
+    void SetEnvironment(const EnvironmentDesc &);
+    EnvironmentDesc Environment() const;
     std::vector<std::string> Animations(ObjectHandle) const;
     void PlayAnimation(ObjectHandle, const std::string &, bool loop = true, float speed = 1);
     void StopAnimation(ObjectHandle);

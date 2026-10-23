@@ -75,8 +75,8 @@ source lists/framework links are present. Initial architecture is x86-64.
 | Phase | Status |
 |---|---|
 | 1 Foundation | Complete; Windows tests reported by user |
-| 2 Renderer | In development; see Phase2.md |
-| 3 World/ECS | Pending |
+| 2 Renderer | Accepted by user on 2026-10-23; advanced effects deferred |
+| 3 World/ECS | Implemented; Linux Debug verified; user acceptance pending; see Phase3.md |
 | 4 Physics | Pending |
 | 5 Assets/animation/audio | Pending |
 | 6 Editor backend | Pending |

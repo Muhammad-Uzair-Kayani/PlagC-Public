@@ -9,6 +9,8 @@ class RenderDemo
     void Stop(PlagC::Renderer &);
     void ToggleWireframe(PlagC::Renderer &);
     void ToggleShadows(PlagC::Renderer &);
+    void ToggleSkybox(PlagC::Renderer &);
+    void ToggleReflections(PlagC::Renderer &);
 
   private:
     std::vector<PlagC::MeshHandle> meshes_;

@@ -39,6 +39,13 @@ function common()
     targetdir (root .. "/Bin" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}")
     objdir (root .. "/Bin-Int" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}")
 end
+-- Each target builds its own PCH with its own flags and definitions.
+function enginePch(source)
+    pchheader "pgcpch.h"
+    pchsource(source)
+    includedirs { root .. "/Build/Pch" }
+    files { root .. "/Build/Pch/pgcpch.h" }
+end
 include "Build/Dependencies.lua"
 project "PlagC"
     kind "StaticLib"
@@ -46,22 +53,35 @@ project "PlagC"
     cppdialect "C++20"
     common()
     warnings "Extra"
+    filter "toolset:msc*"
+        -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
+        disablewarnings { "4324" }
+    filter {}
     files { "PlagC/include/**.h", "PlagC/src/**.cpp" }
-    includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include" }
+    enginePch("PlagC/src/pgcpch.cpp")
+    includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include", "Vendor/entt/src" }
+    dependson { "EnTT" }
     defines { "SPDLOG_COMPILED_LIB" }
     ogreIncludes()
-    ogreLinks()
-    links { "GLFW", "spdlog" }
+    -- Static archives contain only their own object files.
+    dependson { "GLFW", "spdlog", "OgreMain", "OgreHlmsCommon", "OgreHlmsPbs", "OgreHlmsUnlit", "OgreRenderNULL" }
+    if not _OPTIONS["null-platform"] then dependson { "OgreRenderGL3Plus" } end
 project "Sandbox"
     kind "ConsoleApp"
     language "C++"
     cppdialect "C++20"
     common()
     warnings "Extra"
-    files { "Sandbox/src/**.cpp" }
+    filter "toolset:msc*"
+        -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
+        disablewarnings { "4324" }
+    filter {}
+    files { "Sandbox/src/**.cpp", "Sandbox/src/**.h" }
+    enginePch("Sandbox/src/pgcpch.cpp")
     includedirs { "PlagC/include" }
     links { "PlagC", "GLFW", "spdlog" }
     ogreLinks()
+    ogreSystemLinks()
     debugdir "%{wks.location}/../.."
     filter "system:windows"
         links { "gdi32", "user32", "shell32" }

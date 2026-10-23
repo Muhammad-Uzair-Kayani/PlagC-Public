@@ -1,3 +1,4 @@
+#include "pgcpch.h"
 #include <PlagC/Window.h>
 #include <PlagC/Events.h>
 #include <PlagC/Thread.h>
@@ -13,7 +14,6 @@
 #endif
 #include <GLFW/glfw3native.h>
 #endif
-#include <stdexcept>
 namespace PlagC {
 namespace { bool activeWindow = false; }
 struct Window::Impl {
