@@ -149,3 +149,8 @@ See [Phase 3.5 controls and validation](Docs/Phase3.5.md). The client now calls
 adds 1,000 every five seconds up to 10,000; G pauses/resumes it. F5 toggles the
 60 FPS cap, F6 toggles VSync, WASD/QE and right-mouse look control the camera.
 Use Release for timing comparisons. Native acceptance of this beta remains pending.
+
+The ECS stress scene now uses [retained rendering and a fast transform system](Docs/WorldHotPath.md).
+F7 enables detailed sync timings; keep it off for baseline FPS comparisons. The title
+and console identify Debug versus optimized builds. Use the same Release settings
+and stable entity count when comparing against the previous revision.

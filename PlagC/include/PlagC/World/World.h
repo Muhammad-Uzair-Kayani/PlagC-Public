@@ -80,7 +80,10 @@ class World
     void ApplyTransforms(std::span<const TransformUpdate>);
 
   private:
+    friend class SceneRenderer;
+    friend class TransformSystem;
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };
 } // namespace PlagC
+

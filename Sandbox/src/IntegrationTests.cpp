@@ -58,6 +58,14 @@ void TestIntegrationWork(JobSystem& jobs) {
     bool valid=true;
     for(auto& u:world.TransformSnapshot())valid&=u.transform.rotationDegrees.y==45&&std::isfinite(u.transform.position.y);
     Require(valid,"1000 job-generated transforms commit exactly once");
+    TransformSystem fast;
+    std::vector<Entity> selection;for(const auto& u:updates)selection.push_back(u.entity);
+    fast.Bind(world,selection);auto packed=fast.Prepare();
+    auto expected=world.TransformSnapshot();
+    AnimateIntegration(jobs,expected,.1f,3,4);AnimateTransforms(jobs,packed,.1f,3,4);fast.Commit();
+    bool equivalent=true;const auto actual=world.TransformSnapshot();
+    for(std::size_t i=0;i<actual.size();++i) equivalent &= actual[i].transform.rotationDegrees.y==expected[i].transform.rotationDegrees.y && actual[i].transform.position.y==expected[i].transform.position.y;
+    Require(equivalent,"packed transform jobs match safe-path results for every entity");
     for(unsigned i=0;i<1000;++i)world.Create("Growth regression");
     updates=world.TransformSnapshot();AnimateIntegration(jobs,updates,.1f,3,1);world.ApplyTransforms(updates);
     Require(world.Size()==2000,"incremental entity growth updates newly created entities");
@@ -71,6 +79,7 @@ void TestIntegrationWork(JobSystem& jobs) {
 int main() {
     try {
         Thread::InitializeMain();
+        TestTransformSystem();
         TestInputAndPacing();
         for(unsigned workers : {1u,4u}) { JobSystem jobs(workers);TestIntegrationWork(jobs); }
         return 0;

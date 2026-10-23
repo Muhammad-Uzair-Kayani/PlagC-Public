@@ -1,0 +1,79 @@
+2026-10-23. GCC C++20 -O2 -DNDEBUG. Pinned EnTT; recording Renderer, not Ogre.
+50 measured frames after 5 warmups; each frame changes all cube transforms.
+
+[PASS] world scopes entity identities
+[PASS] foreign and null entities rejected
+[PASS] entity names support editor-facing rename
+[PASS] world reads are independent values
+[PASS] invalid transform leaves component unchanged
+[PASS] world rejects nonfinite transforms
+[PASS] active camera requires camera component
+[PASS] world selects active camera
+[PASS] world rejects invalid camera lens
+[PASS] camera position cannot equal target
+[PASS] removing active camera clears selection
+[PASS] world validates light direction
+[PASS] optional component removal is idempotent
+[PASS] world rejects empty render resource handles
+[PASS] world rejects worker-thread reads and mutations
+[PASS] destroy and EnTT slot reuse never revive public entity handles
+[PASS] world clear invalidates all entities
+[PASS] worker snapshots do not mutate live ECS storage
+[PASS] job-produced transform batch updates every entity exactly once
+[PASS] stale entity rejects the whole transform batch without partial writes
+[PASS] duplicate batch entities rejected
+[PASS] invalid batch transform rejected
+[PASS] world snapshots have deterministic identity order
+[PASS] ECS synchronization creates Ogre objects, lights and active camera
+[PASS] repeated ECS sync does not duplicate renderer instances
+[PASS] bridge keeps borrowed mesh in use
+[PASS] renderable replacement updates flags and preserves instance count
+[PASS] invalid borrowed material leaves existing renderer instance intact
+[PASS] component removal releases renderer instances
+[PASS] entity deletion removes rendering and active camera
+[PASS] syncing another world removes previous instances
+[PASS] scene bridge RAII releases all owned renderer instances
+[PASS] ECS tests release their borrowed render resources
+[PASS] prepared system buffer is detached from ECS
+[PASS] system commits selected transforms
+[PASS] system rejects double commit
+[PASS] invalid system batch is atomic
+[PASS] system rejects nonfinite values
+[PASS] system rejects intervening safe transform writes
+[PASS] failed duplicate bind preserves valid selection
+[PASS] system rejects foreign entities
+[PASS] entity destruction/reuse invalidates cached bindings before dereference
+[PASS] camera component insertion invalidates cached component pointers
+[PASS] system preserves camera position/target constraints
+[PASS] system rejects intervening camera changes
+[PASS] camera removal invalidates system binding
+[PASS] world clear invalidates pending system batch
+[PASS] empty system selection is valid
+[PASS] system safely outlives its world
+[PASS] system access remains main-thread only
+[PASS] first sync creates retained binding
+[PASS] static sync performs no object renderer calls
+[PASS] renaming does not dirty render extraction
+[PASS] transform dirty state reaches independent bridges exactly once
+[PASS] visibility update changes only one renderer property
+[PASS] system commit marks transform revision for rendering
+[PASS] failed resource replacement keeps previous object alive
+[PASS] remove/readd before sync refreshes all changed flags
+[PASS] unchanged lights and camera skip renderer calls
+[PASS] one transform updates object light and active camera
+[PASS] structural removal destroys retained object
+[PASS] entity destruction removes retained light
+[PASS] bridge switches worlds with independent revisions
+[PASS] explicit Clear rebuilds next sync
+[PASS] retained scene tests release all resources
+CPU recording backend; NOT Ogre or GPU/FPS. Median of 50 frames after 5 warmups.
+Build: optimized
+cubes,path,gather_ms,commit_ms,sync_ms,total_ms
+1000,baseline,0.0304,0.0496,0.1598,0.2415
+1000,retained,0.0015,0.0058,0.0118,0.0197
+3000,baseline,0.0945,0.2239,0.5151,0.8414
+3000,retained,0.0052,0.0175,0.0321,0.0565
+7000,baseline,0.2875,0.5616,1.3843,2.2442
+7000,retained,0.0127,0.0423,0.0731,0.1324
+10000,baseline,0.3625,0.7197,1.8072,2.9256
+10000,retained,0.0182,0.0619,0.1111,0.1983

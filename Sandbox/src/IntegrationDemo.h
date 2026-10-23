@@ -2,11 +2,14 @@
 #include <PlagC/Application.h>
 #include <PlagC/World/SceneRenderer.h>
 #include <PlagC/Input/Input.h>
-#include <unordered_set>
+#include <PlagC/World/TransformSystem.h>
 
 // Owned snapshots only; workers never access World, Input or Renderer.
 unsigned AnimateIntegration(PlagC::JobSystem&, std::vector<PlagC::TransformUpdate>&,
                             float dt, float time, unsigned iterations);
+unsigned AnimateTransforms(PlagC::JobSystem&, std::span<PlagC::Transform>, float dt, float time, unsigned iterations);
+void TestTransformSystem();
+void TestSceneSynchronization(PlagC::Renderer&);
 void TestInputAndPacing();
 void TestIntegrationWork(PlagC::JobSystem&);
 class IntegrationDemo {
@@ -22,13 +25,12 @@ private:
     PlagC::World world_;
     std::unique_ptr<PlagC::SceneRenderer> scene_;
     std::vector<PlagC::Entity> cubes_;
-    std::unordered_set<std::uint64_t> cubeIDs_;
-    std::vector<PlagC::TransformUpdate> updates_;
+    PlagC::TransformSystem transforms_;
     PlagC::Entity camera_, lights_[4];
     PlagC::MeshHandle cubeMesh_, groundMesh_;
     PlagC::MaterialHandle cubeMaterial_, groundMaterial_;
     PlagC::EventBus::Connection keys_;
-    bool grow_ = true, looking_ = false;
+    bool grow_ = true, looking_ = false, profileSync_ = false;
     unsigned iterations_ = 1;
     double elapsed_ = 0, growthTime_ = 0, statsTime_ = 0;
     unsigned statsFrames_ = 0;

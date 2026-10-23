@@ -8,8 +8,9 @@ double Ms(Clock::time_point a, Clock::time_point b) { return std::chrono::durati
 }
 void IntegrationDemo::SetCount(std::size_t requested) {
     requested = std::min<std::size_t>(requested, 10000);
+    if(requested==cubes_.size())return;
     while (cubes_.size() > requested) {
-        auto e = cubes_.back(); world_.Destroy(e); cubeIDs_.erase(e.value); cubes_.pop_back();
+        auto e = cubes_.back(); world_.Destroy(e); cubes_.pop_back();
     }
     while (cubes_.size() < requested) {
         const auto i = cubes_.size();
@@ -17,9 +18,10 @@ void IntegrationDemo::SetCount(std::size_t requested) {
         try {
             world_.SetTransform(e, {{float(i % 32) * 2 - 31, 1.2f, -float(i / 32) * 2}, {}, {.7f, .7f, .7f}});
             world_.SetRenderable(e, {cubeMesh_, cubeMaterial_});
-            cubes_.push_back(e); cubeIDs_.insert(e.value);
+            cubes_.push_back(e);
         } catch (...) { world_.Destroy(e); throw; }
     }
+    transforms_.Bind(world_,cubes_);
 }
 void IntegrationDemo::Start(Engine& e) {
     auto& r = e.Graphics();
@@ -53,7 +55,7 @@ void IntegrationDemo::Start(Engine& e) {
     keys_ = e.Events().Subscribe(EventType::KeyPressed, [this,&e](const Event& event) { Key(e,event.key); });
     std::cout << "[INTEGRATION] 1000 cubes, FPS unlocked; +1000 every 5s up to 10000.\n"
                  "WASD move, Q/E vertical, hold RMB + mouse to look, Shift sprint.\n"
-                 "F1 wireframe, F2 shadows, F3 sky, F4 reflections, F5 FPS lock, F6 VSync.\n"
+                 "F1 wireframe, F2 shadows, F3 sky, F4 reflections, F5 FPS lock, F6 VSync, F7 detailed sync profiling.\n"
                  "1/2/3/4: 100/1000/5000/10000 cubes; Insert/Delete: +/-100; G: auto growth.\n"
                  "Up/Down: CPU math iterations (1..4096); Escape: exit.\n";
 }
@@ -93,6 +95,7 @@ void IntegrationDemo::Key(Engine& e, KeyCode key) {
     case KeyCode::F3: environment.skybox = !environment.skybox; r.SetEnvironment(environment); break;
     case KeyCode::F4: environment.reflections = !environment.reflections; r.SetEnvironment(environment); break;
     case KeyCode::F5: e.SetFPSLocked(!e.IsFPSLocked()); break;
+    case KeyCode::F7: profileSync_=!profileSync_;scene_->SetProfiling(profileSync_);break;
     case KeyCode::F6: r.SetVSync(!settings.vsync); break;
     case KeyCode::D1: grow_=false; SetCount(100); break;
     case KeyCode::D2: grow_=false; SetCount(1000); break;
@@ -145,12 +148,12 @@ void IntegrationDemo::Frame(Engine& e, double dt) {
         world_.SetTransform(lights_[i], {{20*std::cos(a),6,-25+20*std::sin(a)}, {}, {1,1,1}});
     }
     const auto a=Clock::now();
-    updates_=world_.TransformSnapshot();
-    std::erase_if(updates_,[this](const auto& u) { return !cubeIDs_.contains(u.entity.value); });
+    if(!transforms_.IsBindingValid()) transforms_.Bind(world_,cubes_);
+    auto updates=transforms_.Prepare();
     const auto b=Clock::now();
-    const auto count=AnimateIntegration(e.Jobs(),updates_,float(delta),float(elapsed_),iterations_);
+    const auto count=AnimateTransforms(e.Jobs(),updates,float(delta),float(elapsed_),iterations_);
     const auto c=Clock::now();
-    world_.ApplyTransforms(updates_);
+    transforms_.Commit();
     const auto d=Clock::now();
     scene_->Sync(world_);
     const auto f=Clock::now();
@@ -164,8 +167,17 @@ void IntegrationDemo::Frame(Engine& e, double dt) {
          <<" | entities "<<world_.Size()<<" | lights "<<scene_->Lights()<<" | workers "<<e.Jobs().WorkerCount()
          <<" | jobs/frame "<<count<<" | math "<<iterations_<<" | lock "<<e.IsFPSLocked()
          <<" | vsync "<<e.Graphics().Settings().vsync<<" | grow "<<grow_
-         <<" | snapshot/job+wait/commit/sync/render ms "<<snapshotMs_/n<<"/"<<jobsMs_/n<<"/"
+         <<" | gather/job+wait/commit/sync/render ms "<<snapshotMs_/n<<"/"<<jobsMs_/n<<"/"
          <<commitMs_/n<<"/"<<syncMs_/n<<"/"<<renderMs_/n;
+        const auto sync=scene_->Statistics();
+        s<<" | sync visited/transform/properties "<<sync.scanned<<"/"<<sync.transforms<<"/"<<sync.propertyCalls;
+        if(profileSync_)s<<" | sync LAST frame structure/resource/transform/property/light-camera/traversal ms "
+            <<sync.structureMs<<"/"<<sync.resourceMs<<"/"<<sync.transformMs<<"/"<<sync.propertyMs<<"/"<<sync.lightCameraMs<<"/"<<sync.traversalMs;
+        #ifdef NDEBUG
+        s<<" | optimized build";
+        #else
+        s<<" | DEBUG build (use Release for benchmarks)";
+        #endif
         if(auto* w=e.MainWindow()) w->SetTitle(s.str());
         std::cout<<s.str()<<'\n';
         statsTime_=snapshotMs_=jobsMs_=commitMs_=syncMs_=renderMs_=0;statsFrames_=0;
@@ -177,7 +189,7 @@ void IntegrationDemo::Stop(Engine& e) {
     world_.Clear();scene_->Sync(world_);scene_.reset();
     auto& r=e.Graphics();r.DestroyMaterial(cubeMaterial_);r.DestroyMaterial(groundMaterial_);
     r.DestroyMesh(cubeMesh_);r.DestroyMesh(groundMesh_);r.SetEnvironment({});
-    cubes_.clear();cubeIDs_.clear();updates_.clear();
+    cubes_.clear();
     const auto s=r.Statistics();
     if(s.objects||s.lights||s.meshes||s.materials) throw std::runtime_error("integration resources leaked");
     std::cout<<"[PASS] integration world and renderer resources released\n";

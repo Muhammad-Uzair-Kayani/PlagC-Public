@@ -175,6 +175,7 @@ class Sandbox final : public Application {
 public:
     explicit Sandbox(EngineConfig config):config_(config){}
     void OnStart(Engine& engine) override {
+        TestTransformSystem(); TestSceneSynchronization(engine.Graphics());
         TestInputAndPacing(); TestIntegrationWork(engine.Jobs());
         engine.SetFPSLocked(true);
         Check(engine.IsFPSLocked(),"client enables FPS lock");

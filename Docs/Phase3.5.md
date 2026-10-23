@@ -103,3 +103,10 @@ Windows acceptance:
 4. Test every control, focus loss while holding movement, mouse capture/release,
    resize, minimize/restore, automatic growth and close with thousands of entities.
 5. Run `Scripts\Validate.bat` for Debug, Release and Dist acceptance.
+
+## ECS hot-path update
+
+The integration scene now uses retained render bindings and a reusable transform
+system buffer. F7 toggles detailed sync timings. See [World hot-path design and
+comparison procedure](WorldHotPath.md); native acceptance must be repeated for this
+revision. The safe World snapshot/batch APIs remain available.
