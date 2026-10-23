@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <stdexcept>
 namespace PlagC {
-namespace { std::uint64_t next=1; }
+namespace { std::uint64_t next=1; Transform lastTransform; }
+Transform RecordedLastTransform(){return lastTransform;}
 struct Renderer::Impl {
     struct Object { MeshHandle mesh;MaterialHandle material;Transform transform;bool visible=true,shadow=true;std::uint8_t queue=10; };
     std::unordered_map<std::uint64_t,MeshData> meshes;
@@ -23,7 +24,7 @@ ObjectHandle Renderer::CreateObject(MeshHandle mesh,MaterialHandle material,cons
     impl_->meshes.at(mesh.value);impl_->materials.at(material.value);ObjectHandle h{next++};impl_->objects.emplace(h.value,Impl::Object{mesh,material,t});return h;
 }
 void Renderer::DestroyObject(ObjectHandle h){if(!impl_->objects.erase(h.value))throw std::runtime_error("stale object");}
-void Renderer::SetTransform(ObjectHandle h,const Transform& t){impl_->objects.at(h.value).transform=t;}
+void Renderer::SetTransform(ObjectHandle h,const Transform& t){impl_->objects.at(h.value).transform=t;lastTransform=t;}
 void Renderer::SetVisible(ObjectHandle h,bool b){impl_->objects.at(h.value).visible=b;}
 void Renderer::SetCastShadows(ObjectHandle h,bool b){impl_->objects.at(h.value).shadow=b;}
 void Renderer::SetRenderQueue(ObjectHandle h,std::uint8_t q){impl_->objects.at(h.value).queue=q;}

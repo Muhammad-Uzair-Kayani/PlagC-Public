@@ -24,6 +24,8 @@ void TransformSystem::Bind(World& world,std::span<const Entity> entities) {
     std::unordered_set<std::uint64_t> seen;seen.reserve(entities.size());
     for(auto e:entities) {
         auto raw=w.Get(e);
+        if(auto* pc=w.registry.try_get<PhysicsComponent>(raw);pc&&pc->body.motion==MotionType::Dynamic)
+            throw std::invalid_argument("dynamic transforms are physics-owned");
         if(!seen.insert(e.value).second)throw std::invalid_argument("duplicate transform system entity");
         next->bindings.push_back({&w.registry.get<Transform>(raw), &w.registry.get<WorldChanges>(raw),
                                   w.registry.try_get<CameraComponent>(raw)});

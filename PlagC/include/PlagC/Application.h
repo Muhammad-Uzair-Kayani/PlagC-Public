@@ -7,7 +7,7 @@
 #include <memory>
 #include <PlagC/FrameLimiter.h>
 namespace PlagC {
-struct EngineConfig { bool headless = false, nullPlatform = false, offscreen = false; unsigned workers = 0; unsigned frameLimit = 0; };
+struct EngineConfig { bool headless = false, nullPlatform = false, offscreen = false; unsigned workers = 0; unsigned frameLimit = 0; bool physicsLab = false; unsigned physicsWorkers = 2, physicsBodies = 1000; };
 class Engine {
 public:
     explicit Engine(const EngineConfig&);

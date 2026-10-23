@@ -52,6 +52,7 @@ void World::Destroy(Entity e)
     const auto raw=p.Get(e);
     if(p.registry.any_of<RenderableComponent,LightComponent>(raw)) ++p.structure;
     ++p.topology;
+    if(p.registry.all_of<PhysicsComponent>(raw)) ++p.physicsStructure;
     p.registry.destroy(raw);
     p.entities.erase(e.value);
     if (p.active == e) { p.active = {}; ++p.cameraSelection; }
@@ -59,7 +60,7 @@ void World::Destroy(Entity e)
 void World::Clear()
 {
     Thread::RequireMain();
-    ++impl_->structure; ++impl_->topology; ++impl_->cameraSelection;
+    ++impl_->structure; ++impl_->topology; ++impl_->cameraSelection; ++impl_->physicsStructure;
     impl_->registry.clear();
     impl_->entities.clear();
     impl_->active = {};
@@ -74,10 +75,11 @@ EntityRecord World::Read(Entity e) const
 {
     const auto raw = impl_->Get(e);
     const auto &r = impl_->registry;
-    EntityRecord result{e, r.get<Name>(raw).value, r.get<Transform>(raw), {}, {}, {}};
+    EntityRecord result{e, r.get<Name>(raw).value, r.get<Transform>(raw), {}, {}, {}, {}};
     if (auto *v = r.try_get<RenderableComponent>(raw)) result.renderable = *v;
     if (auto *v = r.try_get<LightComponent>(raw)) result.light = *v;
     if (auto *v = r.try_get<CameraComponent>(raw)) result.camera = *v;
+    if (auto *v = r.try_get<PhysicsComponent>(raw)) result.physics = *v;
     return result;
 }
 std::vector<EntityRecord> World::Snapshot() const
@@ -98,10 +100,23 @@ void World::Rename(Entity e, std::string name)
 void World::SetTransform(Entity e, const Transform &t)
 {
     const auto raw = impl_->Get(e);
+    if(auto* pc=impl_->registry.try_get<PhysicsComponent>(raw))
+        Require(pc->body.motion!=MotionType::Dynamic,"dynamic transform is physics-owned; use PhysicsSystem::Teleport");
     ValidateWorldTransform(t);
     if (auto *c = impl_->registry.try_get<CameraComponent>(raw)) ValidateWorldCamera(*c, t);
     impl_->registry.replace<Transform>(raw, t);
     ++impl_->registry.get<WorldChanges>(raw).transform;
+}
+void World::SetPhysics(Entity e, const PhysicsComponent& c) {
+    auto& p=*impl_;auto raw=p.Get(e);
+    Require(!p.registry.all_of<CameraComponent>(raw),"physics camera ownership is unsupported");
+    ValidatePhysicsBody({c,p.registry.get<Transform>(raw)});
+    p.registry.emplace_or_replace<PhysicsComponent>(raw,c);
+    ++p.registry.get<WorldChanges>(raw).physics;++p.physicsStructure;++p.topology;
+}
+void World::RemovePhysics(Entity e) {
+    auto& p=*impl_;auto raw=p.Get(e);
+    if(p.registry.remove<PhysicsComponent>(raw)){++p.physicsStructure;++p.topology;}
 }
 void World::SetRenderable(Entity e, const RenderableComponent &c)
 {
@@ -138,6 +153,7 @@ void World::RemoveLight(Entity e) {
 void World::SetCamera(Entity e, const CameraComponent &c)
 {
     const auto raw = impl_->Get(e);
+    Require(!impl_->registry.all_of<PhysicsComponent>(raw),"physics camera ownership is unsupported");
     ValidateWorldCamera(c, impl_->registry.get<Transform>(raw));
     if(!impl_->registry.all_of<CameraComponent>(raw)) ++impl_->topology;
     impl_->registry.emplace_or_replace<CameraComponent>(raw, c);
@@ -175,6 +191,8 @@ void World::ApplyTransforms(std::span<const TransformUpdate> updates)
     {
         const auto raw = impl_->Get(u.entity);
         Require(seen.insert(u.entity.value).second, "duplicate entity in transform batch");
+        if(auto* pc=impl_->registry.try_get<PhysicsComponent>(raw))
+            Require(pc->body.motion!=MotionType::Dynamic,"dynamic transform is physics-owned; use PhysicsSystem::Teleport");
         ValidateWorldTransform(u.transform);
         if (auto *c = impl_->registry.try_get<CameraComponent>(raw)) ValidateWorldCamera(*c, u.transform);
     }

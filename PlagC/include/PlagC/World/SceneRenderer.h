@@ -16,7 +16,8 @@ class SceneRenderer
     ~SceneRenderer();
     SceneRenderer(const SceneRenderer &) = delete;
     SceneRenderer &operator=(const SceneRenderer &) = delete;
-    void Sync(const World &);
+    // Optional presentation poses override renderer objects only, never World.
+    void Sync(const World &, std::span<const TransformUpdate> presentation = {});
     void Clear();
     void SetProfiling(bool); // Per-call clocks are opt-in; counters always enabled.
     SceneSyncStats Statistics() const;

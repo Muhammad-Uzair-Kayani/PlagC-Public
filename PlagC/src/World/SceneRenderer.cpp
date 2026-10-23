@@ -17,6 +17,7 @@ struct SceneRenderer::Impl {
     struct Object {
         entt::entity raw{};ObjectHandle handle;RenderableComponent component;
         std::uint64_t transform=0, property=0, seen=0;
+        std::optional<Transform> presentation;
     };
     struct Light {
         entt::entity raw{};LightHandle handle;
@@ -48,7 +49,7 @@ std::size_t SceneRenderer::Lights() const {
 }
 void SceneRenderer::SetProfiling(bool value) { Thread::RequireMain();impl_->profiling=value; }
 SceneSyncStats SceneRenderer::Statistics() const { Thread::RequireMain();return impl_->stats; }
-void SceneRenderer::Sync(const World& world) {
+void SceneRenderer::Sync(const World& world,std::span<const TransformUpdate> presentation) {
     Thread::RequireMain();
     auto& p=*impl_;const auto& w=*world.impl_;const auto& registry=w.registry;
     const auto start=Clock::now();p.stats={};auto& s=p.stats;s.detailed=p.profiling;
@@ -85,6 +86,10 @@ void SceneRenderer::Sync(const World& world) {
         p.objectBindings.swap(objects);p.lightBindings.swap(lights);p.structure=w.structure;
         s.structureMs=Milliseconds(structuralStart);
     }
+    for(const auto& u:presentation)ValidateWorldTransform(u.transform);
+    for(const auto& u:presentation){
+        if(auto it=p.objects.find(u.entity.value);it!=p.objects.end())it->second.presentation=u.transform;
+    }
     for(auto* o:p.objectBindings) {
         ++s.scanned;
         const auto& changes=registry.get<WorldChanges>(o->raw);
@@ -106,10 +111,11 @@ void SceneRenderer::Sync(const World& world) {
             }
             o->component=c;o->property=changes.renderable;
         }
-        if(o->transform!=changes.transform) {
+        if(o->presentation || o->transform!=changes.transform) {
             Measure measure(s.transformMs,p.profiling);
-            p.renderer.SetTransform(o->handle,registry.get<Transform>(o->raw));++s.transforms;
-            o->transform=changes.transform;
+            p.renderer.SetTransform(o->handle,o->presentation.value_or(registry.get<Transform>(o->raw)));++s.transforms;
+            o->transform=o->presentation?0:changes.transform;
+            o->presentation.reset();
         }
     }
     {

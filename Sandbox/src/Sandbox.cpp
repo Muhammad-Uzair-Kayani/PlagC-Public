@@ -3,6 +3,7 @@
 #include "RenderDemo.h"
 #include "WorldDemo.h"
 #include "IntegrationDemo.h"
+#include "PhysicsLab.h"
 #include <PlagC/Thread.h>
 using namespace PlagC;
 namespace {
@@ -172,9 +173,11 @@ class Sandbox final : public Application {
     RenderDemo demo_;
     WorldDemo worldDemo_;
     IntegrationDemo integration_;
+    PhysicsLab physicsLab_;
 public:
     explicit Sandbox(EngineConfig config):config_(config){}
     void OnStart(Engine& engine) override {
+        if(config_.physicsLab){TestPhysicsFoundation();physicsLab_.Start(engine,config_.physicsWorkers,config_.physicsBodies);return;}
         TestTransformSystem(); TestSceneSynchronization(engine.Graphics());
         TestInputAndPacing(); TestIntegrationWork(engine.Jobs());
         engine.SetFPSLocked(true);
@@ -220,11 +223,11 @@ public:
         Check(!engine.IsFPSLocked() && !engine.Graphics().Settings().vsync,"integration scene starts explicitly unlocked");
     }
     void OnFrame(Engine& engine,double dt) override {
-        integration_.Frame(engine,dt);
+        if(config_.physicsLab)physicsLab_.Frame(engine,dt);else integration_.Frame(engine,dt);
         if ((config_.headless || config_.nullPlatform || config_.offscreen) && !config_.frameLimit && ++frames_>=6) engine.Stop();
     }
     void OnStop(Engine& engine) override {
-        integration_.Stop(engine);
+        if(config_.physicsLab)physicsLab_.Stop(engine);else integration_.Stop(engine);
         if (auto* window=engine.MainWindow()) { window->RequestClose(); Check(window->ShouldClose(),"programmatic close request"); }
     }
 };
