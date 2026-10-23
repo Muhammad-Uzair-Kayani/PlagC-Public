@@ -15,7 +15,11 @@ project "Jolt"
     -- SerializableObject.cpp supplies RTTI even when object streaming is disabled.
     includedirs { "../Vendor/jolt" }
     defines { "JPH_DISABLE_CUSTOM_ALLOCATOR" }
-    floatingpoint "Precise"
+    -- Premake beta2 accepts Default/Fast/Strict, but not Precise.
+    floatingpoint "Default"
+    filter "toolset:msc*"
+        buildoptions { "/fp:precise" }
+    filter {}
     filter "system:windows"
         defines { "_CRT_SECURE_NO_WARNINGS", "NOMINMAX" }
     filter {}
