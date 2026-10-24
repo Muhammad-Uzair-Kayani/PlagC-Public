@@ -10,7 +10,9 @@ Bin\windows-x86_64\Dist\Sandbox.exe --physics
 
 One executable loads **one scenario at a time**. Switching releases its physics
 world, constraints, characters, scene objects, meshes and materials. The existing
-non-physics integration test remains available by omitting `--physics`.
+non-physics integration test is available with `--integration`. A normal EXE or
+Visual Studio F5 launch now opens Physics Lab; `--physics` remains supported.
+Headless/null/offscreen runs keep the integration default unless a mode is explicit.
 Rendering calls `Engine::SetFPSLocked(false)`; physics uses a separate fixed
 60 Hz clock with interpolation and a maximum of four catch-up ticks.
 
@@ -161,3 +163,18 @@ runs a smaller CPU-only matrix: all scenes, both schedulers, 1/2/4/6/11 workers,
 500 requested bodies (eight characters), 10k terrain triangles, 500 queries,
 60 warmup ticks and 120 samples. It omits rendering and is **not** the native
 Debug/Dist acceptance matrix. See [validation results](PhysicsValidation.md).
+
+## If scene shortcuts appear unresponsive
+
+The window title must say `PlagC Physics Lab`. Earlier builds launched the old
+ECS test without `--physics`; its F-keys control rendering rather than lab scenes.
+Current builds open the lab by default. Each received press logs `[LAB INPUT]`,
+and a scene selection logs its number/name before loading. Benchmark mode ignores
+interactive controls except Escape and now reports that in the input log.
+Click the render window to focus it; use Page Up/Down to avoid laptop Fn/media-key
+mapping. Shift shortcuts use the event's captured modifiers (either Shift key),
+so a release queued in the same poll cannot change the selected scene.
+
+Regression check: `bash Scripts/TestPhysicsControls.sh` tests the default launch
+configuration and queued scene-selection events, including a Shift release before
+the event pump. This does not simulate native Windows keyboard delivery.

@@ -14,7 +14,7 @@ public:
 private:
     void Load(PlagC::Engine&);
     void Unload(PlagC::Engine&);
-    void Key(PlagC::Engine&,PlagC::KeyCode);
+    void Key(PlagC::Engine&,const PlagC::Event&);
     void Camera(PlagC::Engine&,double);
     void Visuals(PlagC::Renderer&);
     void Hud(PlagC::Engine&,double);

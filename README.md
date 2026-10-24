@@ -21,9 +21,9 @@ Download Premake from https://github.com/premake/premake-core/releases and place
 2. Run `GenerateProjects.bat`. It calls `FetchDependencies.bat`, shallow-fetches exact pinned dependencies with four parallel jobs, verifies them, then runs Premake. Git for Windows supplies the required Bash.
 3. Open `Build/Generated/PlagC.sln` in VS2022.
 4. Choose Debug / x64, set Sandbox as startup project, build and run.
-5. Sandbox executes automated checks, then leaves a native window open. Move,
-   resize, minimize, focus, type, click and scroll; inspect EVENT log lines.
-   Press W for wireframe, S for shadows, Escape or the OS close button to exit.
+5. Sandbox runs physics checks, then opens Physics Lab. Use F1–F12 or Page Up/Down
+   to select scenes, H for controls, and Escape to exit. See `Docs/PhysicsLab.md`.
+   Pass `--integration` to run the earlier ECS stress scene instead.
 6. Repeat under Release and Dist. See `Docs/Phase2.md` for the acceptance checklist.
 
 For all configurations, run `Scripts\Validate.bat` from a VS2022 Developer

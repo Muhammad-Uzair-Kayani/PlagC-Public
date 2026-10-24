@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include "PhysicsLab.h"
+#include "PhysicsLabControls.h"
 #include <PlagC/Input/Input.h>
 #include <iomanip>
 using namespace PlagC;
@@ -14,7 +15,7 @@ void PhysicsLab::Start(Engine& engine,const EngineConfig& config){
  config_=config;engine.SetFPSLocked(false);options_={config.physicsScene-1,config.physicsBodies,config.physicsQueries,config.physicsTriangles,config.physicsSeed,config.physicsVariant,config.physicsIndividual};
  physicsConfig_.workers=config.physicsWorkers;physicsConfig_.fixedHz=config.physicsHz;physicsConfig_.maxBodies=40000;physicsConfig_.maxBodyPairs=262144;physicsConfig_.maxContacts=131072;
  physicsConfig_.scheduler=config.physicsScheduler=="plagc"?PhysicsScheduler::PlagC:PhysicsScheduler::Native;physicsConfig_.sharedJobs=&engine.Jobs();benchmark_=config.physicsBenchmark;
- keys_=engine.Events().Subscribe(EventType::KeyPressed,[this,&engine](const Event& e){Key(engine,e.key);});Load(engine);
+ keys_=engine.Events().Subscribe(EventType::KeyPressed,[this,&engine](const Event& e){Key(engine,e);});Load(engine);
 }
 void PhysicsLab::Unload(Engine& engine){
  auto& r=engine.Graphics();hud_.Clear(r);for(auto h:marks_)r.DestroyObject(h);marks_.clear();scene_.reset();model_.reset();
@@ -43,13 +44,16 @@ void PhysicsLab::Visuals(Renderer& r){
  }
  std::erase_if(bound_,[&](auto& b){return !model_->world.Alive({b.first});});
 }
-void PhysicsLab::Key(Engine& e,KeyCode key){
+void PhysicsLab::Key(Engine& e,const Event& event){
+ const auto key=event.key;
+ std::cout<<"[LAB INPUT] key="<<unsigned(key)<<" modifiers="<<event.modifiers<<(benchmark_?" benchmark: controls disabled":"")<<std::endl;
  if(key==KeyCode::Escape){e.Stop();return;}
  if(benchmark_)return; // Timed runs must not be mutated by interactive controls.
  bool reload=false;
- if(key>=KeyCode::F1&&key<=KeyCode::F12){unsigned scene=unsigned(key)-unsigned(KeyCode::F1);if(Input::IsKeyPressed(KeyCode::LeftShift)&&scene<2)scene+=12;options_.scene=scene;reload=true;}
- if(key==KeyCode::PageDown){options_.scene=(options_.scene+1)%PhysicsLabScenes::Count;reload=true;}
- if(key==KeyCode::PageUp){options_.scene=(options_.scene+PhysicsLabScenes::Count-1)%PhysicsLabScenes::Count;reload=true;}
+ if(auto scene=PhysicsLabControls::SceneForPress(event,options_.scene)){
+  options_.scene=*scene;reload=true;
+  std::cout<<"[LAB INPUT] selecting "<<options_.scene+1<<" "<<PhysicsLabScenes::Names[options_.scene]<<std::endl;
+ }
  if(key==KeyCode::R)reload=true;
  if(key==KeyCode::V){if(options_.scene==11)options_.individual=!options_.individual;else options_.alternate=!options_.alternate;reload=true;}
  if(key==KeyCode::Insert){options_.bodies=std::min(16000u,options_.bodies+500);reload=true;}
