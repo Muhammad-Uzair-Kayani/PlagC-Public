@@ -13,6 +13,7 @@ struct Renderer::Impl {
     std::unordered_map<std::uint64_t,Object> objects;
     std::unordered_map<std::uint64_t,LightDesc> lights;
     CameraDesc camera;
+    RenderSettings settings;EnvironmentDesc environment;std::uint64_t frames=0;
 };
 Renderer::Renderer(Window*,const RendererConfig&):impl_(std::make_unique<Impl>()) {}
 Renderer::~Renderer()=default;
@@ -32,5 +33,12 @@ LightHandle Renderer::CreateLight(const LightDesc& d){LightHandle h{next++};impl
 void Renderer::DestroyLight(LightHandle h){if(!impl_->lights.erase(h.value))throw std::runtime_error("stale light");}
 void Renderer::UpdateLight(LightHandle h,const LightDesc& d){impl_->lights.at(h.value)=d;}
 void Renderer::SetCamera(const CameraDesc& c){impl_->camera=c;}
-RenderStats Renderer::Statistics() const {RenderStats s;s.objects=impl_->objects.size();s.meshes=impl_->meshes.size();s.materials=impl_->materials.size();s.lights=impl_->lights.size();return s;}
+RenderStats Renderer::Statistics() const {RenderStats s;s.frames=impl_->frames;s.objects=impl_->objects.size();s.meshes=impl_->meshes.size();s.materials=impl_->materials.size();s.lights=impl_->lights.size();return s;}
+void Renderer::SetSettings(const RenderSettings& s){impl_->settings=s;}
+RenderSettings Renderer::Settings()const{return impl_->settings;}
+void Renderer::SetVSync(bool value){impl_->settings.vsync=value;}
+void Renderer::SetEnvironment(const EnvironmentDesc& e){impl_->environment=e;}
+EnvironmentDesc Renderer::Environment()const{return impl_->environment;}
+void Renderer::Render(double){++impl_->frames;}
+void Renderer::Resize(unsigned,unsigned){}
 }

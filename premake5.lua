@@ -85,7 +85,7 @@ project "Sandbox"
     ogreSystemLinks()
     debugdir "%{wks.location}/../.."
     filter "system:windows"
-        links { "gdi32", "user32", "shell32" }
+        links { "gdi32", "user32", "shell32", "psapi" }
     filter "system:linux"
         links { "pthread", "dl", "m" }
     filter "system:macosx"

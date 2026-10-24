@@ -5,7 +5,7 @@ logging, GLFW windows, typed event categories, thread identity and a bounded
 lock-free work-stealing job system. Sandbox is the client and validation app.
 Phase 2 adds Ogre-Next rendering behind engine APIs, tested through Sandbox.
 Phase 3 adds an EnTT-backed World, typed components and an Ogre scene bridge.
-Physics is available through the [14-scene Physics Lab](Docs/PhysicsLab.md). Managed assets and editor systems remain future phases.
+The default client is one [Integrated FPS Stress World](Docs/StressWorld.md). Managed assets and editor systems remain future phases.
 See Docs/Phase2.md for current verification and limitations.
 
 ## Windows / Visual Studio 2022
@@ -21,9 +21,9 @@ Download Premake from https://github.com/premake/premake-core/releases and place
 2. Run `GenerateProjects.bat`. It calls `FetchDependencies.bat`, shallow-fetches exact pinned dependencies with four parallel jobs, verifies them, then runs Premake. Git for Windows supplies the required Bash.
 3. Open `Build/Generated/PlagC.sln` in VS2022.
 4. Choose Debug / x64, set Sandbox as startup project, build and run.
-5. Sandbox runs physics checks, then opens Physics Lab. Use F1–F12 or Page Up/Down
-   to select scenes, H for controls, and Escape to exit. See `Docs/PhysicsLab.md`.
-   Pass `--integration` to run the earlier ECS stress scene instead.
+5. Sandbox opens one persistent FPS facility with unlocked FPS. WASD/mouse move/look,
+   E grabs, left-click throws, and F1 displays all controls. There are no scene-selection keys.
+   See [controls, benchmarks and validation](Docs/StressWorld.md).
 6. Repeat under Release and Dist. See `Docs/Phase2.md` for the acceptance checklist.
 
 For all configurations, run `Scripts\Validate.bat` from a VS2022 Developer
@@ -34,11 +34,11 @@ msbuild Build\Generated\PlagC.sln /m /p:Configuration=Debug /p:Platform=x64
 Bin\windows-x86_64\Debug\Sandbox.exe --headless --workers 4
 ```
 
-`--headless` skips GLFW and runs core plus Ogre NULL resource/lifecycle checks. `--null` creates a
+`--headless` skips GLFW and runs the stress world with the Ogre NULL backend. `--null` creates a
 real GLFW window object through its Null backend; it does not display a native
 window. `--frames N` limits the app loop. `--workers N` configures the pool.
-Headless/Null modes exit automatically after their checks and six frames unless
-an explicit frame limit is supplied. Unexpected arguments/failures exit nonzero.
+Headless/Null/offscreen modes exit after six frames unless a frame limit, benchmark,
+or soak capture is supplied. `--self-test` additionally runs core physics regressions. Unexpected arguments/failures exit nonzero.
 
 ## Linux / macOS structure
 
@@ -119,38 +119,22 @@ commit or stash them first. Git errors stop generation with a nonzero exit code.
 See [the permanent dependency policy](Docs/Dependencies.md). Deliveries are
 committed to GitHub; clone the branch above instead of using source ZIPs.
 
-## Skybox and environment validation
+## Integrated FPS Stress World
 
-Sandbox now loads an original mipmapped DDS cubemap, displays it as the sky,
-and applies it to PBR reflections. Press **E** to toggle the sky and **R** to
-toggle reflections. Startup runs resource/lifecycle checks in all modes and
-pixel comparisons in native / `--offscreen` mode. Inspect `Logs/Environment-*.ppm`.
-The renderer API is `SetEnvironment({"EnvironmentTest.dds", true, true})`;
-`SetEnvironment({})` clears it. See `Docs/Phase2.md` for coverage and limitations.
+The former playable Physics Lab, rendering demo and ECS integration demo are removed.
+Their engine APIs and standalone API regressions remain. The default app combines
+six connected districts, a physical capsule player, force-based grabbing, CCD
+projectiles, machinery, bridges/chains, terrain and bounded factory recycling.
 
-## Phase 3 — World / ECS
+FPS locking is disabled through `engine.SetFPSLocked(false)`. Keys 1–4 change the
+population of the same world; they do not switch scenes. Read
+[StressWorld.md](Docs/StressWorld.md) for the complete key map, architecture,
+benchmark commands and honest validation limits.
 
-Pull `prototype` and rerun `GenerateProjects.bat`: the build now shallow-fetches
-pinned EnTT and adds its header-only utility project. Build Sandbox normally.
-It runs the earlier regression checks, then displays sixteen cubes controlled
-by World components and animated through four job-system tasks per frame.
+After pulling this change, rerun `GenerateProjects.bat` and rebuild: source files
+were added/removed and Windows process-memory telemetry links `psapi`.
+Use Release or Dist for performance measurements.
 
-`World` owns entities, names and component data. `SceneRenderer` synchronizes
-that data with Ogre and owns its renderer instances. EnTT is private to the
-engine implementation. See `Docs/Phase3.md` for API examples, ownership rules,
-the test checklist and Windows acceptance steps. Captures are in `Logs/World-*.ppm`
-and `Logs/Phase3.ppm`. The beta integration scene now uses the controls below.
-
-
-## Beta integration stress scene
-
-See [Phase 3.5 controls and validation](Docs/Phase3.5.md). The client now calls
-`engine.SetFPSLocked(false)` and begins with 1,000 animated cubes. Automatic growth
-adds 1,000 every five seconds up to 10,000; G pauses/resumes it. F5 toggles the
-60 FPS cap, F6 toggles VSync, WASD/QE and right-mouse look control the camera.
-Use Release for timing comparisons. Native acceptance of this beta remains pending.
-
-The ECS stress scene now uses [retained rendering and a fast transform system](Docs/WorldHotPath.md).
-F7 enables detailed sync timings; keep it off for baseline FPS comparisons. The title
-and console identify Debug versus optimized builds. Use the same Release settings
-and stable entity count when comparing against the previous revision.
+The [World hot path](Docs/WorldHotPath.md), [physics foundation](Docs/PhysicsFoundation.md),
+and earlier phase reports document engine architecture and historical results;
+their old playable-demo controls are superseded by StressWorld.md.

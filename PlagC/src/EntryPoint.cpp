@@ -5,47 +5,38 @@ int main(int argc, char** argv) {
     try {
         PlagC::Thread::InitializeMain();
         PlagC::EngineConfig config;
-        bool physicsWorkersExplicit=false, demoExplicit=false;
-        for (int i=1;i<argc;++i) {
-            const std::string arg = argv[i];
-            if (arg == "--headless") config.headless = true;
-            else if (arg == "--offscreen") config.offscreen = true;
-            else if (arg == "--null") config.nullPlatform = true;
-            else if (arg == "--physics") {config.physicsLab = true;demoExplicit=true;}
-            else if (arg == "--integration") {config.physicsLab = false;demoExplicit=true;}
-            else if (arg == "--physics-workers" && i+1<argc) {config.physicsWorkers = static_cast<unsigned>(std::stoul(argv[++i]));physicsWorkersExplicit=true;}
-            else if (arg == "--physics-bodies" && i+1<argc) config.physicsBodies = static_cast<unsigned>(std::stoul(argv[++i]));
-            else if (arg == "--physics-scene" && i+1<argc) {config.physicsScene=unsigned(std::stoul(argv[++i]));config.physicsLab=true;demoExplicit=true;}
-            else if (arg == "--physics-queries" && i+1<argc) config.physicsQueries=unsigned(std::stoul(argv[++i]));
-            else if (arg == "--physics-triangles" && i+1<argc) config.physicsTriangles=unsigned(std::stoul(argv[++i]));
-            else if (arg == "--physics-seed" && i+1<argc) config.physicsSeed=unsigned(std::stoul(argv[++i]));
-            else if (arg == "--physics-warmup" && i+1<argc) config.physicsWarmup=unsigned(std::stoul(argv[++i]));
-            else if (arg == "--physics-samples" && i+1<argc) config.physicsSamples=unsigned(std::stoul(argv[++i]));
-            else if (arg == "--physics-csv" && i+1<argc) config.physicsCSV=argv[++i];
-            else if (arg == "--physics-scheduler" && i+1<argc) config.physicsScheduler=argv[++i];
-            else if (arg == "--physics-hz" && i+1<argc) config.physicsHz=std::stod(argv[++i]);
-            else if (arg == "--physics-variant") config.physicsVariant=true;
-            else if (arg == "--physics-individual") config.physicsIndividual=true;
-            else if (arg == "--physics-benchmark") {config.physicsLab=true;config.physicsBenchmark=true;demoExplicit=true;}
-            else if (arg == "--frames" && i+1<argc) config.frameLimit = static_cast<unsigned>(std::stoul(argv[++i]));
-            else if (arg == "--workers" && i+1<argc) config.workers = static_cast<unsigned>(std::stoul(argv[++i]));
-            else throw std::invalid_argument("Usage: Sandbox [--headless|--null|--offscreen] [--frames N] [--workers N] [--physics|--integration] [--physics-workers N] [--physics-bodies N] [--physics-scene 1..14] [--physics-benchmark]. Full controls and flags: Docs/PhysicsLab.md");
+        bool physicsWorkersExplicit=false;
+        for(int i=1;i<argc;++i){
+            std::string arg=argv[i];
+            auto value=[&]()->std::string {if(i+1>=argc)throw std::invalid_argument("missing value for "+arg);return argv[++i];};
+            auto number=[&]()->unsigned {auto text=value();std::size_t used=0;auto n=std::stoul(text,&used);if(used!=text.size()||text.starts_with('-')||n>1000000)throw std::invalid_argument("invalid number for "+arg);return unsigned(n);};
+            if(arg=="--headless")config.headless=true;
+            else if(arg=="--null")config.nullPlatform=true;
+            else if(arg=="--offscreen")config.offscreen=true;
+            else if(arg=="--frames")config.frameLimit=number();
+            else if(arg=="--workers")config.workers=number();
+            else if(arg=="--physics-workers"){config.physicsWorkers=number();physicsWorkersExplicit=true;}
+            else if(arg=="--physics-hz")config.physicsHz=std::stod(value());
+            else if(arg=="--physics-scheduler")config.physicsScheduler=value();
+            else if(arg=="--entities")config.stressEntities=number();
+            else if(arg=="--seed")config.stressSeed=number();
+            else if(arg=="--no-progressive")config.stressProgressive=false;
+            else if(arg=="--soak")config.stressSoak=true;
+            else if(arg=="--benchmark")config.stressBenchmark=true;
+            else if(arg=="--seconds")config.stressSeconds=std::stod(value());
+            else if(arg=="--warmup")config.stressWarmup=number();
+            else if(arg=="--csv")config.stressCSV=value();
+            else if(arg=="--self-test")config.selfTest=true;
+            else if(arg=="--stress"||arg=="--physics"){} // Compatibility alias; only one playable world exists.
+            else throw std::invalid_argument("Unknown option "+arg+". See Docs/StressWorld.md; the old scene selector has been removed.");
         }
-        // Preserve noninteractive regression runs; a normal F5/EXE launch opens the lab.
-        if(!demoExplicit && (config.headless||config.nullPlatform||config.offscreen)) config.physicsLab=false;
-        if(config.physicsBenchmark) config.physicsLab=true;
-        if(unsigned(config.headless)+unsigned(config.nullPlatform)+unsigned(config.offscreen)>1) throw std::invalid_argument("choose one rendering mode");
-        if(config.physicsScene<1||config.physicsScene>14||config.physicsQueries>10000||config.physicsTriangles>500000||!config.physicsSamples||config.physicsSamples>1000000||config.physicsWarmup>1000000||!std::isfinite(config.physicsHz)||config.physicsHz<1||config.physicsHz>240)throw std::invalid_argument("invalid Physics Lab workload; see Docs/PhysicsLab.md");
+        if(config.stressSoak&&config.stressBenchmark)throw std::invalid_argument("choose --soak or --benchmark");
+        if(unsigned(config.headless)+unsigned(config.nullPlatform)+unsigned(config.offscreen)>1)throw std::invalid_argument("choose one rendering mode");
+        if(config.stressEntities<1000||config.stressEntities>10000||config.physicsWorkers>64||config.workers>32||!std::isfinite(config.physicsHz)||config.physicsHz<1||config.physicsHz>240||!std::isfinite(config.stressSeconds)||config.stressSeconds<1||config.stressSeconds>1800||config.stressWarmup>10000)throw std::invalid_argument("invalid stress workload limits; see Docs/StressWorld.md");
         if(config.physicsScheduler!="native"&&config.physicsScheduler!="plagc")throw std::invalid_argument("physics scheduler must be native or plagc");
-        if(config.physicsWorkers>64||config.physicsBodies>16000)throw std::invalid_argument("physics workers <=64, bodies <=16000");
-        if(config.physicsLab&&!physicsWorkersExplicit){
-            const unsigned hardware=std::max(1u,std::thread::hardware_concurrency());
-            config.physicsWorkers=std::min(config.physicsWorkers,hardware>2?hardware-2:0u);
-        }
-        if(config.physicsLab&&!config.workers){
-            const unsigned hardware=std::max(1u,std::thread::hardware_concurrency());
-            config.workers=config.physicsScheduler=="plagc"?std::min(32u,std::max(1u,hardware-1)):std::min(32u,hardware>config.physicsWorkers+1?hardware-config.physicsWorkers-1:1u);
-        }
+        const unsigned hardware=std::max(1u,std::thread::hardware_concurrency());
+        if(!physicsWorkersExplicit)config.physicsWorkers=std::min(config.physicsWorkers,hardware>2?hardware-2:0u);
+        if(!config.workers)config.workers=config.physicsScheduler=="plagc"?std::min(32u,std::max(1u,hardware-1)):1u;
         PlagC::Engine engine(config);
         auto application = PlagC::CreateApplication(config);
         if (!application) throw std::runtime_error("CreateApplication returned null");

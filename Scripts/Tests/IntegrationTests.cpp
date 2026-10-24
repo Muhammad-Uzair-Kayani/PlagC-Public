@@ -1,5 +1,5 @@
 #include "pgcpch.h"
-#include "IntegrationDemo.h"
+#include "IntegrationWork.h"
 #include <PlagC/Thread.h>
 using namespace PlagC;
 namespace {

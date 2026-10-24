@@ -1,3 +1,5 @@
+> Historical phase report. The former demo scenes are removed; current startup and controls are in [StressWorld.md](StressWorld.md).
+
 # Phase 3 — World / ECS
 
 Status: implementation and Linux Debug Sandbox verification complete;
@@ -106,3 +108,4 @@ On Windows: pull prototype, run GenerateProjects.bat, build Sandbox, and verify
 sixteen rotating cubes above the checker floor. Check PASS lines and inspect
 Logs/Phase3.ppm and Logs/World-*.ppm. Exercise W/S/E/R, resize/minimize/restore,
 then close. Run Scripts\Validate.bat for the three build configurations.
+

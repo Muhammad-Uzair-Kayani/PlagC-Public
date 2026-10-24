@@ -1,3 +1,5 @@
+> Historical phase report. The former demo scenes are removed; current startup and controls are in [StressWorld.md](StressWorld.md).
+
 # Phase 2 — Ogre renderer
 
 Accepted by the user on 2026-10-23 after reporting that testing worked.
@@ -161,3 +163,4 @@ Startup runs the checks automatically and saves `Logs/Environment-*.ppm` on real
 renderers. Evidence PNGs are under `Docs/Evidence/Environment-*.png`; the raw
 cubemap's saturated colors intentionally make orientation/reflections obvious.
 Point-light shadows, cascaded directional shadows and HDR/bloom stay deferred.
+

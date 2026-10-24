@@ -1,3 +1,5 @@
+> Historical phase report. The former demo scenes are removed; current startup and controls are in [StressWorld.md](StressWorld.md).
+
 # Phase 3.5 — input, FPS control and integration stress scene
 
 Delivery branch: `prototype`, based on `prototype` commit `6f713b0`.

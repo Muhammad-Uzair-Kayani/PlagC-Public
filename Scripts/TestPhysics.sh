@@ -29,6 +29,6 @@ test_exe=out/('tests-asan' if os.environ.get('PHYSICS_SANITIZE')=='1' else 'test
 subprocess.run([compiler,*test_flags,'-DPC_PHYSICS_TEST_MAIN','-DPC_PHYSICS_RECORDING_TEST','-IPlagC/include','-IBuild/Pch','-IVendor/entt/src',
     'PlagC/src/Physics/PhysicsTypes.cpp','PlagC/src/Physics/PhysicsShapes.cpp','PlagC/src/Jobs.cpp','PlagC/src/Physics/JoltPhysicsWorld.cpp','PlagC/src/Physics/PhysicsSystem.cpp',
     'PlagC/src/World/World.cpp','PlagC/src/World/TransformSystem.cpp','PlagC/src/World/SceneRenderer.cpp',
-    'Scripts/Tests/RecordingRenderer.cpp','Sandbox/src/PhysicsTests.cpp','Sandbox/src/PhysicsExtendedTests.cpp','Sandbox/src/PhysicsScenarios.cpp','Sandbox/src/PhysicsScenarioTests.cpp','Sandbox/src/PhysicsHud.cpp',str(lib),'-o',str(test_exe)],check=True)
+    'Scripts/Tests/RecordingRenderer.cpp','Sandbox/src/PhysicsTests.cpp','Sandbox/src/PhysicsExtendedTests.cpp',str(lib),'-o',str(test_exe)],check=True)
 subprocess.run([str(test_exe)],check=True)
 PY

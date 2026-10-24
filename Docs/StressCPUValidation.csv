@@ -1,0 +1,5 @@
+entities,simulated_seconds,one_second_samples,bodies,active_min,active_median,active_max,requested_active,feasible_active,recycled_at_last_sample
+1000,600,600,992,665,799.5,893,1000,893,7428
+2500,30,30,2492,942,1081.5,2386,1000,1000,351
+5000,30,30,4992,1576,2152.0,4886,1500,1500,351
+10000,30,30,9992,4754,6313.5,9879,2000,2000,351

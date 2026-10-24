@@ -1,6 +1,6 @@
 # Phase 4 — physics foundation
 
-> Historical foundation notes. The current APIs, controls, scenes and validation limits are documented in [Physics Lab](PhysicsLab.md).
+> Historical foundation notes. The current APIs, controls, scenes and validation limits are documented in [Integrated FPS Stress World](StressWorld.md).
 
 This describes the first Phase 4 increment, not the current feature set.
 It establishes the engine boundary and sparse ECS handoff before adding gameplay

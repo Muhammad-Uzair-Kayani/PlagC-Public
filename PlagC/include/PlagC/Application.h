@@ -7,11 +7,16 @@
 #include <memory>
 #include <PlagC/FrameLimiter.h>
 namespace PlagC {
-struct EngineConfig { bool headless = false, nullPlatform = false, offscreen = false; unsigned workers = 0; unsigned frameLimit = 0; bool physicsLab = true; unsigned physicsWorkers = 2, physicsBodies = 1000;
-    unsigned physicsScene=1,physicsQueries=1000,physicsTriangles=100000,physicsSeed=42,physicsWarmup=120,physicsSamples=600;
-    bool physicsVariant=false,physicsIndividual=false,physicsBenchmark=false;
+struct EngineConfig {
+    bool headless=false,nullPlatform=false,offscreen=false;
+    unsigned workers=0,frameLimit=0,physicsWorkers=2;
     double physicsHz=60;
-    std::string physicsScheduler="native",physicsCSV="Logs/PhysicsLab.csv"; };
+    std::string physicsScheduler="native";
+    unsigned stressEntities=1000,stressSeed=42,stressWarmup=120;
+    double stressSeconds=600;
+    bool stressProgressive=true,stressBenchmark=false,stressSoak=false,selfTest=false;
+    std::string stressCSV="Logs/StressWorld.csv";
+};
 class Engine {
 public:
     explicit Engine(const EngineConfig&);

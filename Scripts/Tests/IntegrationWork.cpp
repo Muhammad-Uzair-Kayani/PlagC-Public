@@ -1,5 +1,5 @@
 #include "pgcpch.h"
-#include "IntegrationDemo.h"
+#include "IntegrationWork.h"
 #include <type_traits>
 template<class T> unsigned Animate(PlagC::JobSystem& jobs, std::span<T> updates,
                             float dt, float time, unsigned iterations) {

@@ -1,5 +1,5 @@
 #include "pgcpch.h"
-#include "PhysicsHud.h"
+#include "StressHud.h"
 #include <cctype>
 using namespace PlagC;
 namespace {
@@ -27,20 +27,29 @@ std::array<unsigned char,7> Glyph(char c){
  }
 }
 }
-void PhysicsHud::Update(Renderer& r,const std::string& text){
+void StressHud::Update(Renderer& r,const std::string& text){
  MeshData mesh;unsigned x=0,y=0;constexpr float pixel=.009f;
  for(unsigned char raw:text){if(raw=='\n'){x=0;y+=9;continue;}auto glyph=Glyph(char(std::toupper(raw)));for(unsigned row=0;row<7;++row)for(unsigned col=0;col<5;++col)if(glyph[row]&(1u<<(4-col))){float px=float(x+col)*pixel,py=-float(y+row)*pixel;auto base=std::uint32_t(mesh.vertices.size());for(auto uv:{std::pair{0.f,0.f},{1.f,0.f},{1.f,1.f},{0.f,1.f}})mesh.vertices.push_back({{px+uv.first*pixel,py+uv.second*pixel,0},{0,0,1},0,0});mesh.indices.insert(mesh.indices.end(),{base,base+1,base+2,base,base+2,base+3});}x+=6;}
  if(mesh.indices.empty())return;
  if(!material_){MaterialDesc d;d.model=MaterialModel::Unlit;d.colour={.95f,1,.95f};d.overlay=true;material_=r.CreateMaterial(d);}
+ if(!cross_){
+  MeshData cross;
+  for(auto size:{std::pair{.018f,.002f},std::pair{.002f,.018f}}){auto base=std::uint32_t(cross.vertices.size());
+   for(auto point:{Vec3{-size.first,-size.second,0},Vec3{size.first,-size.second,0},Vec3{size.first,size.second,0},Vec3{-size.first,size.second,0}})cross.vertices.push_back({point,{0,0,1},0,0});
+   cross.indices.insert(cross.indices.end(),{base,base+1,base+2,base,base+2,base+3});
+  }
+  crossMesh_=r.CreateMesh(cross);cross_=r.CreateObject(crossMesh_,material_);r.SetCastShadows(cross_,false);r.SetRenderQueue(cross_,199);
+ }
  auto next=r.CreateMesh(mesh);auto object=r.CreateObject(next,material_);r.SetCastShadows(object,false);r.SetRenderQueue(object,199);
  if(object_)r.DestroyObject(object_);
  if(mesh_)r.DestroyMesh(mesh_);
  mesh_=next;object_=object;
 }
-void PhysicsHud::Place(Renderer& r,Vec3 position,float yaw,float pitch,float aspect){
+void StressHud::Place(Renderer& r,Vec3 position,float yaw,float pitch,float aspect){
  if(!object_)return;
  constexpr float rad=3.14159265358979323846f/180;
  Vec3 f{std::cos(yaw*rad)*std::cos(pitch*rad),std::sin(pitch*rad),std::sin(yaw*rad)*std::cos(pitch*rad)},right{-std::sin(yaw*rad),0,std::cos(yaw*rad)},up{-std::cos(yaw*rad)*std::sin(pitch*rad),std::cos(pitch*rad),-std::sin(yaw*rad)*std::sin(pitch*rad)};
+ r.SetTransform(cross_,{{position.x+2*f.x,position.y+2*f.y,position.z+2*f.z},{pitch,-yaw-90,0},{1,1,1}});
  float left=-1.1f*aspect,top=1.02f;position={position.x+2*f.x+left*right.x+top*up.x,position.y+2*f.y+left*right.y+top*up.y,position.z+2*f.z+left*right.z+top*up.z};float scale=std::min(1.f,aspect/1.7f);r.SetTransform(object_,{position,{pitch,-yaw-90,0},{scale,scale,scale}});
 }
-void PhysicsHud::Clear(Renderer& r){if(object_)r.DestroyObject(object_);if(mesh_)r.DestroyMesh(mesh_);if(material_)r.DestroyMaterial(material_);object_={};mesh_={};material_={};}
+void StressHud::Clear(Renderer& r){if(cross_)r.DestroyObject(cross_);if(crossMesh_)r.DestroyMesh(crossMesh_);cross_={};crossMesh_={};if(object_)r.DestroyObject(object_);if(mesh_)r.DestroyMesh(mesh_);if(material_)r.DestroyMaterial(material_);object_={};mesh_={};material_={};}

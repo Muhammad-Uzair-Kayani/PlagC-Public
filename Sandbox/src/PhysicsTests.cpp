@@ -107,16 +107,16 @@ void TestBridge(){
 }
 }
 void TestPhysicsExtended();
-void TestPhysicsScenarios();
+
 void TestPhysicsFoundation(){
     TestClock();const auto baseline=Falling(0,60);Check(Near(baseline,Falling(0,30),.00001f)&&Near(baseline,Falling(2,144),.00001f),"simulation agrees across render rates and worker counts");
-    TestBodies(0);TestBodies(2);TestShapesAndFilters();TestCCD();TestBridge();TestPhysicsExtended();TestPhysicsScenarios();
+    TestBodies(0);TestBodies(2);TestShapesAndFilters();TestCCD();TestBridge();TestPhysicsExtended();
 #ifdef PC_PHYSICS_RECORDING_TEST
     TestPresentation();
 #endif
 }
 #ifdef PC_PHYSICS_TEST_MAIN
 #include <cstdlib>
-void BenchmarkPhysicsCPU(const char*);
-int main(){Thread::InitializeMain();try{if(const auto* path=std::getenv("PC_PHYSICS_CPU_BENCH")){BenchmarkPhysicsCPU(path);return 0;}TestPhysicsFoundation();std::cout<<"Physics foundation tests passed\n";return 0;}catch(const std::exception& e){std::cerr<<"FAIL: "<<e.what()<<'\n';return 1;}}
+
+int main(){Thread::InitializeMain();try{TestPhysicsFoundation();std::cout<<"Physics foundation tests passed\n";return 0;}catch(const std::exception& e){std::cerr<<"FAIL: "<<e.what()<<'\n';return 1;}}
 #endif

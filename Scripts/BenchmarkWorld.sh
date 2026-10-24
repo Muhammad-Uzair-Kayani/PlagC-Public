@@ -8,6 +8,6 @@ trap 'rm -f "$out"' EXIT
 "${CXX:-g++}" -std=c++20 -O2 -DNDEBUG -pthread -ffunction-sections -fdata-sections -Wl,--gc-sections \
   -IPlagC/include -IBuild/Pch -I"${PLAGC_ENTT_INCLUDE:-Vendor/entt/src}" \
   PlagC/src/Physics/PhysicsTypes.cpp PlagC/src/World/World.cpp PlagC/src/World/TransformSystem.cpp PlagC/src/World/SceneRenderer.cpp \
-  PlagC/src/Jobs.cpp Sandbox/src/WorldDemo.cpp PlagC/src/Renderer/Geometry.cpp Sandbox/src/TransformSystemTests.cpp Sandbox/src/SceneSyncTests.cpp \
+  PlagC/src/Jobs.cpp Scripts/Tests/WorldTests.cpp PlagC/src/Renderer/Geometry.cpp Sandbox/src/TransformSystemTests.cpp Sandbox/src/SceneSyncTests.cpp \
   Scripts/Tests/RecordingRenderer.cpp Scripts/Tests/LegacySceneRenderer.cpp Scripts/Tests/WorldHotPath.cpp -o "$out"
 "$out"

@@ -1,5 +1,6 @@
 #include "pgcpch.h"
-#include "WorldDemo.h"
+#include <PlagC/World/SceneRenderer.h>
+#include <PlagC/Jobs.h>
 #include <limits>
 using namespace PlagC;
 namespace
@@ -182,94 +183,4 @@ void TestWorld(Renderer &renderer, JobSystem &jobs)
     renderer.DestroyMesh(mesh);
     Check(renderer.Statistics().meshes == initial.meshes && renderer.Statistics().materials == initial.materials,
           "ECS tests release their borrowed render resources");
-}
-void WorldDemo::Start(Renderer &r, bool capture)
-{
-    capture_ = capture;
-    scene_ = std::make_unique<SceneRenderer>(r);
-    meshes_.push_back(r.CreateMesh(MakePrimitive(Primitive::Cube)));
-    meshes_.push_back(r.CreateMesh(MakePrimitive(Primitive::Plane)));
-    MaterialDesc metal; metal.colour = {.8f, .5f, .18f}; metal.metallic = .7f; metal.roughness = .3f;
-    materials_.push_back(r.CreateMaterial(metal));
-    MaterialDesc floor; floor.colour = {1, 1, 1}; floor.colourTexture = "checker.ppm";
-    materials_.push_back(r.CreateMaterial(floor));
-    for (int z = 0; z < 4; ++z)
-        for (int x = 0; x < 4; ++x)
-        {
-            auto entity = world_.Create("Cube " + std::to_string(z * 4 + x));
-            Transform transform{{float(x * 2 - 3), .8f, float(z * 2 - 3)}, {}, {1, 1.5f, 1}};
-            world_.SetTransform(entity, transform);
-            world_.SetRenderable(entity, {meshes_[0], materials_[0]});
-            animated_.push_back({entity, transform});
-        }
-    auto ground = world_.Create("Ground");
-    world_.SetTransform(ground, {{0, 0, 0}, {}, {16, 1, 16}});
-    world_.SetRenderable(ground, {meshes_[1], materials_[1]});
-    auto sun = world_.Create("Sun");
-    LightComponent light; light.light.direction = {.6f, -1, .6f};
-    world_.SetLight(sun, light);
-    auto camera = world_.Create("Main camera");
-    world_.SetTransform(camera, {{11, 9, 13}, {}, {1, 1, 1}});
-    world_.SetCamera(camera, {{0, 0, 0}, 55, .1f, 100});
-    world_.SetActiveCamera(camera);
-    r.SetEnvironment({"EnvironmentTest.dds", true, true});
-    scene_->Sync(world_);
-    target_ = r.CreateTarget(640, 360);
-    Check(world_.Size() == 19 && scene_->Objects() == 17 && scene_->Lights() == 1,
-          "Phase 3 demo is driven entirely by world components");
-    if (capture_)
-    {
-        auto baseline = CaptureWorld(r, target_, "Logs/World-baseline.ppm");
-        for (auto &u : animated_)
-            world_.SetRenderable(u.entity, {meshes_[0], materials_[0], false});
-        scene_->Sync(world_);
-        auto hidden = CaptureWorld(r, target_, "Logs/World-hidden.ppm");
-        Check(Different(baseline, hidden), "ECS visibility changes rendered pixels");
-        for (auto &u : animated_)
-            world_.SetRenderable(u.entity, {meshes_[0], materials_[0]});
-        auto moved = animated_;
-        for (auto &u : moved) u.transform.position.y += 2;
-        world_.ApplyTransforms(moved); scene_->Sync(world_);
-        auto translated = CaptureWorld(r, target_, "Logs/World-transforms.ppm");
-        Check(Different(baseline, translated), "ECS transform batches move rendered geometry");
-        world_.ApplyTransforms(animated_);
-        light.light.power = 0; world_.SetLight(sun, light); scene_->Sync(world_);
-        auto unlit = CaptureWorld(r, target_, "Logs/World-light-off.ppm");
-        Check(Different(baseline, unlit), "ECS light updates affect rendered surfaces");
-        light.light.power = 3.141593f; world_.SetLight(sun, light);
-        auto alternate = world_.Create("Alternate camera");
-        world_.SetTransform(alternate, {{-11, 9, 13}, {}, {1, 1, 1}});
-        world_.SetCamera(alternate, {{0, 0, 0}, 55, .1f, 100});
-        world_.SetActiveCamera(alternate); scene_->Sync(world_);
-        auto switched = CaptureWorld(r, target_, "Logs/World-camera.ppm");
-        Check(Different(baseline, switched), "active ECS camera changes rendered viewpoint");
-        world_.Destroy(alternate); world_.SetActiveCamera(camera); scene_->Sync(world_);
-    }
-}
-void WorldDemo::Frame(Renderer &r, JobSystem &jobs, double dt)
-{
-    Rotate(jobs, animated_, float(std::clamp(dt, 0.0, .1) * 45));
-    world_.ApplyTransforms(animated_);
-    scene_->Sync(world_);
-    if (++frames_ == 5 && capture_)
-    {
-        r.CaptureTarget(target_, "Logs/Phase3.ppm");
-        Check(std::filesystem::file_size("Logs/Phase3.ppm") > 640 * 360 * 3,
-              "ECS scene produces a real rendered capture");
-    }
-}
-void WorldDemo::Stop(Renderer &r)
-{
-    world_.Clear();
-    scene_->Sync(world_);
-    Check(!scene_->Objects() && !scene_->Lights(), "clearing demo world releases scene instances");
-    scene_.reset();
-    r.DestroyTarget(target_);
-    for (auto m : materials_) r.DestroyMaterial(m);
-    for (auto m : meshes_) r.DestroyMesh(m);
-    materials_.clear(); meshes_.clear(); animated_.clear();
-    r.SetEnvironment({});
-    auto stats = r.Statistics();
-    Check(!stats.objects && !stats.lights && !stats.meshes && !stats.materials,
-          "Phase 3 client releases all resources before shutdown");
 }
