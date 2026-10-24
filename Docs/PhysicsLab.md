@@ -178,3 +178,11 @@ so a release queued in the same poll cannot change the selected scene.
 Regression check: `bash Scripts/TestPhysicsControls.sh` tests the default launch
 configuration and queued scene-selection events, including a Shift release before
 the event pump. This does not simulate native Windows keyboard delivery.
+
+### Startup exception: Item in a v1 render queue
+
+If the log ends with `Items do not implement getRenderOperation`, update and
+rebuild PlagC/Sandbox. The HUD uses queue 199, while Ogre defaults queues 100–199
+to legacy Entity rendering. The adapter now explicitly configures its public
+queue range (1–199) for modern Items before rendering. This is a renderer setup
+error, not a failed physics assertion or a keyboard problem.

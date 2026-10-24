@@ -22,6 +22,7 @@
 #include <OgreWindow.h>
 #include <OgreRenderSystem.h>
 #include <OgreSceneManager.h>
+#include <OgreRenderQueue.h>
 #include <OgreSceneNode.h>
 #include <OgreCamera.h>
 #include <OgreItem.h>
@@ -283,6 +284,12 @@ Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::ma
         resources.addResourceLocation(config.assetsRoot + "/Shaders", "FileSystem", "General");
     resources.initialiseAllResourceGroups(true);
     p.scene = p.root->createSceneManager(Ogre::ST_GENERIC, 1, "PlagCScene");
+    // PlagC reserves queues 1..199 for v2 Items. Ogre defaults 100..199 to
+    // V1_FAST, which calls the unsupported SubItem::getRenderOperation.
+    // Configure the complete public range before any objects (including HUD) render.
+    for (unsigned queue = 1; queue < 200; ++queue)
+        p.scene->getRenderQueue()->setRenderQueueMode(static_cast<Ogre::uint8>(queue),
+                                                     Ogre::RenderQueue::FAST);
     p.scene->setShadowDirectionalLightExtrusionDistance(50);
     p.scene->setShadowFarDistance(50);
     p.scene->setAmbientLight(Ogre::ColourValue(.3f, .3f, .35f), Ogre::ColourValue(.1f, .1f, .12f),
