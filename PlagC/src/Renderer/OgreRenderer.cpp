@@ -134,6 +134,7 @@ struct Renderer::Impl
     {
         Ogre::HlmsDatablock *value;
         MaterialModel model;
+        bool overlay=false;
     };
     struct Object
     {
@@ -389,9 +390,10 @@ MaterialHandle Renderer::CreateMaterial(const MaterialDesc &d)
     auto name = Name("Material", id);
     Ogre::Hlms *hlms = d.model == MaterialModel::Pbr ? static_cast<Ogre::Hlms *>(p.pbs) : p.unlit;
     Ogre::HlmsMacroblock macro;
-    macro.mPolygonMode = p.settings.wireframe ? Ogre::PM_WIREFRAME : Ogre::PM_SOLID;
+    macro.mDepthCheck = !d.overlay; macro.mDepthWrite = !d.overlay;
+    macro.mPolygonMode = p.settings.wireframe && !d.overlay ? Ogre::PM_WIREFRAME : Ogre::PM_SOLID;
     auto *db = hlms->createDatablock(name, name, macro, Ogre::HlmsBlendblock(), {});
-    p.materials.emplace(id, Impl::Material{db, d.model});
+    p.materials.emplace(id, Impl::Material{db, d.model, d.overlay});
     try
     {
         UpdateMaterial({id}, d);
@@ -407,7 +409,7 @@ MaterialHandle Renderer::CreateMaterial(const MaterialDesc &d)
 void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
 {
     auto &m = Get(impl_->materials, h);
-    Require(m.model == d.model, "material model is immutable");
+    Require(m.model == d.model && m.overlay == d.overlay, "material model/overlay is immutable");
     Require(Finite(d.colour) && std::isfinite(d.roughness) && std::isfinite(d.metallic) &&
                 d.roughness >= 0 && d.roughness <= 1 && d.metallic >= 0 && d.metallic <= 1,
             "invalid material values");
@@ -649,7 +651,7 @@ void Renderer::SetSettings(const RenderSettings &d)
     for (auto &[id, m] : p.materials)
     {
         auto block = *m.value->getMacroblock();
-        block.mPolygonMode = d.wireframe ? Ogre::PM_WIREFRAME : Ogre::PM_SOLID;
+        block.mPolygonMode = d.wireframe && !m.overlay ? Ogre::PM_WIREFRAME : Ogre::PM_SOLID;
         m.value->setMacroblock(block);
     }
     if (p.output)

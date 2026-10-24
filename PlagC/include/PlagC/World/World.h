@@ -65,6 +65,7 @@ class World
     bool Alive(Entity) const;
     std::size_t Size() const;
     EntityRecord Read(Entity) const;
+    Transform ReadTransform(Entity) const;
     std::vector<EntityRecord> Snapshot() const;
     void Rename(Entity, std::string);
     void SetTransform(Entity, const Transform &);

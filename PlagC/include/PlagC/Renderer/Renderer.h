@@ -56,6 +56,7 @@ struct MaterialDesc
     Vec3 colour{.7f, .7f, .7f};
     float roughness = .5f, metallic = 0;
     std::string colourTexture;
+    bool overlay=false; // Immutable: no depth test/write; for camera-relative diagnostic text.
 };
 enum class LightType
 {

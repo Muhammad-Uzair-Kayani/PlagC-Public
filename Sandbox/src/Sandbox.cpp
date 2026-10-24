@@ -177,7 +177,7 @@ class Sandbox final : public Application {
 public:
     explicit Sandbox(EngineConfig config):config_(config){}
     void OnStart(Engine& engine) override {
-        if(config_.physicsLab){TestPhysicsFoundation();physicsLab_.Start(engine,config_.physicsWorkers,config_.physicsBodies);return;}
+        if(config_.physicsLab){if(!config_.physicsBenchmark)TestPhysicsFoundation();physicsLab_.Start(engine,config_);return;}
         TestTransformSystem(); TestSceneSynchronization(engine.Graphics());
         TestInputAndPacing(); TestIntegrationWork(engine.Jobs());
         engine.SetFPSLocked(true);
@@ -224,7 +224,7 @@ public:
     }
     void OnFrame(Engine& engine,double dt) override {
         if(config_.physicsLab)physicsLab_.Frame(engine,dt);else integration_.Frame(engine,dt);
-        if ((config_.headless || config_.nullPlatform || config_.offscreen) && !config_.frameLimit && ++frames_>=6) engine.Stop();
+        if ((config_.headless || config_.nullPlatform || config_.offscreen) && !config_.frameLimit && !config_.physicsBenchmark && ++frames_>=6) engine.Stop();
     }
     void OnStop(Engine& engine) override {
         if(config_.physicsLab)physicsLab_.Stop(engine);else integration_.Stop(engine);

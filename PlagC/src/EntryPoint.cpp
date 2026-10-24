@@ -14,11 +14,25 @@ int main(int argc, char** argv) {
             else if (arg == "--physics") config.physicsLab = true;
             else if (arg == "--physics-workers" && i+1<argc) {config.physicsWorkers = static_cast<unsigned>(std::stoul(argv[++i]));physicsWorkersExplicit=true;}
             else if (arg == "--physics-bodies" && i+1<argc) config.physicsBodies = static_cast<unsigned>(std::stoul(argv[++i]));
+            else if (arg == "--physics-scene" && i+1<argc) config.physicsScene=unsigned(std::stoul(argv[++i]));
+            else if (arg == "--physics-queries" && i+1<argc) config.physicsQueries=unsigned(std::stoul(argv[++i]));
+            else if (arg == "--physics-triangles" && i+1<argc) config.physicsTriangles=unsigned(std::stoul(argv[++i]));
+            else if (arg == "--physics-seed" && i+1<argc) config.physicsSeed=unsigned(std::stoul(argv[++i]));
+            else if (arg == "--physics-warmup" && i+1<argc) config.physicsWarmup=unsigned(std::stoul(argv[++i]));
+            else if (arg == "--physics-samples" && i+1<argc) config.physicsSamples=unsigned(std::stoul(argv[++i]));
+            else if (arg == "--physics-csv" && i+1<argc) config.physicsCSV=argv[++i];
+            else if (arg == "--physics-scheduler" && i+1<argc) config.physicsScheduler=argv[++i];
+            else if (arg == "--physics-hz" && i+1<argc) config.physicsHz=std::stod(argv[++i]);
+            else if (arg == "--physics-variant") config.physicsVariant=true;
+            else if (arg == "--physics-individual") config.physicsIndividual=true;
+            else if (arg == "--physics-benchmark") {config.physicsLab=true;config.physicsBenchmark=true;}
             else if (arg == "--frames" && i+1<argc) config.frameLimit = static_cast<unsigned>(std::stoul(argv[++i]));
             else if (arg == "--workers" && i+1<argc) config.workers = static_cast<unsigned>(std::stoul(argv[++i]));
-            else throw std::invalid_argument("Usage: Sandbox [--headless|--null|--offscreen] [--frames N] [--workers N] [--physics] [--physics-workers N] [--physics-bodies N]");
+            else throw std::invalid_argument("Usage: Sandbox [--headless|--null|--offscreen] [--frames N] [--workers N] [--physics] [--physics-workers N] [--physics-bodies N] [--physics-scene 1..14] [--physics-benchmark]. Full controls and flags: Docs/PhysicsLab.md");
         }
         if(unsigned(config.headless)+unsigned(config.nullPlatform)+unsigned(config.offscreen)>1) throw std::invalid_argument("choose one rendering mode");
+        if(config.physicsScene<1||config.physicsScene>14||config.physicsQueries>10000||config.physicsTriangles>500000||!config.physicsSamples||config.physicsSamples>1000000||config.physicsWarmup>1000000||!std::isfinite(config.physicsHz)||config.physicsHz<1||config.physicsHz>240)throw std::invalid_argument("invalid Physics Lab workload; see Docs/PhysicsLab.md");
+        if(config.physicsScheduler!="native"&&config.physicsScheduler!="plagc")throw std::invalid_argument("physics scheduler must be native or plagc");
         if(config.physicsWorkers>64||config.physicsBodies>16000)throw std::invalid_argument("physics workers <=64, bodies <=16000");
         if(config.physicsLab&&!physicsWorkersExplicit){
             const unsigned hardware=std::max(1u,std::thread::hardware_concurrency());
@@ -26,7 +40,7 @@ int main(int argc, char** argv) {
         }
         if(config.physicsLab&&!config.workers){
             const unsigned hardware=std::max(1u,std::thread::hardware_concurrency());
-            config.workers=std::min(32u,hardware>config.physicsWorkers+1?hardware-config.physicsWorkers-1:1u);
+            config.workers=config.physicsScheduler=="plagc"?std::min(32u,std::max(1u,hardware-1)):std::min(32u,hardware>config.physicsWorkers+1?hardware-config.physicsWorkers-1:1u);
         }
         PlagC::Engine engine(config);
         auto application = PlagC::CreateApplication(config);

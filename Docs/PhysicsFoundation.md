@@ -1,6 +1,8 @@
 # Phase 4 — physics foundation
 
-This is the first Phase 4 increment, not completion of the full physics phase.
+> Historical foundation notes. The current APIs, controls, scenes and validation limits are documented in [Physics Lab](PhysicsLab.md).
+
+This describes the first Phase 4 increment, not the current feature set.
 It establishes the engine boundary and sparse ECS handoff before adding gameplay
 physics features. The existing integration stress scene remains the default.
 

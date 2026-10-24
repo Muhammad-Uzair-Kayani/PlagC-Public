@@ -71,6 +71,7 @@ bool World::Alive(Entity e) const
     return impl_->entities.contains(e.value);
 }
 std::size_t World::Size() const { Thread::RequireMain(); return impl_->entities.size(); }
+Transform World::ReadTransform(Entity e) const {return impl_->registry.get<Transform>(impl_->Get(e));}
 EntityRecord World::Read(Entity e) const
 {
     const auto raw = impl_->Get(e);

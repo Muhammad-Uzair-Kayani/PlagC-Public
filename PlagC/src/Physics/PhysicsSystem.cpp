@@ -19,6 +19,7 @@ struct PhysicsSystem::Impl {
     std::vector<PhysicsBodyHandle> candidates;
     std::uint64_t structure=0,frame=0;
     PhysicsFrameStats stats;
+    std::vector<TriggerEvent> events;
     Impl(World::Impl& w,const PhysicsConfig& c):world(&w),lifetime(w.lifetime),physics(c),clock(c.fixedHz,c.maxCatchUpSteps){}
     void Check()const{Thread::RequireMain();if(lifetime.expired())throw std::logic_error("physics world binding expired");}
     Binding& Get(Entity e){Check();auto it=bindings.find(e.value);if(it==bindings.end())throw std::invalid_argument("entity has no synchronized physics body; call Advance(0)");return it->second;}
@@ -26,12 +27,12 @@ struct PhysicsSystem::Impl {
         Check();auto& w=*world;if(structure==w.physicsStructure)return;
         const auto start=Clock::now();
         // Structural changes only: stable bindings avoid per-frame snapshots and names.
-        for(auto it=bindings.begin();it!=bindings.end();){
-            auto& b=it->second;
-            if(!w.registry.valid(b.raw)||!w.registry.all_of<PhysicsComponent>(b.raw)||w.registry.get<WorldChanges>(b.raw).physics!=b.version){
-                byBody.erase(b.body.value);physics.DestroyBody(b.body);it=bindings.erase(it);
-            }else ++it;
+        std::vector<PhysicsBodyHandle> removed;std::vector<std::uint64_t> removedEntities;
+        for(auto& [id,b]:bindings){
+            if(!w.registry.valid(b.raw)||!w.registry.all_of<PhysicsComponent>(b.raw)||w.registry.get<WorldChanges>(b.raw).physics!=b.version){removed.push_back(b.body);removedEntities.push_back(id);}
         }
+        physics.DestroyBatch(removed);
+        for(auto id:removedEntities){byBody.erase(bindings.at(id).body.value);bindings.erase(id);}
         std::vector<PhysicsBodyDesc> descriptions;std::vector<entt::entity> entities;
         for(auto raw:w.registry.view<PhysicsComponent,Transform,Entity>()){
             if(bindings.contains(w.registry.get<Entity>(raw).value))continue;
@@ -76,14 +77,17 @@ PhysicsSystem::PhysicsSystem(World& w,const PhysicsConfig& c){
     impl_=std::make_unique<Impl>(*w.impl_,c);w.impl_->physicsAttached=true;
 }
 PhysicsSystem::~PhysicsSystem(){Thread::RequireMain();if(impl_&&!impl_->lifetime.expired())impl_->world->physicsAttached=false;}
-void PhysicsSystem::Advance(double dt){
-    auto& p=*impl_;p.Check();p.stats={};p.Reconcile();const auto plan=p.clock.Advance(dt);
+void PhysicsSystem::Synchronize(){impl_->Reconcile();}
+void PhysicsSystem::Advance(double dt,const std::function<void(double)>& beforeFixedStep){
+    auto& p=*impl_;p.Check();p.stats={};p.events.clear();p.Reconcile();const auto plan=p.clock.Advance(dt);
     p.stats.steps=plan.steps;p.stats.alpha=plan.alpha;p.stats.droppedSeconds=plan.droppedSeconds;
     // Retain final sleeping poses across multiple catch-up steps in this frame.
     ++p.frame;
     if(plan.steps)p.candidates.clear();
     for(unsigned i=0;i<plan.steps;++i){
-        p.Inputs();p.physics.Step();p.stats.stepMs+=p.physics.Statistics().updateMs;p.Outputs();
+        if(beforeFixedStep){beforeFixedStep(p.clock.StepSeconds());p.Reconcile();}
+        p.Inputs();p.physics.Step();auto tick=p.physics.Statistics();p.stats.stepMs+=tick.updateMs;p.stats.eventsMs+=tick.eventsMs;p.stats.charactersMs+=tick.charactersMs;p.Outputs();
+        const auto events=p.physics.TriggerEvents();p.events.insert(p.events.end(),events.begin(),events.end());
         for(const auto& pose:p.physics.ChangedBodies()){auto& b=*p.byBody.at(pose.body.value);if(b.stamp!=p.frame){b.stamp=p.frame;p.candidates.push_back(pose.body);}}
     }
     const auto start=Clock::now();p.presentation.clear();p.presentation.reserve(p.candidates.size());
@@ -102,5 +106,18 @@ std::optional<RayHit> PhysicsSystem::Raycast(Vec3 a,Vec3 b,CollisionLayer l){imp
 Entity PhysicsSystem::EntityFor(PhysicsBodyHandle h)const{impl_->Check();auto it=impl_->byBody.find(h.value);if(it==impl_->byBody.end())return {};const auto& b=*it->second;return impl_->world->registry.valid(b.raw)&&impl_->world->registry.all_of<PhysicsComponent>(b.raw)?b.entity:Entity{};}
 PhysicsBodyState PhysicsSystem::Read(Entity e)const{impl_->Reconcile();return impl_->physics.Read(impl_->Get(e).body);}
 std::span<const TransformUpdate> PhysicsSystem::Presentation()const{impl_->Check();return impl_->presentation;}
-PhysicsFrameStats PhysicsSystem::Statistics()const{impl_->Check();return impl_->stats;}
+PhysicsFrameStats PhysicsSystem::Statistics()const{impl_->Check();auto stats=impl_->stats;stats.physics=impl_->physics.Statistics();return stats;}
+
+void PhysicsSystem::SetAngularVelocity(Entity e,Vec3 v){impl_->Reconcile();impl_->physics.SetAngularVelocity(impl_->Get(e).body,v);}
+PhysicsBodyHandle PhysicsSystem::BodyFor(Entity e)const{impl_->Reconcile();return impl_->Get(e).body;}
+std::optional<RayHit> PhysicsSystem::ShapeCast(const ColliderComponent& c,const Transform& t,Vec3 v,CollisionLayer l){impl_->Reconcile();return impl_->physics.ShapeCast(c,t,v,l);}
+std::vector<PhysicsBodyHandle> PhysicsSystem::Overlap(const ColliderComponent& c,const Transform& t,CollisionLayer l){impl_->Reconcile();return impl_->physics.Overlap(c,t,l);}
+ConstraintHandle PhysicsSystem::CreateConstraint(Entity a,Entity b,ConstraintDesc d){impl_->Reconcile();d.a=impl_->Get(a).body;d.b=impl_->Get(b).body;return impl_->physics.CreateConstraint(d);}
+void PhysicsSystem::DestroyConstraint(ConstraintHandle h){impl_->Check();impl_->physics.DestroyConstraint(h);}
+CharacterHandle PhysicsSystem::CreateCharacter(const CharacterDesc& d){impl_->Reconcile();return impl_->physics.CreateCharacter(d);}
+void PhysicsSystem::DestroyCharacter(CharacterHandle h){impl_->Check();impl_->physics.DestroyCharacter(h);}
+void PhysicsSystem::SetCharacterInput(CharacterHandle h,Vec3 v,bool jump){impl_->Check();impl_->physics.SetCharacterInput(h,v,jump);}
+CharacterState PhysicsSystem::ReadCharacter(CharacterHandle h)const{impl_->Check();return impl_->physics.ReadCharacter(h);}
+std::span<const TriggerEvent> PhysicsSystem::TriggerEvents()const{impl_->Check();return impl_->events;}
+MeshData PhysicsSystem::BuildColliderMesh(const ColliderComponent& c)const{impl_->Check();return impl_->physics.BuildColliderMesh(c);}
 }

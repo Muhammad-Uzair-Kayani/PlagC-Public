@@ -5,7 +5,7 @@ logging, GLFW windows, typed event categories, thread identity and a bounded
 lock-free work-stealing job system. Sandbox is the client and validation app.
 Phase 2 adds Ogre-Next rendering behind engine APIs, tested through Sandbox.
 Phase 3 adds an EnTT-backed World, typed components and an Ogre scene bridge.
-Physics, managed assets and editor systems remain future phases.
+Physics is available through the [14-scene Physics Lab](Docs/PhysicsLab.md). Managed assets and editor systems remain future phases.
 See Docs/Phase2.md for current verification and limitations.
 
 ## Windows / Visual Studio 2022
