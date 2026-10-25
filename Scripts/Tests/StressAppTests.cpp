@@ -170,8 +170,13 @@ int main()
             demo.Events().Pump();
         };
         key(KeyCode::F5);
+        Check(demoApp.AssetStatus() == "F5 BEACON ANIMATION PAUSED", "F5 confirms animation pause");
+        key(KeyCode::F5);
+        Check(demoApp.AssetStatus() == "F5 BEACON ANIMATION PLAYING", "F5 confirms animation resume");
         key(KeyCode::F6);
+        Check(demoApp.AssetStatus() == "F6 AUDIO UNAVAILABLE - SEE CONSOLE", "F6 explains unavailable headless audio");
         key(KeyCode::F7);
+        Check(demoApp.AssetStatus() == "F7 RELOADING COOKED ASSETS", "F7 confirms reload request");
         demo.Assets().Wait();
         demoApp.Frame(demo, 1. / 60);
         Check(demo.Graphics().Statistics().textures == 1,

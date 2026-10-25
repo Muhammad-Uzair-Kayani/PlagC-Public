@@ -13,6 +13,7 @@ class StressWorld
     void Start(PlagC::Engine &, const PlagC::EngineConfig &);
     void Frame(PlagC::Engine &, double);
     void Stop(PlagC::Engine &);
+    const std::string &AssetStatus() const { return assetStatus_; }
 
   private:
     PlagC::EngineConfig config_;
@@ -26,6 +27,8 @@ class StressWorld
     PlagC::AudioSource chime_;
     bool animationPlaying_ = true, assetErrorReported_ = false;
     void UpdateAssets(PlagC::Engine &, double);
+    void AssetMessage(std::string);
+    std::string assetStatus_ = "ASSETS LOADING";
     struct Mesh
     {
         PlagC::ColliderComponent shape;

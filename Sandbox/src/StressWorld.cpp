@@ -201,6 +201,12 @@ void StressWorld::Capture(Engine &engine, bool capture)
     if (auto *window = engine.MainWindow())
         window->SetCursorCaptured(capture);
 }
+void StressWorld::AssetMessage(std::string message)
+{
+    assetStatus_ = std::move(message);
+    hudClock_ = 1;
+    std::cout << "[ASSET] " << assetStatus_ << std::endl;
+}
 void StressWorld::Key(Engine &engine, const Event &event)
 {
     if (event.key == KeyCode::Escape)
@@ -234,6 +240,11 @@ void StressWorld::Key(Engine &engine, const Event &event)
         break;
     }
     case KeyCode::F5:
+        if (!config_.assetDemo || !beacon_ || beacon_->animations.empty())
+        {
+            AssetMessage("F5 NO ANIMATED MODEL READY - CHECK ASSET STATUS");
+            break;
+        }
         animationPlaying_ = !animationPlaying_;
         for (auto e : assetActors_)
         {
@@ -244,15 +255,29 @@ void StressWorld::Key(Engine &engine, const Event &event)
                 model_->world.SetAnimator(e, *record.animator);
             }
         }
+        AssetMessage(animationPlaying_ ? "F5 BEACON ANIMATION PLAYING" : "F5 BEACON ANIMATION PAUSED");
         break;
     case KeyCode::F6:
         if (chime_)
         {
             if (engine.Audio().State(chime_) == AudioPlayback::Playing)
+            {
                 engine.Audio().Pause(chime_);
+                AssetMessage("F6 CHIME PAUSED");
+            }
             else
+            {
                 engine.Audio().Play(chime_);
+                AssetMessage("F6 CHIME PLAYING - RIGHT BEACON NEAR SPAWN");
+            }
         }
+        else if (!engine.Audio().Available())
+        {
+            AssetMessage("F6 AUDIO UNAVAILABLE - SEE CONSOLE");
+            std::cout << "[AUDIO] " << engine.Audio().Error() << std::endl;
+        }
+        else
+            AssetMessage("F6 CHIME NOT READY - CHECK ASSET STATUS");
         break;
     case KeyCode::F7:
         if (config_.assetDemo)
@@ -260,7 +285,10 @@ void StressWorld::Key(Engine &engine, const Event &event)
             engine.Assets().Reload("Beacon.plasset");
             engine.Assets().Reload("Chime.plasset");
             assetErrorReported_ = false;
+            AssetMessage("F7 RELOADING COOKED ASSETS");
         }
+        else
+            AssetMessage("F7 ASSET DEMO DISABLED");
         break;
     case KeyCode::D1:
     case KeyCode::D2:
@@ -390,6 +418,7 @@ void StressWorld::Hud(Engine &engine, double dt)
     text << (paused_ ? "PAUSED " : "RUNNING ")
          << (captured_ ? "MOUSE CAPTURED" : "TAB TO CAPTURE MOUSE") << "  TARGET " << selected_
          << "  HELD " << model_->Held().value << "\n";
+    text << assetStatus_ << "\n";
     if (performance_)
     {
         text << "FPS " << (dt > 0 ? 1 / dt : 0) << " FRAME " << dt * 1000 << " MS\nENTITIES "
@@ -615,6 +644,7 @@ void StressWorld::UpdateAssets(Engine &engine, double dt)
         else
             model_->world.RemoveAnimator(assetActors_.back());
         beacon_ = model;
+        AssetMessage("BEACONS READY - R TO SPAWN - LOOK LEFT AND RIGHT");
     }
     if (clip && clip.Shared() != chimeClip_.Shared() && engine.Audio().Available())
     {
@@ -637,6 +667,7 @@ void StressWorld::UpdateAssets(Engine &engine, double dt)
             {
                 std::cerr << "[ASSET] " << info.metadata.path << ": " << info.error
                           << ". Run AssetCooker --demo to restore fixtures.\n";
+                AssetMessage("ASSET LOAD FAILED - " + info.metadata.path + " - SEE CONSOLE");
                 assetErrorReported_ = true;
             }
     assetScene_->Update(model_->world, dt);

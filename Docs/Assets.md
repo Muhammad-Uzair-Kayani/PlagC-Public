@@ -162,3 +162,17 @@ lifetime and actual OpenAL loopback output. `ASSET_SANITIZE=1` instruments PlagC
 code; cached vendor libraries are not instrumented. `Scripts/TestStressApp.sh` also
 checks default-world asset creation, reload and reset using recording graphics.
 See [AssetsValidation.md](AssetsValidation.md) for executed evidence and native limits.
+
+### Checking the asset keys
+
+F5/F6/F7 control the beacon demo in the same FPS world; they do not switch scenes.
+The status line directly below the world header confirms each key action, reports
+when no animated model or chime is ready, and reports load failures. F6 reports an
+unavailable audio device and prints its detailed reason to the console. F7 reports
+its request, then the model-ready message after the new model is finalized. Reloading
+unchanged files should leave the model looking the same.
+
+Press R to return to spawn and look toward the two beacons ahead-left/ahead-right.
+If no key confirmation appears, focus the game window and try Fn+F5/F6/F7 on laptops
+whose function row defaults to media controls. If the status says a load failed,
+read the console error and verify Assets/Cooked contains Beacon.plasset and Chime.plasset.
