@@ -3,7 +3,8 @@
 /Build/Generated/
 /Build/Bin*/
 /Build/Bin-Int*/
-/Tools/
+/Tools/*
+!/Tools/AssetCooker/
 /Logs/
 *.user
 *.suo
@@ -14,3 +15,4 @@
 
 # Ogre generated shader diagnostics
 /[0-9]*Shader_*.glsl
+

@@ -78,3 +78,17 @@ Setup first attempts checkout using existing objects (`--no-fetch`), then
 retries with shallow fetching if objects are missing. Initial missing-module
 clones still download sources. Neither path changes the parent's gitlinks.
 
+
+## Asset-phase pins
+
+- Assimp v6.0.2: `fb375dd8c0a032106a2122815fb18dffe0283721` (glTF import profile only).
+- Ozz 0.16.0: `6cbdc790123aa4731d82e255df187b3a8a808256`.
+- OpenAL Soft 1.24.3: `dc7d7054a5b4f3bec1dc23a42fd616a0847af948` (shared library).
+
+All three remain shallow submodules; their gitlinks are authoritative.
+`Build/AssetVendors.json` and `Build/Assets.lua` own source lists/build settings.
+`Build/Config` contains PlagC-owned configuration headers for those exact revisions;
+review these and the manifest when deliberately updating a pin. Assimp's configuration
+header is derived from its pinned template and preserves the upstream notice.
+OpenAL includes its pinned bundled fmt; Assimp includes its pinned bundled stb decoder.
+No vendor CMake invocation or unpinned nested downloads are introduced.

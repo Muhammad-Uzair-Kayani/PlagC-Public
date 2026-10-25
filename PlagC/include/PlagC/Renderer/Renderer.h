@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <span>
 namespace PlagC
 {
 class Window;
@@ -40,6 +41,7 @@ template <class Tag> struct RenderHandle
         return value != 0;
     }
 };
+using TextureHandle = RenderHandle<struct TextureTag>;
 using MeshHandle = RenderHandle<struct MeshTag>;
 using MaterialHandle = RenderHandle<struct MaterialTag>;
 using ObjectHandle = RenderHandle<struct ObjectTag>;
@@ -56,7 +58,8 @@ struct MaterialDesc
     Vec3 colour{.7f, .7f, .7f};
     float roughness = .5f, metallic = 0;
     std::string colourTexture;
-    bool overlay=false; // Immutable: no depth test/write; for camera-relative diagnostic text.
+    TextureHandle baseColourTexture;
+    bool overlay = false; // Immutable: no depth test/write; for camera-relative diagnostic text.
 };
 enum class LightType
 {
@@ -92,6 +95,7 @@ struct RenderStats
     std::uint64_t frames = 0;
     std::size_t objects = 0, meshes = 0, materials = 0, lights = 0;
     double cpuMilliseconds = 0;
+    std::size_t textures = 0;
 };
 struct RendererConfig
 {
@@ -106,7 +110,11 @@ class Renderer
     ~Renderer();
     Renderer(const Renderer &) = delete;
     Renderer &operator=(const Renderer &) = delete;
-    MeshHandle CreateMesh(const MeshData &);
+    MeshHandle CreateMesh(const MeshData &, bool dynamic = false);
+    void UpdateMesh(MeshHandle, std::span<const Vertex>);
+    TextureHandle CreateTexture(unsigned width, unsigned height,
+                                std::span<const std::uint8_t> rgba);
+    void DestroyTexture(TextureHandle);
     MeshHandle LoadModel(const std::string &, bool legacyMesh = true);
     void DestroyMesh(MeshHandle);
     MaterialHandle CreateMaterial(const MaterialDesc &);
@@ -143,4 +151,3 @@ class Renderer
     std::unique_ptr<Impl> impl_;
 };
 } // namespace PlagC
-

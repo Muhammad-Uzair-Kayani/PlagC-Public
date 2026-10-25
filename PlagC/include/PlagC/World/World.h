@@ -1,6 +1,7 @@
 #pragma once
 #include <PlagC/Renderer/Renderer.h>
 #include <PlagC/Physics/PhysicsTypes.h>
+#include <PlagC/Animation/Animation.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -14,8 +15,16 @@ namespace PlagC
 struct Entity
 {
     std::uint64_t value = 0;
-    explicit operator bool() const { return value != 0; }
+    explicit operator bool() const
+    {
+        return value != 0;
+    }
     bool operator==(const Entity &) const = default;
+};
+struct ModelComponent
+{
+    AssetHandle<ModelAsset> asset;
+    bool visible = true;
 };
 struct RenderableComponent
 {
@@ -49,6 +58,8 @@ struct EntityRecord
     std::optional<LightComponent> light;
     std::optional<CameraComponent> camera;
     std::optional<PhysicsComponent> physics;
+    std::optional<ModelComponent> model;
+    std::optional<AnimatorComponent> animator;
 };
 // Main-thread ownership. Public reads return copies, never EnTT references.
 // Registry mutation is not thread safe; jobs may operate on owned snapshots.
@@ -72,6 +83,10 @@ class World
     // Dynamic transforms belong to physics; use PhysicsSystem::Teleport after attachment.
     void SetPhysics(Entity, const PhysicsComponent &);
     void RemovePhysics(Entity);
+    void SetModel(Entity, const ModelComponent &);
+    void RemoveModel(Entity);
+    void SetAnimator(Entity, const AnimatorComponent &);
+    void RemoveAnimator(Entity);
     void SetRenderable(Entity, const RenderableComponent &);
     void RemoveRenderable(Entity);
     void SetLight(Entity, const LightComponent &);
@@ -87,10 +102,10 @@ class World
 
   private:
     friend class SceneRenderer;
+    friend class AssetScene;
     friend class TransformSystem;
     friend class PhysicsSystem;
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };
 } // namespace PlagC
-

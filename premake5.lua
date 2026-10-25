@@ -58,6 +58,9 @@ project "PlagC"
         disablewarnings { "4324" }
     filter {}
     files { "PlagC/include/**.h", "PlagC/src/**.h", "PlagC/src/**.cpp" }
+    removefiles { "PlagC/src/Assets/AssimpImporter.cpp", "PlagC/src/Assets/WaveImporter.cpp" }
+    assetRuntimeIncludes()
+    dependson { "Ozz", "OpenAL" }
     enginePch("PlagC/src/pgcpch.cpp")
     includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include", "Vendor/entt/src" }
     dependson { "EnTT", "Jolt" }
@@ -80,7 +83,10 @@ project "Sandbox"
     files { "Sandbox/src/**.cpp", "Sandbox/src/**.h" }
     enginePch("Sandbox/src/pgcpch.cpp")
     includedirs { "PlagC/include" }
-    links { "PlagC", "GLFW", "spdlog", "Jolt" }
+    links { "PlagC", "GLFW", "spdlog", "Jolt", "Ozz", "OpenAL" }
+    filter "system:linux"
+        linkoptions { "-Wl,-rpath,'$$ORIGIN'" }
+    filter {}
     ogreLinks()
     ogreSystemLinks()
     debugdir "%{wks.location}/../.."
@@ -92,3 +98,16 @@ project "Sandbox"
         links { "Cocoa.framework", "IOKit.framework", "CoreFoundation.framework" }
     filter {}
 
+
+project "AssetCooker"
+    kind "ConsoleApp"
+    language "C++"
+    cppdialect "C++20"
+    common()
+    files { "Tools/AssetCooker/**.cpp" }
+    includedirs { "PlagC/include", "Build/Pch" }
+    links { "PlagCImport", "PlagC", "Assimp" }
+    debugdir "%{wks.location}/../.."
+    filter "system:linux"
+        links { "pthread" }
+    filter {}

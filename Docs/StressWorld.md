@@ -50,6 +50,7 @@ Sensors exercise queued trigger events and player overlap queries.
 | Tab | Release or capture mouse; focus loss releases it |
 | F1 / F2 | Help / active-sleeping physics colours and sensor zones |
 | F3 / F4 | Performance HUD / wireframe |
+| F5 / F6 / F7 | Asset animation / positional chime / cooked asset reload |
 | 1 / 2 / 3 / 4 | 1,000 / 2,500 / 5,000 / 10,000 entities; disable automatic growth |
 | B / V | Add 100 / 500 within the 10,000 ceiling |
 | T | Toggle progressive growth |
@@ -99,7 +100,7 @@ Walk between districts, grab/throw cargo, fire at towers, change presets, and in
 activity, RSS and dropped time. These two capture modes are mutually exclusive.
 
 Both write every measured frame to CSV and a `.summary.csv` with median, p95, p99,
-peak, total samples and quantile samples for twelve timing series. At most 65,536
+peak, total samples and quantile samples for fourteen timing series. At most 65,536
 samples are retained in a uniform reservoir. Quantiles are exact below this limit,
 estimates above it; peaks cover all frames. The complete CSV supports exact offline
 analysis. Warmup defaults to 120 frames. Captures close on Escape or normal shutdown.
@@ -136,3 +137,7 @@ checks validate resource lifetime and control routing, not native Ogre pixels or
 Windows keyboard/mouse delivery. Native Windows acceptance still requires testing
 walking on stairs/ramps/bridges/platforms, warehouse lighting/shadows, focus capture,
 all controls and a real 10–30 minute interactive soak on the target machine.
+
+The [asset phase](Assets.md) adds two imported beacon entities within the existing
+entity budget. Use `--no-asset-demo` for procedural-only comparisons and `--no-audio`
+to disable device creation. Native hardware/render validation is documented separately.

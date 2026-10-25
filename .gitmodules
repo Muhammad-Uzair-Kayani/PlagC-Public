@@ -23,3 +23,18 @@
     path = Vendor/jolt
     url = https://github.com/jrouwe/JoltPhysics.git
     shallow = true
+
+[submodule "Vendor/assimp"]
+    path = Vendor/assimp
+    url = https://github.com/assimp/assimp.git
+    shallow = true
+
+[submodule "Vendor/ozz"]
+    path = Vendor/ozz
+    url = https://github.com/guillaumeblanc/ozz-animation.git
+    shallow = true
+
+[submodule "Vendor/openal"]
+    path = Vendor/openal
+    url = https://github.com/kcat/openal-soft.git
+    shallow = true

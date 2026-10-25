@@ -9,7 +9,8 @@ then calls the client's CreateApplication factory. Engine owns logging, event
 bus, job pool and optional window. Sandbox initializes no vendor subsystem.
 On normal shutdown, accepted jobs drain before OnStop and client destruction.
 An RAII drain guard also drains jobs before client destruction on exceptions.
-Engine destroys jobs before its window/event bus/logger. Client-owned job data
+Engine drains and destroys AssetManager while jobs are alive, then destroys audio,
+jobs, renderer and window before the event bus/logger. Client-owned job data
 must remain alive until completion; OnStart stack data must be waited before
 unwinding. Connection objects are owned by their subscribers.
 
@@ -102,3 +103,11 @@ GLFW source/platform lists are maintained in Build/Dependencies.lua. Vendor
 CMake scripts are never invoked. Premake defines all configurations; generated
 solutions/makefiles are disposable. Submodule commits, not moving tags, pin builds.
 Official GLFW manual-build reference: https://www.glfw.org/docs/3.4/compile.html
+
+## Asset phase ownership
+
+See [Assets.md](Assets.md) for the current engine-owned asset registry, immutable CPU
+handles and private Ogre/Ozz/OpenAL adapters. Client AssetScene instances must be
+cleared before Renderer destruction. GPU resources and audio devices stay on the
+main thread; background asset reads use the existing job pool. Assimp belongs to
+the offline importer/cooker and is not linked into Sandbox.

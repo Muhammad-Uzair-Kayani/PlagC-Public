@@ -5,7 +5,7 @@ logging, GLFW windows, typed event categories, thread identity and a bounded
 lock-free work-stealing job system. Sandbox is the client and validation app.
 Phase 2 adds Ogre-Next rendering behind engine APIs, tested through Sandbox.
 Phase 3 adds an EnTT-backed World, typed components and an Ogre scene bridge.
-The default client is one [Integrated FPS Stress World](Docs/StressWorld.md). Managed assets and editor systems remain future phases.
+The default client is one [Integrated FPS Stress World](Docs/StressWorld.md). [Managed assets, Ozz animation and OpenAL audio](Docs/Assets.md) are now integrated. Editor systems remain a future phase.
 See Docs/Phase2.md for current verification and limitations.
 
 ## Windows / Visual Studio 2022
@@ -138,3 +138,11 @@ Use Release or Dist for performance measurements.
 The [World hot path](Docs/WorldHotPath.md), [physics foundation](Docs/PhysicsFoundation.md),
 and earlier phase reports document engine architecture and historical results;
 their old playable-demo controls are superseded by StressWorld.md.
+
+## Asset phase
+
+The FPS facility includes imported textured beacons, Ozz-driven animation and a
+positional OpenAL chime. F5 toggles animation, F6 toggles the chime, and F7 reloads
+cooked assets. Read [Assets.md](Docs/Assets.md) for supported formats, ownership,
+AssetCooker commands, dependency/build changes and validation limits. Regenerate
+projects after pulling this phase. Keep the generated OpenAL32.dll beside the EXE.

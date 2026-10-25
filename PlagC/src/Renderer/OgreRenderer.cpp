@@ -19,6 +19,8 @@
 #include <OgreRoot.h>
 #include <OgreWorkQueue.h>
 #include <OgreImage2.h>
+#include <OgreTextureBox.h>
+#include <cstring>
 #include <OgreWindow.h>
 #include <OgreRenderSystem.h>
 #include <OgreSceneManager.h>
@@ -130,12 +132,15 @@ struct Renderer::Impl
     struct Mesh
     {
         Ogre::MeshPtr value;
+        bool dynamic = false;
+        std::vector<std::uint64_t> users{};
     };
     struct Material
     {
         Ogre::HlmsDatablock *value;
         MaterialModel model;
-        bool overlay=false;
+        bool overlay = false;
+        TextureHandle texture{};
     };
     struct Object
     {
@@ -157,6 +162,7 @@ struct Renderer::Impl
         Ogre::CompositorWorkspace *workspace;
         unsigned width, height;
     };
+    std::unordered_map<std::uint64_t, Ogre::TextureGpu *> textures;
     std::unordered_map<std::uint64_t, Mesh> meshes;
     std::unordered_map<std::uint64_t, Material> materials;
     std::unordered_map<std::uint64_t, Object> objects;
@@ -215,8 +221,10 @@ struct Renderer::Impl
                 "AutoGen " + Ogre::IdString(workspaceName + "/Node").getReleaseText());
             auto *target = node->getTargetPass(0);
             // Preserve opaque depth for the far-plane sky quad. It cannot cover geometry.
-            target->getCompositorPassesNonConst().front()->mStoreActionDepth = Ogre::StoreAction::Store;
-            auto *sky = static_cast<Ogre::CompositorPassQuadDef *>(target->addPass(Ogre::PASS_QUAD));
+            target->getCompositorPassesNonConst().front()->mStoreActionDepth =
+                Ogre::StoreAction::Store;
+            auto *sky =
+                static_cast<Ogre::CompositorPassQuadDef *>(target->addPass(Ogre::PASS_QUAD));
             sky->mMaterialName = skyMaterial->getName();
             sky->mFrustumCorners = Ogre::CompositorPassQuadDef::CAMERA_DIRECTION;
         }
@@ -289,7 +297,7 @@ Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::ma
     // Configure the complete public range before any objects (including HUD) render.
     for (unsigned queue = 1; queue < 200; ++queue)
         p.scene->getRenderQueue()->setRenderQueueMode(static_cast<Ogre::uint8>(queue),
-                                                     Ogre::RenderQueue::FAST);
+                                                      Ogre::RenderQueue::FAST);
     p.scene->setShadowDirectionalLightExtrusionDistance(50);
     p.scene->setShadowFarDistance(50);
     p.scene->setAmbientLight(Ogre::ColourValue(.3f, .3f, .35f), Ogre::ColourValue(.1f, .1f, .12f),
@@ -305,7 +313,7 @@ Renderer::~Renderer()
 {
     Thread::RequireMain();
 }
-MeshHandle Renderer::CreateMesh(const MeshData &data)
+MeshHandle Renderer::CreateMesh(const MeshData &data, bool dynamic)
 {
     Thread::RequireMain();
     Require(!data.vertices.empty() && !data.indices.empty() && data.indices.size() % 3 == 0,
@@ -328,7 +336,8 @@ MeshHandle Renderer::CreateMesh(const MeshData &data)
         Ogre::VertexElement2Vec elements{{Ogre::VET_FLOAT3, Ogre::VES_POSITION},
                                          {Ogre::VET_FLOAT3, Ogre::VES_NORMAL},
                                          {Ogre::VET_FLOAT2, Ogre::VES_TEXTURE_COORDINATES}};
-        vb = vm->createVertexBuffer(elements, data.vertices.size(), Ogre::BT_IMMUTABLE,
+        vb = vm->createVertexBuffer(elements, data.vertices.size(),
+                                    dynamic ? Ogre::BT_DEFAULT : Ogre::BT_IMMUTABLE,
                                     const_cast<Vertex *>(data.vertices.data()), false);
         ib = vm->createIndexBuffer(Ogre::IndexBufferPacked::IT_32BIT, data.indices.size(),
                                    Ogre::BT_IMMUTABLE,
@@ -348,7 +357,7 @@ MeshHandle Renderer::CreateMesh(const MeshData &data)
         }
         mesh->_setBounds(Ogre::Aabb((lo + hi) * .5f, (hi - lo) * .5f), false);
         mesh->_setBoundingSphereRadius(std::max(lo.length(), hi.length()));
-        p.meshes.emplace(id, Impl::Mesh{mesh});
+        p.meshes.emplace(id, Impl::Mesh{mesh, dynamic});
     }
     catch (...)
     {
@@ -363,6 +372,71 @@ MeshHandle Renderer::CreateMesh(const MeshData &data)
     }
     return {id};
 }
+void Renderer::UpdateMesh(MeshHandle handle, std::span<const Vertex> vertices)
+{
+    Thread::RequireMain();
+    auto &mesh = Get(impl_->meshes, handle);
+    auto *buffer = mesh.value->getSubMesh(0)->mVao[Ogre::VpNormal][0]->getVertexBuffers()[0];
+    Require(mesh.dynamic && vertices.size() == buffer->getNumElements(),
+            "mesh update requires matching dynamic vertex count");
+    for (auto &v : vertices)
+        Require(Finite(v.position) && Finite(v.normal) && std::isfinite(v.u) && std::isfinite(v.v),
+                "nonfinite mesh update");
+    buffer->upload(vertices.data(), 0, vertices.size());
+    Ogre::Vector3 lo = V(vertices[0].position), hi = lo;
+    for (auto &v : vertices)
+    {
+        lo.makeFloor(V(v.position));
+        hi.makeCeil(V(v.position));
+    }
+    mesh.value->_setBounds(Ogre::Aabb((lo + hi) * .5f, (hi - lo) * .5f), false);
+    mesh.value->_setBoundingSphereRadius(std::max(lo.length(), hi.length()));
+    for (auto id : mesh.users)
+        impl_->objects.at(id).value->setLocalAabb(mesh.value->getAabb());
+}
+TextureHandle Renderer::CreateTexture(unsigned width, unsigned height,
+                                      std::span<const std::uint8_t> rgba)
+{
+    Thread::RequireMain();
+    Require(width && height && width <= 8192 && height <= 8192 &&
+                rgba.size() == std::uint64_t(width) * height * 4,
+            "invalid RGBA texture");
+    auto image = std::make_unique<Ogre::Image2>();
+    image->createEmptyImage(width, height, 1, Ogre::TextureTypes::Type2D,
+                            Ogre::PFG_RGBA8_UNORM_SRGB);
+    auto box = image->getData(0);
+    for (unsigned row = 0; row < height; ++row)
+        std::memcpy(static_cast<unsigned char *>(box.data) + row * box.bytesPerRow,
+                    rgba.data() + std::size_t(row) * width * 4, std::size_t(width) * 4);
+    image->generateMipmaps(true);
+    auto id = ID();
+    auto *tm = impl_->root->getRenderSystem()->getTextureGpuManager();
+    auto *texture = tm->createTexture(Name("AssetTexture", id), Ogre::GpuPageOutStrategy::Discard,
+                                      Ogre::TextureFlags::PrefersLoadingFromFileAsSRGB,
+                                      Ogre::TextureTypes::Type2D);
+    try
+    {
+        texture->scheduleTransitionTo(Ogre::GpuResidency::Resident, image.release(), true);
+        tm->waitForStreamingCompletion();
+        impl_->textures.emplace(id, texture);
+    }
+    catch (...)
+    {
+        tm->destroyTexture(texture);
+        throw;
+    }
+    return {id};
+}
+void Renderer::DestroyTexture(TextureHandle handle)
+{
+    Thread::RequireMain();
+    auto *texture = Get(impl_->textures, handle);
+    for (auto &[id, m] : impl_->materials)
+        Require(m.texture.value != handle.value, "texture still referenced by material");
+    impl_->root->getRenderSystem()->getTextureGpuManager()->destroyTexture(texture);
+    impl_->textures.erase(handle.value);
+}
+
 MeshHandle Renderer::LoadModel(const std::string &resource, bool legacy)
 {
     Thread::RequireMain();
@@ -397,7 +471,8 @@ MaterialHandle Renderer::CreateMaterial(const MaterialDesc &d)
     auto name = Name("Material", id);
     Ogre::Hlms *hlms = d.model == MaterialModel::Pbr ? static_cast<Ogre::Hlms *>(p.pbs) : p.unlit;
     Ogre::HlmsMacroblock macro;
-    macro.mDepthCheck = !d.overlay; macro.mDepthWrite = !d.overlay;
+    macro.mDepthCheck = !d.overlay;
+    macro.mDepthWrite = !d.overlay;
     macro.mPolygonMode = p.settings.wireframe && !d.overlay ? Ogre::PM_WIREFRAME : Ogre::PM_SOLID;
     auto *db = hlms->createDatablock(name, name, macro, Ogre::HlmsBlendblock(), {});
     p.materials.emplace(id, Impl::Material{db, d.model, d.overlay});
@@ -420,6 +495,9 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
     Require(Finite(d.colour) && std::isfinite(d.roughness) && std::isfinite(d.metallic) &&
                 d.roughness >= 0 && d.roughness <= 1 && d.metallic >= 0 && d.metallic <= 1,
             "invalid material values");
+    if (d.baseColourTexture)
+        Get(impl_->textures, d.baseColourTexture);
+    m.texture = d.baseColourTexture;
     if (d.model == MaterialModel::Pbr)
     {
         auto *b = static_cast<Ogre::HlmsPbsDatablock *>(m.value);
@@ -427,7 +505,10 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
         b->setDiffuse(V(d.colour));
         b->setRoughness(std::max(.02f, d.roughness));
         b->setMetalness(d.metallic);
-        b->setTexture(Ogre::PBSM_DIFFUSE, d.colourTexture);
+        if (d.baseColourTexture)
+            b->setTexture(Ogre::PBSM_DIFFUSE, Get(impl_->textures, d.baseColourTexture));
+        else
+            b->setTexture(Ogre::PBSM_DIFFUSE, d.colourTexture);
         b->setTexture(Ogre::PBSM_REFLECTION,
                       impl_->environment.reflections ? impl_->environmentTexture : nullptr);
     }
@@ -436,7 +517,10 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
         auto *b = static_cast<Ogre::HlmsUnlitDatablock *>(m.value);
         b->setUseColour(true);
         b->setColour(C(d.colour));
-        b->setTexture(0, d.colourTexture);
+        if (d.baseColourTexture)
+            b->setTexture(0, Get(impl_->textures, d.baseColourTexture));
+        else
+            b->setTexture(0, d.colourTexture);
     }
 }
 void Renderer::SetEnvironment(const EnvironmentDesc &desc)
@@ -460,8 +544,10 @@ void Renderer::SetEnvironment(const EnvironmentDesc &desc)
             image->load(desc.cubemap, "General");
             Require(image->getTextureType() == Ogre::TextureTypes::TypeCube,
                     "environment must be a DDS cubemap, not a 2D texture");
-            Require(image->getNumMipmaps() > 1, "environment cubemap needs mipmaps for rough reflections");
-            next = tm->createTexture(desc.cubemap, Name("Environment", ID()), Ogre::GpuPageOutStrategy::Discard,
+            Require(image->getNumMipmaps() > 1,
+                    "environment cubemap needs mipmaps for rough reflections");
+            next = tm->createTexture(desc.cubemap, Name("Environment", ID()),
+                                     Ogre::GpuPageOutStrategy::Discard,
                                      Ogre::TextureFlags::PrefersLoadingFromFileAsSRGB,
                                      Ogre::TextureTypes::TypeCube, "General");
             try
@@ -487,7 +573,8 @@ void Renderer::SetEnvironment(const EnvironmentDesc &desc)
     }
     catch (...)
     {
-        if (replace && next) tm->destroyTexture(next);
+        if (replace && next)
+            tm->destroyTexture(next);
         throw;
     }
     auto *previous = p.environmentTexture;
@@ -496,15 +583,18 @@ void Renderer::SetEnvironment(const EnvironmentDesc &desc)
     if (p.skyMaterial)
     {
         auto *unit = p.skyMaterial->getTechnique(0)->getPass(0)->getTextureUnitState(0);
-        if (next) unit->setTexture(next);
-        else unit->setTextureName("");
+        if (next)
+            unit->setTexture(next);
+        else
+            unit->setTextureName("");
     }
     for (auto &[id, material] : p.materials)
         if (material.model == MaterialModel::Pbr)
-            static_cast<Ogre::HlmsPbsDatablock *>(material.value)->setTexture(
-                Ogre::PBSM_REFLECTION, desc.reflections ? next : nullptr);
+            static_cast<Ogre::HlmsPbsDatablock *>(material.value)
+                ->setTexture(Ogre::PBSM_REFLECTION, desc.reflections ? next : nullptr);
     p.Workspaces();
-    if (replace && previous) tm->destroyTexture(previous);
+    if (replace && previous)
+        tm->destroyTexture(previous);
 }
 EnvironmentDesc Renderer::Environment() const
 {
@@ -536,6 +626,7 @@ ObjectHandle Renderer::CreateObject(MeshHandle mesh, MaterialHandle material, co
         node->attachObject(item);
         p.objects.emplace(id, Impl::Object{item, node, mesh, material});
         SetTransform({id}, t);
+        Get(p.meshes, mesh).users.push_back(id);
     }
     catch (...)
     {
@@ -579,6 +670,7 @@ void Renderer::DestroyObject(ObjectHandle h)
     auto o = Get(p.objects, h);
     p.scene->destroyItem(o.value);
     p.scene->destroySceneNode(o.node);
+    std::erase(Get(p.meshes, o.mesh).users, h.value);
     p.objects.erase(h.value);
 }
 LightHandle Renderer::CreateLight(const LightDesc &d)
@@ -643,10 +735,16 @@ void Renderer::SetCamera(const CameraDesc &d)
     p.camera->setFarClipDistance(d.farClip);
     p.camera->setAutoAspectRatio(true);
 }
-RenderSettings Renderer::Settings() const { Thread::RequireMain(); return impl_->settings; }
-void Renderer::SetVSync(bool enabled) {
+RenderSettings Renderer::Settings() const
+{
     Thread::RequireMain();
-    if (impl_->output) impl_->output->setVSync(enabled, 1);
+    return impl_->settings;
+}
+void Renderer::SetVSync(bool enabled)
+{
+    Thread::RequireMain();
+    if (impl_->output)
+        impl_->output->setVSync(enabled, 1);
     impl_->settings.vsync = enabled;
 }
 void Renderer::SetSettings(const RenderSettings &d)
@@ -801,9 +899,9 @@ RenderStats Renderer::Statistics() const
     auto s = impl_->stats;
     s.objects = impl_->objects.size();
     s.meshes = impl_->meshes.size();
+    s.textures = impl_->textures.size();
     s.materials = impl_->materials.size();
     s.lights = impl_->lights.size();
     return s;
 }
 } // namespace PlagC
-

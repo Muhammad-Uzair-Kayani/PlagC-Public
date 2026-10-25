@@ -5,3 +5,5 @@ include "Ogre.lua"
 include "EnTT.lua"
 
 include "Jolt.lua"
+
+include "Assets.lua"

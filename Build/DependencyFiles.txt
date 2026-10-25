@@ -11,3 +11,8 @@ Vendor/entt/src/entt/entity/registry.hpp
 
 Vendor/jolt/Jolt/Jolt.h
 Vendor/jolt/Jolt/Physics/PhysicsSystem.cpp
+
+Vendor/assimp/include/assimp/Importer.hpp
+Vendor/ozz/include/ozz/animation/runtime/sampling_job.h
+Vendor/openal/include/AL/al.h
+Vendor/openal/fmt-11.1.1/include/fmt/format.h
