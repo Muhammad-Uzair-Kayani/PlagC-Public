@@ -127,10 +127,25 @@ void StressWorld::Load(Engine &engine)
     debugClock_ = 0;
     assetScene_ = std::make_unique<AssetScene>(engine.Graphics());
     assetErrorReported_ = false;
+    freeView_ = followView_ = false;
+    freeCamera_ = followCamera_ = character_ = materialDisplay_ = {};
+    characterAsset_ = {};
+    materialAsset_ = {};
     if (config_.assetDemo)
     {
         engine.Assets().Request("Beacon.plasset", AssetType::Model);
         engine.Assets().Request("Chime.plasset", AssetType::Audio);
+        engine.Assets().Request("RobotExpressive.plasset", AssetType::Model);
+        engine.Assets().Request("MaterialLab.plasset", AssetType::Model);
+        auto camera = model_->world.Read(model_->camera);
+        freeCamera_ = model_->world.Create("Free camera");
+        followCamera_ = model_->world.Create("Follow camera");
+        for (auto e : {freeCamera_, followCamera_})
+        {
+            model_->world.SetTransform(e, camera.transform);
+            model_->world.SetCamera(e, *camera.camera);
+        }
+        model_->SetTarget(model_->Target());
     }
     hudClock_ = 1;
     revision_ = model_->visualRevision;
@@ -149,6 +164,9 @@ void StressWorld::Unload(Engine &engine)
     assetScene_.reset();
     assetActors_.clear();
     beacon_ = {};
+    characterAsset_ = {};
+    materialAsset_ = {};
+    freeCamera_ = followCamera_ = character_ = materialDisplay_ = {};
     chimeClip_ = {};
     hud_.Clear(engine.Graphics());
     scene_.reset();
@@ -239,6 +257,43 @@ void StressWorld::Key(Engine &engine, const Event &event)
         engine.Graphics().SetSettings(settings);
         break;
     }
+    case KeyCode::F8:
+        if (config_.assetDemo)
+        {
+            freeView_ = false;
+            followView_ = !followView_;
+            cameras_.Activate(model_->world, followView_ ? followCamera_ : model_->camera);
+            AssetMessage(followView_ ? "F8 FOLLOW CAMERA - WASD MOVES CHARACTER" : "F8 FPS CAMERA");
+        }
+        break;
+    case KeyCode::F9:
+        if (config_.assetDemo)
+        {
+            freeView_ = !freeView_;
+            if (freeView_)
+            {
+                auto active = model_->world.Read(model_->world.ActiveCamera());
+                freeController_.look = {yaw_, pitch_};
+                freeController_.Update(model_->world, freeCamera_, active.transform.position);
+            }
+            cameras_.Activate(model_->world, freeView_
+                                                 ? freeCamera_
+                                                 : (followView_ ? followCamera_ : model_->camera));
+            AssetMessage(freeView_ ? "F9 FREE CAMERA - WASD SPACE CTRL MOVE"
+                                   : "F9 RETURN TO CHARACTER CAMERA");
+        }
+        break;
+    case KeyCode::F10:
+        if (character_)
+        {
+            auto a = model_->world.Read(character_).animator;
+            if (a && a->controller)
+            {
+                a->controller->Trigger("Wave");
+                model_->world.SetAnimator(character_, *a);
+            }
+        }
+        break;
     case KeyCode::F5:
         if (!config_.assetDemo || !beacon_ || beacon_->animations.empty())
         {
@@ -255,7 +310,8 @@ void StressWorld::Key(Engine &engine, const Event &event)
                 model_->world.SetAnimator(e, *record.animator);
             }
         }
-        AssetMessage(animationPlaying_ ? "F5 BEACON ANIMATION PLAYING" : "F5 BEACON ANIMATION PAUSED");
+        AssetMessage(animationPlaying_ ? "F5 BEACON ANIMATION PLAYING"
+                                       : "F5 BEACON ANIMATION PAUSED");
         break;
     case KeyCode::F6:
         if (chime_)
@@ -284,6 +340,8 @@ void StressWorld::Key(Engine &engine, const Event &event)
         {
             engine.Assets().Reload("Beacon.plasset");
             engine.Assets().Reload("Chime.plasset");
+            engine.Assets().Reload("RobotExpressive.plasset");
+            engine.Assets().Reload("MaterialLab.plasset");
             assetErrorReported_ = false;
             AssetMessage("F7 RELOADING COOKED ASSETS");
         }
@@ -346,10 +404,29 @@ void StressWorld::Key(Engine &engine, const Event &event)
         break;
     }
 }
-void StressWorld::Input(Engine &, double)
+void StressWorld::Input(Engine &, double dt)
 {
     constexpr float rad = 3.14159265358979323846f / 180;
     Vec3 velocity{};
+    if (freeView_)
+    {
+        Vec3 move{};
+        if (captured_)
+        {
+            auto delta = PlagC::Input::GetMouseDelta();
+            freeController_.look.Rotate(float(delta.x), float(delta.y));
+            move = {float(PlagC::Input::IsKeyPressed(KeyCode::D)) -
+                        float(PlagC::Input::IsKeyPressed(KeyCode::A)),
+                    float(PlagC::Input::IsKeyPressed(KeyCode::Space)) -
+                        float(PlagC::Input::IsKeyPressed(KeyCode::LeftControl)),
+                    float(PlagC::Input::IsKeyPressed(KeyCode::W)) -
+                        float(PlagC::Input::IsKeyPressed(KeyCode::S))};
+        }
+        freeController_.Move(model_->world, freeCamera_, move, dt);
+        model_->SetInput({}, false, {std::cos(yaw_ * rad), 0, std::sin(yaw_ * rad)});
+        jump_ = false;
+        return;
+    }
     if (config_.stressBenchmark)
     {
         constexpr Vec3 waypoints[] = {{0, 0, -120}, {75, 0, -120}, {75, 0, 60},
@@ -419,6 +496,12 @@ void StressWorld::Hud(Engine &engine, double dt)
          << (captured_ ? "MOUSE CAPTURED" : "TAB TO CAPTURE MOUSE") << "  TARGET " << selected_
          << "  HELD " << model_->Held().value << "\n";
     text << assetStatus_ << "\n";
+    if (config_.assetDemo)
+        text << "CAMERA "
+             << (freeView_     ? "FREE"
+                 : followView_ ? "FOLLOW"
+                               : "FPS")
+             << " ANIMATION " << locomotion_ << "\nF8 FPS/FOLLOW  F9 FREE  F10 WAVE\n";
     if (performance_)
     {
         text << "FPS " << (dt > 0 ? 1 / dt : 0) << " FRAME " << dt * 1000 << " MS\nENTITIES "
@@ -571,6 +654,7 @@ void StressWorld::Frame(Engine &engine, double dt)
                                              : dt;
     step_ = false;
     model_->Advance(advance);
+    UpdateCharacter(engine, advance);
     UpdateAssets(engine, advance);
     double existingQueries = model_->metrics.queryMs;
     auto queryStart = Clock::now();
@@ -604,8 +688,10 @@ void StressWorld::Frame(Engine &engine, double dt)
         float aspect = 16.f / 9;
         if (auto *window = engine.MainWindow(); window && window->Height() > 0)
             aspect = float(window->Width()) / window->Height();
-        hud_.Place(engine.Graphics(), model_->world.ReadTransform(model_->camera).position, yaw_,
-                   pitch_, aspect);
+        hud_.Place(engine.Graphics(),
+                   model_->world.ReadTransform(model_->world.ActiveCamera()).position,
+                   freeView_ ? freeController_.look.yaw : yaw_,
+                   freeView_ ? freeController_.look.pitch : pitch_, aspect);
     }
     SampleFrame(engine, dt);
 }
@@ -680,4 +766,84 @@ void StressWorld::UpdateAssets(Engine &engine, double dt)
                             std::sin(yaw_ * rad) * std::cos(pitch_ * rad)};
         engine.Audio().SetListener(listener);
     }
+}
+
+void StressWorld::UpdateCharacter(Engine &engine, double)
+{
+    if (!config_.assetDemo)
+        return;
+    engine.Assets().Pump();
+    auto material = engine.Assets().Get<ModelAsset>("MaterialLab.plasset");
+    if (material && material.Shared() != materialAsset_.Shared())
+    {
+        if (!materialDisplay_)
+            materialDisplay_ = model_->world.Create("PBR material display");
+        model_->world.SetModel(materialDisplay_, {material, true});
+        model_->world.SetTransform(materialDisplay_, {{0, 0, 48}, {}, {1, 1, 1}});
+        materialAsset_ = material;
+        model_->SetTarget(model_->Target());
+    }
+    auto asset = engine.Assets().Get<ModelAsset>("RobotExpressive.plasset");
+    if (asset && asset.Shared() != characterAsset_.Shared())
+    {
+        auto clip = [&](const std::string &name) {
+            for (unsigned i = 0; i < asset->animations.size(); ++i)
+                if (asset->animations[i].name == name)
+                    return i;
+            throw std::runtime_error("character missing clip: " + name);
+        };
+        AnimationStateMachine graph;
+        graph.parameters = {{"Speed", AnimationParameterType::Float, 0},
+                            {"Grounded", AnimationParameterType::Bool, 1},
+                            {"Wave", AnimationParameterType::Trigger, 0},
+                            {"Finished", AnimationParameterType::Bool, 0}};
+        graph.states = {{"Idle", clip("Idle")},
+                        {"Walk", clip("Walking")},
+                        {"Run", clip("Running")},
+                        {"Wave", clip("Wave"), false}};
+        using C = AnimationCompare;
+        graph.transitions = {{0, 3, .2f, {{"Wave", C::Equal, 1}}},
+                             {1, 3, .2f, {{"Wave", C::Equal, 1}}},
+                             {2, 3, .2f, {{"Wave", C::Equal, 1}}},
+                             {3, 0, .2f, {{"Finished", C::Equal, 1}}},
+                             {0, 2, .2f, {{"Speed", C::Greater, 6}, {"Grounded", C::Equal, 1}}},
+                             {0, 1, .2f, {{"Speed", C::Greater, .15f}, {"Grounded", C::Equal, 1}}},
+                             {1, 0, .2f, {{"Speed", C::Less, .1f}}},
+                             {1, 2, .2f, {{"Speed", C::Greater, 6}}},
+                             {2, 0, .2f, {{"Speed", C::Less, .1f}}},
+                             {2, 1, .2f, {{"Speed", C::Less, 5.5f}}}};
+        if (!character_)
+            character_ = model_->world.Create("Player character - RobotExpressive");
+        model_->world.SetModel(character_, {asset, true});
+        AnimatorComponent animator;
+        animator.controller.emplace(graph, unsigned(asset->animations.size()));
+        animator.state.clip = clip("Idle");
+        model_->world.SetAnimator(character_, animator);
+        characterAsset_ = asset;
+        model_->SetTarget(model_->Target());
+    }
+    auto player = model_->Player();
+    if (followCamera_)
+    {
+        FPSCameraController follow;
+        follow.look = {yaw_, pitch_};
+        auto f = follow.look.Forward();
+        auto eye = model_->Eye();
+        follow.Update(model_->world, followCamera_,
+                      {eye.x - f.x * 5, eye.y - f.y * 5, eye.z - f.z * 5});
+    }
+    if (!character_)
+        return;
+    auto component = model_->world.Read(character_).animator;
+    auto &a = *component;
+    a.controller->SetFloat("Speed", std::hypot(player.velocity.x, player.velocity.z));
+    a.controller->SetBool("Grounded", player.grounded);
+    a.controller->SetBool("Finished", a.controller->Current().name == "Wave" && !a.state.playing);
+    locomotion_ = a.controller->Current().name;
+    model_->world.SetAnimator(character_, a);
+    model_->world.SetModel(character_, {characterAsset_, freeView_ || followView_});
+    model_->world.SetTransform(character_,
+                               {{player.position.x, player.position.y - .9f, player.position.z},
+                                {0, 90 - yaw_, 0},
+                                {.35f, .35f, .35f}});
 }

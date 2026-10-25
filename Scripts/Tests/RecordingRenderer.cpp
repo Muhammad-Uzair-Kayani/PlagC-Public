@@ -165,7 +165,8 @@ void Renderer::UpdateMesh(MeshHandle h, std::span<const Vertex> vertices)
         throw std::invalid_argument("invalid mesh update");
     mesh.vertices.assign(vertices.begin(), vertices.end());
 }
-TextureHandle Renderer::CreateTexture(unsigned w, unsigned h, std::span<const std::uint8_t> bytes)
+TextureHandle Renderer::CreateTexture(unsigned w, unsigned h, std::span<const std::uint8_t> bytes,
+                                      bool, bool)
 {
     if (!w || !h || bytes.size() != std::uint64_t(w) * h * 4)
         throw std::invalid_argument("invalid texture");

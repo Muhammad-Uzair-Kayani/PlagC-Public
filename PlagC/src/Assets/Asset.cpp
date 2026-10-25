@@ -108,6 +108,15 @@ void Validate(const ModelAsset &a)
                     m.metallic <= 1 && m.baseColourTexture >= -1 &&
                     m.baseColourTexture < int(a.textures.size()),
                 "invalid material");
+    for (auto &m : a.materials)
+    {
+        Require(Finite(m.emissive) && m.emissive.x >= 0 && m.emissive.y >= 0 && m.emissive.z >= 0 &&
+                    std::isfinite(m.normalScale) && m.normalScale >= 0,
+                "invalid material factors");
+        for (auto i : {m.normalTexture, m.metallicTexture, m.roughnessTexture, m.occlusionTexture,
+                       m.emissiveTexture})
+            Require(i >= -1 && i < int(a.textures.size()), "invalid material texture");
+    }
     for (auto &m : a.meshes)
     {
         Require(m.node < count && m.material < a.materials.size(), "invalid mesh binding");

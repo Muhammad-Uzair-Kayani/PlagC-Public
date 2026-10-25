@@ -43,6 +43,7 @@ struct CameraComponent
     // Look-at camera: world-space target; position comes from Transform.
     Vec3 target{0, 0, 0};
     float fov = 60, nearClip = .1f, farClip = 1000;
+    float aspect = 0; // Zero follows the render viewport; positive values override it.
 };
 struct TransformUpdate
 {

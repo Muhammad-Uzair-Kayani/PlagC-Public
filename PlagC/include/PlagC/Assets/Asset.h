@@ -62,6 +62,10 @@ struct MaterialAsset
     Vec3 colour{1, 1, 1};
     float roughness = .5f, metallic = 0;
     int baseColourTexture = -1;
+    int normalTexture = -1, metallicTexture = -1, roughnessTexture = -1, occlusionTexture = -1,
+        emissiveTexture = -1;
+    Vec3 emissive{};
+    float normalScale = 1;
 };
 struct VertexSkin
 {

@@ -138,7 +138,7 @@ void WriteFile(Writer &payload, AssetType type, const std::filesystem::path &pat
         throw std::runtime_error("cooked asset exceeds 128 MiB");
     Writer file;
     file.data = {'P', 'L', 'A', 'G', 'C', 'A', 'S', 'T'};
-    file.U(1);
+    file.U(2);
     file.U(unsigned(type));
     file.U(unsigned(payload.data.size()));
     auto hash = Hash(payload.data);
@@ -192,6 +192,11 @@ void SaveAsset(const ModelAsset &a, const std::filesystem::path &path)
         w.F(m.roughness);
         w.F(m.metallic);
         w.U(std::uint32_t(m.baseColourTexture));
+        for (auto index : {m.normalTexture, m.metallicTexture, m.roughnessTexture,
+                           m.occlusionTexture, m.emissiveTexture})
+            w.U(std::uint32_t(index));
+        w.Vec(m.emissive);
+        w.F(m.normalScale);
     });
     w.V(a.textures, [&](const auto &t) {
         w.S(t.name);
@@ -209,6 +214,8 @@ void SaveAsset(const ModelAsset &a, const std::filesystem::path &path)
             w.Vec(v.normal);
             w.F(v.u);
             w.F(v.v);
+            w.Vec(v.tangent);
+            w.F(v.tangentSign);
         });
         w.V(m.geometry.indices, [&](auto v) { w.U(v); });
         w.V(m.tangents, [&](auto v) { w.Vec(v); });
@@ -267,7 +274,8 @@ std::shared_ptr<Asset> ReadAsset(const std::filesystem::path &path)
     if (std::memcmp(bytes.data(), "PLAGCAST", 8))
         throw std::runtime_error("invalid cooked asset magic");
     Reader r{bytes, 8};
-    if (r.U() != 1)
+    auto version = r.U();
+    if (version != 1 && version != 2)
         throw std::runtime_error("unsupported cooked asset version");
     auto type = AssetType(r.U());
     auto n = r.U();
@@ -295,6 +303,14 @@ std::shared_ptr<Asset> ReadAsset(const std::filesystem::path &path)
             v.roughness = r.F();
             v.metallic = r.F();
             v.baseColourTexture = std::bit_cast<std::int32_t>(r.U());
+            if (version >= 2)
+            {
+                for (auto ptr : {&v.normalTexture, &v.metallicTexture, &v.roughnessTexture,
+                                 &v.occlusionTexture, &v.emissiveTexture})
+                    *ptr = std::bit_cast<std::int32_t>(r.U());
+                v.emissive = r.Vec();
+                v.normalScale = r.F();
+            }
             return v;
         });
         r.V(a->textures, [&] {
@@ -319,6 +335,11 @@ std::shared_ptr<Asset> ReadAsset(const std::filesystem::path &path)
                 v.normal = r.Vec();
                 v.u = r.F();
                 v.v = r.F();
+                if (version >= 2)
+                {
+                    v.tangent = r.Vec();
+                    v.tangentSign = r.F();
+                }
                 return v;
             });
             r.V(m.geometry.indices, [&] { return r.U(); });

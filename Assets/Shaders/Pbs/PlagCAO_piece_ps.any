@@ -1,0 +1,61 @@
+// Ambient lighting piece adapted from Ogre-Next 3.0 (MIT license, Vendor/ogre-next/LICENSE).
+// PlagC reserves PBSM_DETAIL_WEIGHT for baked AO. Direct lights/emissive are unoccluded.
+@undefpiece( DoAmbientLighting )
+@piece( DoAmbientLighting )
+	@property( ambient_sh )
+		@property( vct_num_probes )
+			//Only use ambient lighting if object is outside any VCT probe
+			if( vctSpecular.w == 0 )
+			{
+		@end
+				float3 wsNormal = mul( passBuf.invViewMatCubemap, pixelData.normal );
+				wsNormal.x = -wsNormal.x;
+				pixelData.envColourD += irradianceSH( wsNormal PASSBUF_ARG );
+		@property( vct_num_probes )
+			}
+		@end
+	@end
+
+	@property( ambient_hemisphere )
+		@property( ambient_hemisphere_inverted )
+			float tmpAmbientWS = ambientWD;
+			float tmpAmbientWD = ambientWS;
+		@else
+			float tmpAmbientWS = ambientWS;
+			float tmpAmbientWD = ambientWD;
+		@end
+		@property( vct_num_probes )
+			//Only use ambient lighting if object is outside any VCT probe
+			if( vctSpecular.w == 0 )
+			{
+		@end
+				pixelData.envColourS += lerp( midf3_c( passBuf.ambientLowerHemi.xyz ),
+											  midf3_c( passBuf.ambientUpperHemi.xyz ), tmpAmbientWS );
+				pixelData.envColourD += lerp( midf3_c( passBuf.ambientLowerHemi.xyz ),
+											  midf3_c( passBuf.ambientUpperHemi.xyz ), tmpAmbientWD );
+		@property( vct_num_probes )
+			}
+		@end
+	@end
+
+	@property( ambient_fixed && vct_num_probes )
+		//Only use ambient lighting if object is outside any VCT probe
+		finalColour += vctSpecular.w == 0 ? float3( 0, 0, 0 ) :
+											(passBuf.ambientUpperHemi.xyz * pixelData.diffuse.xyz);
+	@end
+    @property( detail_weight_map && needs_env_brdf )
+        midf plagcAO = SampleDetailWeightMap( textureMaps@value(detail_weight_map_idx),
+            samplerState@value(detail_weight_map_sampler),
+            UV_DETAIL_WEIGHT( inPs.uv@value(uv_detail_weight).xy ), texIndex_weightMapIdx ).x;
+        pixelData.envColourD *= plagcAO;
+        pixelData.envColourS *= plagcAO;
+    @end
+@end
+
+@piece( custom_ps_preLights )
+    @property( detail_weight_map && ambient_fixed && !vct_num_probes )
+        finalColour *= SampleDetailWeightMap( textureMaps@value(detail_weight_map_idx),
+            samplerState@value(detail_weight_map_sampler),
+            UV_DETAIL_WEIGHT( inPs.uv@value(uv_detail_weight).xy ), texIndex_weightMapIdx ).x;
+    @end
+@end

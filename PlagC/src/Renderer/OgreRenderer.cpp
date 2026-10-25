@@ -103,6 +103,8 @@ template <class T> T *RegisterHlms(Ogre::Root &root, const std::string &media)
     Ogre::ArchiveVec paths;
     for (const auto &lib : libs)
         paths.push_back(archives.load(media + "/" + lib, "FileSystem", true));
+    if constexpr (std::is_same_v<T, Ogre::HlmsPbs>)
+        paths.push_back(archives.load("Assets/Shaders/Pbs", "FileSystem", true));
     auto result =
         std::make_unique<T>(archives.load(media + "/" + main, "FileSystem", true), &paths);
     auto *ptr = result.get();
@@ -140,7 +142,7 @@ struct Renderer::Impl
         Ogre::HlmsDatablock *value;
         MaterialModel model;
         bool overlay = false;
-        TextureHandle texture{};
+        std::array<TextureHandle, 6> textures{};
     };
     struct Object
     {
@@ -335,7 +337,8 @@ MeshHandle Renderer::CreateMesh(const MeshData &data, bool dynamic)
     {
         Ogre::VertexElement2Vec elements{{Ogre::VET_FLOAT3, Ogre::VES_POSITION},
                                          {Ogre::VET_FLOAT3, Ogre::VES_NORMAL},
-                                         {Ogre::VET_FLOAT2, Ogre::VES_TEXTURE_COORDINATES}};
+                                         {Ogre::VET_FLOAT2, Ogre::VES_TEXTURE_COORDINATES},
+                                         {Ogre::VET_FLOAT4, Ogre::VES_TANGENT}};
         vb = vm->createVertexBuffer(elements, data.vertices.size(),
                                     dynamic ? Ogre::BT_DEFAULT : Ogre::BT_IMMUTABLE,
                                     const_cast<Vertex *>(data.vertices.data()), false);
@@ -395,7 +398,7 @@ void Renderer::UpdateMesh(MeshHandle handle, std::span<const Vertex> vertices)
         impl_->objects.at(id).value->setLocalAabb(mesh.value->getAabb());
 }
 TextureHandle Renderer::CreateTexture(unsigned width, unsigned height,
-                                      std::span<const std::uint8_t> rgba)
+                                      std::span<const std::uint8_t> rgba, bool srgb, bool mipmaps)
 {
     Thread::RequireMain();
     Require(width && height && width <= 8192 && height <= 8192 &&
@@ -403,17 +406,20 @@ TextureHandle Renderer::CreateTexture(unsigned width, unsigned height,
             "invalid RGBA texture");
     auto image = std::make_unique<Ogre::Image2>();
     image->createEmptyImage(width, height, 1, Ogre::TextureTypes::Type2D,
-                            Ogre::PFG_RGBA8_UNORM_SRGB);
+                            srgb ? Ogre::PFG_RGBA8_UNORM_SRGB : Ogre::PFG_RGBA8_UNORM);
     auto box = image->getData(0);
     for (unsigned row = 0; row < height; ++row)
         std::memcpy(static_cast<unsigned char *>(box.data) + row * box.bytesPerRow,
                     rgba.data() + std::size_t(row) * width * 4, std::size_t(width) * 4);
-    image->generateMipmaps(true);
+    if (mipmaps)
+        image->generateMipmaps(true);
     auto id = ID();
     auto *tm = impl_->root->getRenderSystem()->getTextureGpuManager();
-    auto *texture = tm->createTexture(Name("AssetTexture", id), Ogre::GpuPageOutStrategy::Discard,
-                                      Ogre::TextureFlags::PrefersLoadingFromFileAsSRGB,
-                                      Ogre::TextureTypes::Type2D);
+    auto *texture =
+        tm->createTexture(Name("AssetTexture", id), Ogre::GpuPageOutStrategy::Discard,
+                          Ogre::TextureFlags::AutomaticBatching |
+                              (srgb ? Ogre::TextureFlags::PrefersLoadingFromFileAsSRGB : 0u),
+                          Ogre::TextureTypes::Type2D);
     try
     {
         texture->scheduleTransitionTo(Ogre::GpuResidency::Resident, image.release(), true);
@@ -432,7 +438,8 @@ void Renderer::DestroyTexture(TextureHandle handle)
     Thread::RequireMain();
     auto *texture = Get(impl_->textures, handle);
     for (auto &[id, m] : impl_->materials)
-        Require(m.texture.value != handle.value, "texture still referenced by material");
+        for (auto h : m.textures)
+            Require(h.value != handle.value, "texture still referenced by material");
     impl_->root->getRenderSystem()->getTextureGpuManager()->destroyTexture(texture);
     impl_->textures.erase(handle.value);
 }
@@ -497,7 +504,15 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
             "invalid material values");
     if (d.baseColourTexture)
         Get(impl_->textures, d.baseColourTexture);
-    m.texture = d.baseColourTexture;
+    std::array<TextureHandle, 6> bindings{d.baseColourTexture, d.normalTexture,
+                                          d.metallicTexture,   d.roughnessTexture,
+                                          d.occlusionTexture,  d.emissiveTexture};
+    for (auto h : bindings)
+        if (h)
+            Get(impl_->textures, h);
+    Require(Finite(d.emissive) && std::isfinite(d.normalScale) && d.normalScale >= 0,
+            "invalid material factors");
+    m.textures = bindings;
     if (d.model == MaterialModel::Pbr)
     {
         auto *b = static_cast<Ogre::HlmsPbsDatablock *>(m.value);
@@ -505,8 +520,20 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
         b->setDiffuse(V(d.colour));
         b->setRoughness(std::max(.02f, d.roughness));
         b->setMetalness(d.metallic);
+        b->setEmissive(V(d.emissive));
+        b->setNormalMapWeight(d.normalScale);
+        Ogre::HlmsSamplerblock sampler;
+        sampler.setFiltering(Ogre::TFO_TRILINEAR);
+        sampler.setAddressingMode(Ogre::TAM_WRAP);
+        const Ogre::PbsTextureTypes slots[]{Ogre::PBSM_NORMAL, Ogre::PBSM_METALLIC,
+                                            Ogre::PBSM_ROUGHNESS, Ogre::PBSM_DETAIL_WEIGHT,
+                                            Ogre::PBSM_EMISSIVE};
+        for (unsigned i = 0; i < 5; ++i)
+            b->setTexture(slots[i],
+                          bindings[i + 1] ? Get(impl_->textures, bindings[i + 1]) : nullptr,
+                          &sampler);
         if (d.baseColourTexture)
-            b->setTexture(Ogre::PBSM_DIFFUSE, Get(impl_->textures, d.baseColourTexture));
+            b->setTexture(Ogre::PBSM_DIFFUSE, Get(impl_->textures, d.baseColourTexture), &sampler);
         else
             b->setTexture(Ogre::PBSM_DIFFUSE, d.colourTexture);
         b->setTexture(Ogre::PBSM_REFLECTION,
@@ -723,7 +750,7 @@ void Renderer::DestroyLight(LightHandle h)
 void Renderer::SetCamera(const CameraDesc &d)
 {
     Thread::RequireMain();
-    Require(Finite(d.position) && Finite(d.target) &&
+    Require(std::isfinite(d.aspect) && d.aspect >= 0 && Finite(d.position) && Finite(d.target) &&
                 (V(d.position) - V(d.target)).squaredLength() > 0 && d.fov > 1 && d.fov < 179 &&
                 d.nearClip > 0 && d.farClip > d.nearClip,
             "invalid camera");
@@ -733,7 +760,9 @@ void Renderer::SetCamera(const CameraDesc &d)
     p.camera->setFOVy(Ogre::Degree(d.fov));
     p.camera->setNearClipDistance(d.nearClip);
     p.camera->setFarClipDistance(d.farClip);
-    p.camera->setAutoAspectRatio(true);
+    p.camera->setAutoAspectRatio(d.aspect == 0);
+    if (d.aspect > 0)
+        p.camera->setAspectRatio(d.aspect);
 }
 RenderSettings Renderer::Settings() const
 {

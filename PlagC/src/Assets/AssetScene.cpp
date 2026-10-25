@@ -39,16 +39,33 @@ struct AssetScene::Impl
         void Build()
         {
             Validate(*asset);
-            for (auto &t : asset->textures)
-                textures.push_back(renderer.CreateTexture(t.width, t.height, t.rgba));
+            std::unordered_map<std::uint64_t, TextureHandle> cache;
+            auto texture = [&](int index, bool srgb) {
+                if (index < 0)
+                    return TextureHandle{};
+                auto key = std::uint64_t(index) * 2 + srgb;
+                if (auto found = cache.find(key); found != cache.end())
+                    return found->second;
+                auto &t = asset->textures.at(index);
+                auto h = renderer.CreateTexture(t.width, t.height, t.rgba, srgb, true);
+                textures.push_back(h);
+                cache.emplace(key, h);
+                return h;
+            };
             for (auto &m : asset->materials)
             {
                 MaterialDesc d;
                 d.colour = m.colour;
                 d.roughness = m.roughness;
                 d.metallic = m.metallic;
-                if (m.baseColourTexture >= 0)
-                    d.baseColourTexture = textures.at(m.baseColourTexture);
+                d.emissive = m.emissive;
+                d.normalScale = m.normalScale;
+                d.baseColourTexture = texture(m.baseColourTexture, true);
+                d.normalTexture = texture(m.normalTexture, false);
+                d.metallicTexture = texture(m.metallicTexture, false);
+                d.roughnessTexture = texture(m.roughnessTexture, false);
+                d.occlusionTexture = texture(m.occlusionTexture, false);
+                d.emissiveTexture = texture(m.emissiveTexture, true);
                 materials.push_back(renderer.CreateMaterial(d));
             }
             Animator rest(asset);
@@ -175,7 +192,7 @@ void AssetScene::Update(World &world, double dt)
         if (animation)
         {
             auto start = Clock::now();
-            instance.animator->Update(animation->state, dt);
+            instance.animator->Update(*animation, dt);
             p.stats.animationMs += Ms(start);
             for (unsigned i = 0; i < instance.deformed.size(); ++i)
             {

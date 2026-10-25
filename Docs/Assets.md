@@ -176,3 +176,9 @@ Press R to return to spawn and look toward the two beacons ahead-left/ahead-righ
 If no key confirmation appears, focus the game window and try Fn+F5/F6/F7 on laptops
 whose function row defaults to media controls. If the status says a load failed,
 read the console error and verify Assets/Cooked contains Beacon.plasset and Chime.plasset.
+
+## Phase 5.5 extension
+
+See [Phase5.5.md](Phase5.5.md) for camera controllers, gameplay animation state
+machines, PBR textures, character provenance, controls and current validation limits.
+Its material/animation support description supersedes the original phase baseline above.

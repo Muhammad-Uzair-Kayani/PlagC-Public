@@ -146,3 +146,7 @@ positional OpenAL chime. F5 toggles animation, F6 toggles the chime, and F7 relo
 cooked assets. Read [Assets.md](Docs/Assets.md) for supported formats, ownership,
 AssetCooker commands, dependency/build changes and validation limits. Regenerate
 projects after pulling this phase. Keep the generated OpenAL32.dll beside the EXE.
+
+Phase 5.5 adds FPS/follow/free cameras, velocity-driven Idle/Walk/Run crossfades,
+a CC0 robot and PBR texture fixtures to the existing facility. F8 switches FPS/follow,
+F9 toggles free camera and F10 triggers Wave. See [Phase 5.5](Docs/Phase5.5.md).

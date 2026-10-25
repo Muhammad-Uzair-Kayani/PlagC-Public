@@ -32,9 +32,9 @@ void ValidateWorldTransform(const Transform &t)
 void ValidateWorldCamera(const CameraComponent &c, const Transform &t)
 {
     const auto p = t.position;
-    Require(Finite(c.target) && std::isfinite(c.fov) && c.fov > 1 && c.fov < 179 &&
-                std::isfinite(c.nearClip) && std::isfinite(c.farClip) && c.nearClip > 0 &&
-                c.farClip > c.nearClip &&
+    Require(std::isfinite(c.aspect) && c.aspect >= 0 && Finite(c.target) && std::isfinite(c.fov) &&
+                c.fov > 1 && c.fov < 179 && std::isfinite(c.nearClip) && std::isfinite(c.farClip) &&
+                c.nearClip > 0 && c.farClip > c.nearClip &&
                 (c.target.x != p.x || c.target.y != p.y || c.target.z != p.z),
             "invalid world camera");
 }
@@ -307,6 +307,14 @@ void World::SetAnimator(Entity e, const AnimatorComponent &c)
         c.state.clip >= model->asset->animations.size() || !std::isfinite(c.state.time) ||
         !std::isfinite(c.state.speed))
         throw std::invalid_argument("invalid animator/model binding");
+    if (!std::isfinite(c.fadeElapsed) || c.fadeElapsed < 0 || !std::isfinite(c.fadeDuration) ||
+        c.fadeDuration < 0)
+        throw std::invalid_argument("invalid animation fade");
+    if (c.fadeDuration > 0 && (c.previous.clip >= model->asset->animations.size() ||
+                               !std::isfinite(c.previous.time) || !std::isfinite(c.previous.speed)))
+        throw std::invalid_argument("invalid previous animation state");
+    if (c.controller)
+        c.controller->Graph().Validate(unsigned(model->asset->animations.size()));
     impl_->registry.emplace_or_replace<AnimatorComponent>(raw, c);
 }
 void World::RemoveAnimator(Entity e)

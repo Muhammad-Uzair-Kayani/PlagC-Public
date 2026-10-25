@@ -19,6 +19,8 @@ struct Vertex
 {
     Vec3 position, normal;
     float u = 0, v = 0;
+    Vec3 tangent{1, 0, 0};
+    float tangentSign = 1;
 };
 struct MeshData
 {
@@ -59,6 +61,10 @@ struct MaterialDesc
     float roughness = .5f, metallic = 0;
     std::string colourTexture;
     TextureHandle baseColourTexture;
+    TextureHandle normalTexture, metallicTexture, roughnessTexture, occlusionTexture,
+        emissiveTexture;
+    Vec3 emissive{};
+    float normalScale = 1;
     bool overlay = false; // Immutable: no depth test/write; for camera-relative diagnostic text.
 };
 enum class LightType
@@ -77,6 +83,7 @@ struct CameraDesc
 {
     Vec3 position{8, 6, 10}, target{0, 0, 0};
     float fov = 60, nearClip = .1f, farClip = 1000;
+    float aspect = 0; // Zero follows the render viewport; positive values override it.
 };
 struct RenderSettings
 {
@@ -112,8 +119,8 @@ class Renderer
     Renderer &operator=(const Renderer &) = delete;
     MeshHandle CreateMesh(const MeshData &, bool dynamic = false);
     void UpdateMesh(MeshHandle, std::span<const Vertex>);
-    TextureHandle CreateTexture(unsigned width, unsigned height,
-                                std::span<const std::uint8_t> rgba);
+    TextureHandle CreateTexture(unsigned width, unsigned height, std::span<const std::uint8_t> rgba,
+                                bool srgb = true, bool mipmaps = true);
     void DestroyTexture(TextureHandle);
     MeshHandle LoadModel(const std::string &, bool legacyMesh = true);
     void DestroyMesh(MeshHandle);

@@ -4,6 +4,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/material.h>
+#include <assimp/GltfMaterial.h>
 #include <assimp/IOSystem.hpp>
 #include <assimp/DefaultIOSystem.h>
 #define STB_IMAGE_IMPLEMENTATION
@@ -148,66 +149,104 @@ ModelAsset ImportModel(const std::filesystem::path &source)
         m.colour = {colour.r, colour.g, colour.b};
         material.Get(AI_MATKEY_ROUGHNESS_FACTOR, m.roughness);
         material.Get(AI_MATKEY_METALLIC_FACTOR, m.metallic);
-        aiString texture;
-        bool has = material.GetTexture(aiTextureType_BASE_COLOR, 0, &texture) == AI_SUCCESS ||
-                   material.GetTexture(aiTextureType_DIFFUSE, 0, &texture) == AI_SUCCESS;
-        if (has)
-        {
-            std::string key = texture.C_Str();
-            auto found = textures.find(key);
-            if (found == textures.end())
+        auto loadTexture = [&](aiTextureType type, int channel = -1) {
+            aiString texture;
+            unsigned uv = 0;
+            bool has = material.GetTexture(type, 0, &texture, nullptr, &uv) == AI_SUCCESS;
+            if (uv != 0)
+                throw std::runtime_error("material requires unsupported UV set");
+            if (has)
             {
-                TextureAsset t;
-                if (auto *embedded = scene->GetEmbeddedTexture(key.c_str()))
+                std::string key = texture.C_Str();
+                auto found = textures.find(key);
+                if (found == textures.end())
                 {
-                    if (embedded->mHeight == 0)
-                        t = Decode(key, reinterpret_cast<const std::uint8_t *>(embedded->pcData),
-                                   embedded->mWidth);
-                    else
+                    TextureAsset t;
+                    if (auto *embedded = scene->GetEmbeddedTexture(key.c_str()))
                     {
-                        t.name = key;
-                        t.width = embedded->mWidth;
-                        t.height = embedded->mHeight;
-                        if (std::uint64_t(t.width) * t.height > 8192ull * 8192)
-                            throw std::runtime_error("embedded texture too large");
-                        for (std::size_t p = 0; p < std::size_t(t.width) * t.height; ++p)
+                        if (embedded->mHeight == 0)
+                            t = Decode(key,
+                                       reinterpret_cast<const std::uint8_t *>(embedded->pcData),
+                                       embedded->mWidth);
+                        else
                         {
-                            auto c = embedded->pcData[p];
-                            t.rgba.insert(t.rgba.end(), {c.r, c.g, c.b, c.a});
+                            t.name = key;
+                            t.width = embedded->mWidth;
+                            t.height = embedded->mHeight;
+                            if (std::uint64_t(t.width) * t.height > 8192ull * 8192)
+                                throw std::runtime_error("embedded texture too large");
+                            for (std::size_t p = 0; p < std::size_t(t.width) * t.height; ++p)
+                            {
+                                auto c = embedded->pcData[p];
+                                t.rgba.insert(t.rgba.end(), {c.r, c.g, c.b, c.a});
+                            }
                         }
                     }
+                    else
+                    {
+                        auto path = std::filesystem::weakly_canonical(full.parent_path() / key);
+                        auto relative = path.lexically_relative(full.parent_path());
+                        if (relative.empty() || *relative.begin() == "..")
+                            throw std::runtime_error("texture escapes source directory");
+                        auto size = std::filesystem::file_size(path);
+                        if (size > 128 * 1024 * 1024)
+                            throw std::runtime_error("texture too large");
+                        std::vector<std::uint8_t> data(size);
+                        std::ifstream f(path, std::ios::binary);
+                        f.read(reinterpret_cast<char *>(data.data()), std::streamsize(size));
+                        if (!f)
+                            throw std::runtime_error("texture read failed");
+                        t = Decode(key, data.data(), data.size());
+                        out.dependencies.push_back(relative.generic_string());
+                    }
+                    int index = int(out.textures.size());
+                    out.textures.push_back(std::move(t));
+                    found = textures.emplace(key, index).first;
                 }
-                else
+                if (channel < 0)
+                    return found->second;
+                auto t = out.textures[found->second];
+                t.name += "/channel" + std::to_string(channel);
+                for (std::size_t pixel = 0; pixel < t.rgba.size(); pixel += 4)
                 {
-                    auto path = std::filesystem::weakly_canonical(full.parent_path() / key);
-                    auto relative = path.lexically_relative(full.parent_path());
-                    if (relative.empty() || *relative.begin() == "..")
-                        throw std::runtime_error("texture escapes source directory");
-                    auto size = std::filesystem::file_size(path);
-                    if (size > 128 * 1024 * 1024)
-                        throw std::runtime_error("texture too large");
-                    std::vector<std::uint8_t> data(size);
-                    std::ifstream f(path, std::ios::binary);
-                    f.read(reinterpret_cast<char *>(data.data()), std::streamsize(size));
-                    if (!f)
-                        throw std::runtime_error("texture read failed");
-                    t = Decode(key, data.data(), data.size());
-                    out.dependencies.push_back(relative.generic_string());
+                    auto value = t.rgba[pixel + channel];
+                    t.rgba[pixel] = t.rgba[pixel + 1] = t.rgba[pixel + 2] = value;
+                    t.rgba[pixel + 3] = 255;
                 }
-                int index = int(out.textures.size());
                 out.textures.push_back(std::move(t));
-                found = textures.emplace(key, index).first;
+                return int(out.textures.size() - 1);
             }
-            m.baseColourTexture = found->second;
+            return -1;
+        };
+        m.baseColourTexture = loadTexture(aiTextureType_BASE_COLOR);
+        if (m.baseColourTexture < 0)
+            m.baseColourTexture = loadTexture(aiTextureType_DIFFUSE);
+        m.normalTexture = loadTexture(aiTextureType_NORMALS);
+        material.Get(AI_MATKEY_GLTF_TEXTURE_SCALE(aiTextureType_NORMALS, 0), m.normalScale);
+        m.metallicTexture = loadTexture(aiTextureType_METALNESS, 2);
+        m.roughnessTexture = loadTexture(aiTextureType_DIFFUSE_ROUGHNESS, 1);
+        m.occlusionTexture = loadTexture(aiTextureType_LIGHTMAP, 0);
+        m.emissiveTexture = loadTexture(aiTextureType_EMISSIVE);
+        aiColor3D emission{0, 0, 0};
+        material.Get(AI_MATKEY_COLOR_EMISSIVE, emission);
+        float intensity = 1;
+        material.Get(AI_MATKEY_EMISSIVE_INTENSITY, intensity);
+        m.emissive = {emission.r * intensity, emission.g * intensity, emission.b * intensity};
+        float strength = 1;
+        material.Get(AI_MATKEY_GLTF_TEXTURE_STRENGTH(aiTextureType_LIGHTMAP, 0), strength);
+        if (m.occlusionTexture >= 0)
+        {
+            auto &t = out.textures[m.occlusionTexture];
+            for (std::size_t pixel = 0; pixel < t.rgba.size(); pixel += 4)
+            {
+                auto value = std::uint8_t(
+                    std::clamp(255.f * (1 - strength) + t.rgba[pixel] * strength, 0.f, 255.f));
+                t.rgba[pixel] = t.rgba[pixel + 1] = t.rgba[pixel + 2] = value;
+            }
         }
         if (colour.a < .999f)
             out.warnings.push_back("Material alpha is not rendered in this opaque profile: " +
                                    m.name);
-        if (material.GetTextureCount(aiTextureType_NORMALS) ||
-            material.GetTextureCount(aiTextureType_METALNESS) ||
-            material.GetTextureCount(aiTextureType_EMISSIVE))
-            out.warnings.push_back(
-                "Only base-colour texture and scalar metallic/roughness are rendered: " + m.name);
         out.materials.push_back(m);
     }
     for (unsigned node = 0; node < nodes.size(); ++node)
@@ -226,7 +265,14 @@ ModelAsset ImportModel(const std::filesystem::path &source)
                 m.geometry.vertices.push_back(
                     {V(src.mVertices[i]), V(src.mNormals[i]), uv.x, uv.y});
                 if (src.HasTangentsAndBitangents())
+                {
                     m.tangents.push_back(V(src.mTangents[i]));
+                    auto &v = m.geometry.vertices.back();
+                    v.tangent = V(src.mTangents[i]);
+                    v.tangentSign = ((src.mNormals[i] ^ src.mTangents[i]) * src.mBitangents[i]) < 0
+                                        ? -1.f
+                                        : 1.f;
+                }
             }
             for (unsigned i = 0; i < src.mNumFaces; ++i)
             {

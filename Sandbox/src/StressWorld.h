@@ -5,6 +5,7 @@
 #include "StressHud.h"
 #include <PlagC/Assets/AssetScene.h>
 #include <fstream>
+#include <PlagC/Camera/CameraSystem.h>
 #include <random>
 #include <unordered_map>
 class StressWorld
@@ -13,7 +14,14 @@ class StressWorld
     void Start(PlagC::Engine &, const PlagC::EngineConfig &);
     void Frame(PlagC::Engine &, double);
     void Stop(PlagC::Engine &);
-    const std::string &AssetStatus() const { return assetStatus_; }
+    const std::string &LocomotionState() const
+    {
+        return locomotion_;
+    }
+    const std::string &AssetStatus() const
+    {
+        return assetStatus_;
+    }
 
   private:
     PlagC::EngineConfig config_;
@@ -25,6 +33,13 @@ class StressWorld
     PlagC::AssetHandle<PlagC::AudioClip> chimeClip_;
     std::vector<PlagC::Entity> assetActors_;
     PlagC::AudioSource chime_;
+    PlagC::CameraSystem cameras_;
+    PlagC::FreeCameraController freeController_;
+    PlagC::Entity freeCamera_, followCamera_, character_, materialDisplay_;
+    PlagC::AssetHandle<PlagC::ModelAsset> characterAsset_, materialAsset_;
+    bool freeView_ = false, followView_ = false;
+    std::string locomotion_ = "LOADING";
+    void UpdateCharacter(PlagC::Engine &, double);
     bool animationPlaying_ = true, assetErrorReported_ = false;
     void UpdateAssets(PlagC::Engine &, double);
     void AssetMessage(std::string);

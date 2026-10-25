@@ -2,10 +2,16 @@
 #include "pgcpch.h"
 #include <PlagC/Application.h>
 #include <PlagC/Thread.h>
+#include <PlagC/Input/Input.h>
 #include "../../Sandbox/src/StressWorld.h"
 #include <fstream>
 namespace PlagC
 {
+InputState replayInput;
+void Window::Poll()
+{
+    Input::state_ = replayInput;
+}
 struct Log::Impl
 {
 };
@@ -151,6 +157,8 @@ int main()
         soakApp.Stop(soak);
         c.stressSoak = false;
         c.assetDemo = true;
+        c.headless = false;
+        c.nullPlatform = true;
         Engine demo(c);
         StressWorld demoApp;
         demoApp.Start(demo, c);
@@ -158,9 +166,11 @@ int main()
         demoApp.Frame(demo, 1. / 60);
         auto demoStats = demo.Graphics().Statistics();
         auto expectedMaterials =
-            14 + demo.Assets().Get<ModelAsset>("Beacon.plasset")->materials.size();
+            14 + demo.Assets().Get<ModelAsset>("Beacon.plasset")->materials.size() +
+            demo.Assets().Get<ModelAsset>("RobotExpressive.plasset")->materials.size() +
+            demo.Assets().Get<ModelAsset>("MaterialLab.plasset")->materials.size();
         Check(
-            demoStats.textures == 1 && demoStats.materials == expectedMaterials,
+            demoStats.textures == 7 && demoStats.materials == expectedMaterials,
             "default facility finalizes cached imported texture/model alongside procedural world");
         auto key = [&](KeyCode k, int modifiers = 0) {
             Event event{EventType::KeyPressed};
@@ -169,21 +179,51 @@ int main()
             demo.Events().Post(event);
             demo.Events().Pump();
         };
+        auto advance = [&](unsigned frames) {
+            for (unsigned i = 0; i < frames; ++i)
+            {
+                demo.MainWindow()->Poll();
+                demoApp.Frame(demo, 1. / 60);
+            }
+        };
+        advance(120);
+        Check(demoApp.LocomotionState() == "Idle", "stationary character enters Idle");
+        Event movement{EventType::KeyPressed};
+        movement.key = KeyCode::W;
+        replayInput.Apply(movement);
+        advance(45);
+        Check(demoApp.LocomotionState() == "Walk", "actual character velocity drives Walk");
+        movement.key = KeyCode::LeftShift;
+        replayInput.Apply(movement);
+        advance(45);
+        Check(demoApp.LocomotionState() == "Run", "sprint velocity drives Run");
+        replayInput.Reset();
+        advance(90);
+        Check(demoApp.LocomotionState() == "Idle", "stopping returns character to Idle");
+        key(KeyCode::F8);
+        Check(demoApp.AssetStatus().find("FOLLOW CAMERA") != std::string::npos,
+              "F8 selects follow camera");
+        key(KeyCode::F9);
+        Check(demoApp.AssetStatus().find("FREE CAMERA") != std::string::npos,
+              "F9 selects free camera");
+        key(KeyCode::F9);
         key(KeyCode::F5);
         Check(demoApp.AssetStatus() == "F5 BEACON ANIMATION PAUSED", "F5 confirms animation pause");
         key(KeyCode::F5);
-        Check(demoApp.AssetStatus() == "F5 BEACON ANIMATION PLAYING", "F5 confirms animation resume");
+        Check(demoApp.AssetStatus() == "F5 BEACON ANIMATION PLAYING",
+              "F5 confirms animation resume");
         key(KeyCode::F6);
-        Check(demoApp.AssetStatus() == "F6 AUDIO UNAVAILABLE - SEE CONSOLE", "F6 explains unavailable headless audio");
+        Check(demoApp.AssetStatus() == "F6 AUDIO UNAVAILABLE - SEE CONSOLE",
+              "F6 explains unavailable headless audio");
         key(KeyCode::F7);
         Check(demoApp.AssetStatus() == "F7 RELOADING COOKED ASSETS", "F7 confirms reload request");
         demo.Assets().Wait();
         demoApp.Frame(demo, 1. / 60);
-        Check(demo.Graphics().Statistics().textures == 1,
+        Check(demo.Graphics().Statistics().textures == 7,
               "hot reload replaces GPU texture without accumulation");
         key(KeyCode::R, 1);
         demoApp.Frame(demo, 1. / 60);
-        Check(demo.Graphics().Statistics().textures == 1 &&
+        Check(demo.Graphics().Statistics().textures == 7 &&
                   demo.Graphics().Statistics().materials == expectedMaterials,
               "world reset recreates asset instances without resource accumulation");
         demoApp.Stop(demo);

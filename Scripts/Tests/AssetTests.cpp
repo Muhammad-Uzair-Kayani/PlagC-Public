@@ -5,6 +5,7 @@
 #include <PlagC/Audio/AudioSystem.h>
 #include <PlagC/Thread.h>
 #include <limits>
+#include <PlagC/Camera/CameraSystem.h>
 using namespace PlagC;
 void Check(bool value, const char *name)
 {
@@ -227,6 +228,96 @@ int main()
         auto empty = renderer.Statistics();
         Check(!empty.objects && !empty.meshes && !empty.materials && !empty.textures,
               "ECS teardown releases instances before meshes, materials and textures");
+        AnimationStateMachine graph;
+        graph.parameters = {{"Speed", AnimationParameterType::Float, 0},
+                            {"Grounded", AnimationParameterType::Bool, 0},
+                            {"Wave", AnimationParameterType::Trigger, 0}};
+        graph.states = {{"Idle", 0}, {"Walk", 0}, {"Wave", 0, false}};
+        using Compare = AnimationCompare;
+        graph.transitions = {
+            {0, 1, .2f, {{"Speed", Compare::Greater, 1}, {"Grounded", Compare::Equal, 1}}},
+            {1, 2, .2f, {{"Wave", Compare::Equal, 1}}},
+            {2, 0, 0, {}}};
+        AnimationController controller(graph, 1), independent(graph, 1);
+        controller.SetFloat("Speed", 2);
+        Check(!controller.Evaluate(), "bool parameter gates locomotion transition");
+        controller.SetBool("Grounded", true);
+        Check(controller.Evaluate().has_value() && controller.Current().name == "Walk",
+              "float and bool conditions select state");
+        Reject([&] { controller.SetBool("Speed", true); },
+               "typed animation parameters reject mismatches");
+        controller.Trigger("Wave");
+        Check(controller.Evaluate().has_value() && controller.Current().name == "Wave",
+              "trigger selects one-shot animation");
+        controller.Evaluate();
+        controller.Evaluate();
+        Check(!controller.Evaluate(), "selected transition consumes trigger");
+        Check(independent.Current().name == "Idle", "controllers retain independent state");
+        AnimatorComponent blended;
+        blended.controller.emplace(graph, 1);
+        blended.controller->SetFloat("Speed", 2);
+        blended.controller->SetBool("Grounded", true);
+        animator.Update(blended, .1);
+        Check(blended.fadeDuration > 0 && std::abs(blended.fadeElapsed - .1) < .001,
+              "crossfade advances two-clip clock");
+        animator.Update(blended, .1);
+        Check(blended.fadeDuration == 0, "crossfade completes at requested duration");
+        auto poseModel = std::make_shared<ModelAsset>(imported);
+        poseModel->animations.push_back(poseModel->animations[0]);
+        for (unsigned clip = 0; clip < 2; ++clip)
+        {
+            auto &track = poseModel->animations[clip].tracks[0];
+            track.translations = {{0, {float(clip) * 2, 0, 0}}};
+        }
+        AnimationStateMachine poseGraph;
+        poseGraph.parameters = {{"Go", AnimationParameterType::Trigger, 0}};
+        poseGraph.states = {{"Start", 0}, {"End", 1}};
+        poseGraph.transitions = {{0, 1, 1, {{"Go", Compare::Equal, 1}}}};
+        Animator poseAnimator{AssetHandle<ModelAsset>(poseModel)};
+        AnimatorComponent poseComponent;
+        poseComponent.controller.emplace(poseGraph, 2);
+        poseAnimator.Update(poseComponent, 0);
+        poseComponent.controller->Trigger("Go");
+        poseAnimator.Update(poseComponent, .5);
+        Check(std::abs(poseAnimator.Pose()[0].m[12] - 1) < .01,
+              "crossfade blends distinct joint poses at midpoint");
+        poseAnimator.Update(poseComponent, .5);
+        Check(std::abs(poseAnimator.Pose()[0].m[12] - 2) < .01,
+              "crossfade reaches destination joint pose");
+        auto camera = world.Create();
+        CameraComponent initialCamera;
+        initialCamera.target = {0, 0, -1};
+        world.SetCamera(camera, initialCamera);
+        CameraSystem cameras;
+        cameras.Activate(world, camera);
+        cameras.SetViewport(1600, 900);
+        Check(std::abs(cameras.Extract(world).aspect - 1600.f / 900) < .001,
+              "camera tracks viewport aspect");
+        auto cameraComponent = *world.Read(camera).camera;
+        cameraComponent.aspect = 1.25f;
+        world.SetCamera(camera, cameraComponent);
+        Check(cameras.Extract(world).aspect == 1.25f, "camera aspect override takes precedence");
+        FPSCameraController fps;
+        fps.Update(world, camera, {2, 3, 4});
+        Check(Close(cameras.Extract(world).position, {2, 3, 4}),
+              "FPS controller follows supplied physics eye");
+        FreeCameraController free;
+        free.Move(world, camera, {0, 0, 1}, .5);
+        Check(Close(cameras.Extract(world).position, {2, 3, 0}), "free camera moves independently");
+        world.Destroy(camera);
+        Check(!world.ActiveCamera(), "destroying active camera clears selection");
+        auto material = ImportModel("Assets/Source/MaterialLab.gltf");
+        auto &mat = material.materials[0];
+        Check(mat.baseColourTexture >= 0 && mat.normalTexture >= 0 && mat.metallicTexture >= 0 &&
+                  mat.roughnessTexture >= 0 && mat.occlusionTexture >= 0 &&
+                  mat.emissiveTexture >= 0,
+              "material fixture imports all six PBR channels");
+        SaveAsset(material, root / "Material.plasset");
+        auto materialRoundtrip =
+            std::dynamic_pointer_cast<ModelAsset>(ReadAsset(root / "Material.plasset"));
+        Check(materialRoundtrip->materials[0].normalTexture == mat.normalTexture &&
+                  materialRoundtrip->materials[0].emissiveTexture == mat.emissiveTexture,
+              "cooked v2 retains PBR texture bindings");
         AudioSystem disabled({false, false, 48000});
         Check(!disabled.Available(), "disabled audio remains explicit and nonfatal");
         std::cout << "Asset integration tests passed\n";
