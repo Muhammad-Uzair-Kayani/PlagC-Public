@@ -92,3 +92,18 @@ review these and the manifest when deliberately updating a pin. Assimp's configu
 header is derived from its pinned template and preserves the upstream notice.
 OpenAL includes its pinned bundled fmt; Assimp includes its pinned bundled stb decoder.
 No vendor CMake invocation or unpinned nested downloads are introduced.
+
+### Interrupted clone recovery
+
+FetchDependencies now uses one shallow update, serial by default. Override with
+`PLAGC_FETCH_JOBS` only when parallel fetching is reliable. A failed update returns
+its error instead of immediately retrying against possibly incomplete metadata.
+On the next run, broken top-level submodule pointers/metadata are moved together
+into a unique `.git/plagc-recovery.*` directory before Git initializes them again.
+These backups are retained: no vendor files or local edits are deleted. Healthy
+modified submodules still block setup until their changes are committed or stashed.
+
+For the Git error `not a git repository ... .git/modules/Vendor/...`, pull the
+updated `prototype` branch with recursive submodule fetching disabled, then rerun
+GenerateProjects.bat. Recovery tests use local remotes and need no network:
+`python Scripts/Tests/DependencyFetchTests.py`.
