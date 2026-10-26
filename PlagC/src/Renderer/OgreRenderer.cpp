@@ -23,6 +23,7 @@
 #include <OgreWorkQueue.h>
 #include <OgreImage2.h>
 #include <OgreTextureBox.h>
+#include <OgrePixelFormatGpuUtils.h>
 #include <cstring>
 #include <OgreWindow.h>
 #include <OgreRenderSystem.h>
@@ -473,6 +474,36 @@ TextureHandle Renderer::CreateTexture(unsigned width, unsigned height,
         throw;
     }
     return {id};
+}
+TextureHandle Renderer::LoadTexture(const std::string &resource, bool srgb, bool mipmaps)
+{
+    Thread::RequireMain();
+    const auto path = std::filesystem::path(resource);
+    Require(!path.empty() && !path.is_absolute(), "texture resource must be relative");
+    for (const auto &part : path)
+        Require(part != "..", "texture resource escapes asset root");
+    // Use Ogre's registered image codecs on every platform; upload remains engine-owned.
+    Ogre::Image2 image;
+    image.load(resource, "General");
+    const unsigned width = image.getWidth(), height = image.getHeight();
+    Require(image.getTextureType() == Ogre::TextureTypes::Type2D && image.getDepth() == 1 &&
+                width && height && width <= 8192 && height <= 8192,
+            "unsupported texture dimensions/type");
+    std::vector<std::uint8_t> rgba(std::size_t(width) * height * 4);
+    Ogre::TextureBox destination(width, height, 1, 1, 4, width * 4,
+                                 std::size_t(width) * height * 4);
+    destination.data = rgba.data();
+    Ogre::PixelFormatGpuUtils::bulkPixelConversion(image.getData(0), image.getPixelFormat(),
+                                                   destination, Ogre::PFG_RGBA8_UNORM);
+    // A one-channel image is luminance in common PNG/JPEG files. Keep it neutral
+    // when used as colour, while preserving the red channel used by data maps.
+    if (image.getPixelFormat() == Ogre::PFG_R8_UNORM)
+        for (std::size_t i = 0; i < rgba.size(); i += 4)
+        {
+            rgba[i + 1] = rgba[i + 2] = rgba[i];
+            rgba[i + 3] = 255;
+        }
+    return CreateTexture(width, height, rgba, srgb, mipmaps);
 }
 void Renderer::DestroyTexture(TextureHandle handle)
 {

@@ -14,7 +14,9 @@ struct Log::Impl {
 Log::Log() : impl_(std::make_unique<Impl>()) {
     std::filesystem::create_directories("Logs");
     std::vector<spdlog::sink_ptr> sinks;
+#if !defined(_WIN32) || !defined(PC_DIST)
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
+#endif
     sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("Logs/PlagC.log", 4*1024*1024, 3));
     impl_->backend = std::make_shared<spdlog::logger>("PlagC", sinks.begin(), sinks.end());
     impl_->backend->set_level(spdlog::level::trace);

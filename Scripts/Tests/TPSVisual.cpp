@@ -29,6 +29,10 @@ int main()
             if (i == 60 || i == 120 || i == 150)
                 engine.Graphics().CaptureTarget(target, "Logs/TPS-" + std::to_string(i) + ".ppm");
         }
+        engine.Graphics().SetCamera({{38, 16, 35}, {0, 1, -6}, 60, .05f, 200});
+        engine.Graphics().Render(1. / 60);
+        engine.Graphics().CaptureTarget(target, "Logs/TPS-overview.ppm");
+        engine.Graphics().SetCamera(game.View());
         engine.Graphics().ResizeTarget(target, 960, 540);
         engine.Graphics().Render(1. / 60);
         engine.Graphics().CaptureTarget(target, "Logs/TPS-resize.ppm");

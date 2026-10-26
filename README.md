@@ -8,6 +8,10 @@ Phase 3 adds an EnTT-backed World, typed components and an Ogre scene bridge.
 The default client is [OUTPOST ZERO, a third-person sandbox](Docs/TPS.md). [Managed assets, Ozz animation and OpenAL audio](Docs/Assets.md) are now integrated. Editor systems remain a future phase.
 See Docs/Phase2.md for current verification and limitations.
 
+See [asset/renderer stabilization](Docs/AssetStabilization.md) for the validated
+fetch → cook → stage workflow. The full visual profile requires `BuildAAAAssets.bat`
+before building Sandbox; missing content now stops the build instead of being skipped.
+
 ## Windows / Visual Studio 2022
 
 Prerequisites: Git, Visual Studio 2022 with Desktop development with C++ and a

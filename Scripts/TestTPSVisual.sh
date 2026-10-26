@@ -3,8 +3,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p Bin-Int/TPS Logs
+python -c 'import sys;sys.path.insert(0,"Scripts");from RuntimeAssetManifest import verify;verify(".")'
 libs=Bin/linux-x86_64/Dist
-"${CXX:-g++}" -std=c++20 -O2 -DNDEBUG -pthread -IPlagC/include -IBuild/Pch \
+"${CXX:-g++}" -std=c++20 -O2 -DNDEBUG -DPC_TPS_VISUAL_MAX -pthread -IPlagC/include -IBuild/Pch \
     Game/src/*.cpp Scripts/Tests/TPSVisual.cpp -L"$libs" ${LDFLAGS:-} \
     -lPlagC -lGLFW -lspdlog -lJolt -lOzz -lOpenAL -lOgreHlmsPbs -lOgreHlmsUnlit \
     -lOgreHlmsCommon -lOgreRenderNULL -lOgreRenderGL3Plus -lOgreMain \

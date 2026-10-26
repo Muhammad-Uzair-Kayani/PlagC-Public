@@ -16,3 +16,10 @@
 # Ogre generated shader diagnostics
 /[0-9]*Shader_*.glsl
 
+
+# Reproducible high-fidelity content is fetched/cooked locally from checked-in locks.
+/Assets/Source/AAA/
+/Assets/Cooked/TPS/AAA/
+/Assets/Textures/*_1k.jpg
+/Assets/Textures/SliceDiffuse.jpg
+**/__pycache__/

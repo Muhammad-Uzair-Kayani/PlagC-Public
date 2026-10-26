@@ -66,6 +66,23 @@ if not _OPTIONS['null-platform'] then
     library('OgreRenderGL3Plus')
     local gl=base..'/RenderSystems/GL3Plus'
     files {gl..'/src/*.cpp',gl..'/src/Vao/*.cpp',gl..'/src/GLSL/*.cpp'}
+    -- Keep the submodule immutable. Generate one patched translation unit at setup.
+    local original = gl .. '/src/GLSL/OgreGLSLMonolithicProgram.cpp'
+    local input = assert(io.open(original, "rb")); local source = input:read("*a"); input:close()
+    local marker = "OGRE_CHECK_GL_ERROR( glValidateProgram( mGLProgramHandle ) );"
+    local first = assert(source:find(marker, 1, true), "Pinned Ogre GLSL validation site changed")
+    assert(not source:find(marker, first + #marker, true), "Ambiguous Ogre GLSL validation site")
+    local patched = source:sub(1, first - 1) .. '#include "PlagCGLSLSamplerInitialization.inl"\n            ' .. source:sub(first)
+    local generated = path.getabsolute("../Bin-Int/Generated/OgreGLSLMonolithicProgram.cpp")
+    os.mkdir(path.getdirectory(generated))
+    local existing = io.open(generated, "rb")
+    local previous = existing and existing:read("*a") or nil
+    if existing then existing:close() end
+    if previous ~= patched then local out = assert(io.open(generated, "wb")); out:write(patched); out:close() end
+    removefiles { original }
+    files { generated }
+    includedirs { path.getabsolute("Patches") }
+
     includedirs {gl..'/include/GLSL',gl..'/include/GL'}
     filter 'system:linux'
         files {gl..'/src/windowing/OgreGlSwitchableSupport.cpp',gl..'/src/windowing/EGL/PBuffer/*.cpp'}

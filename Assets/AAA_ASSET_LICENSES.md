@@ -1,3 +1,5 @@
+Current acquisition pins and static-part recipes are in `Assets/Manifests/AAAWorld.lock.json`; the build verifies source SHA-256 hashes. Original source packages remain unchanged. See `Docs/AssetStabilization.md` for the current workflow.
+
 # OUTPOST ZERO — Cinematic Asset Provenance
 
 All third-party environment models acquired by `Scripts/FetchAAAWorld.py` come from **Poly Haven** and are released under **CC0 1.0 Universal (Public Domain Dedication)**. They may be copied, modified, distributed and used commercially without attribution. PlagC nevertheless records the API-returned creator metadata, source URL and `files_hash` in `Assets/Source/AAA/provenance.json` at acquisition time.

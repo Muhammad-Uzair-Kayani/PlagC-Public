@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "repository": "AetherRadar/operation-steel-tide",
+  "commit": "d6a33b932e00fb9016dea407eca3f909aeaf2dcb",
+  "files": [
+    {
+      "path": "asphalt_03_diff_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/asphalt_03_diff_1k.jpg",
+      "size": 788840,
+      "sha256": "95ad02e2631c41cf9fdd6a37596cf75adb4fb8a8b6880567cc78ed1c41dc5681"
+    },
+    {
+      "path": "asphalt_03_normal_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/asphalt_03_normal_1k.jpg",
+      "size": 974676,
+      "sha256": "978de8349ce2e9989325099a6fd1f5ea6b2826528e1264606a5c51296b1e2888"
+    },
+    {
+      "path": "asphalt_03_rough_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/asphalt_03_rough_1k.jpg",
+      "size": 590105,
+      "sha256": "069b6ea342aaad04fd1582f59c16fbbe5c7a6f0f3a87bc9d57648ed53336fb3a"
+    },
+    {
+      "path": "concrete_floor_diff_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/concrete_floor_diff_1k.jpg",
+      "size": 927975,
+      "sha256": "5e06d0fb226f671470f59bf7798954b6965c9ed56dd45084dfd012e15737e444"
+    },
+    {
+      "path": "concrete_floor_normal_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/concrete_floor_normal_1k.jpg",
+      "size": 883889,
+      "sha256": "5a403c176361193b785198ab363d3dc3755773ca5b023f19e05874e50caea302"
+    },
+    {
+      "path": "concrete_floor_rough_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/concrete_floor_rough_1k.jpg",
+      "size": 503981,
+      "sha256": "342110e685c07af2c56194662a796b2ab4f2a4d992a9745b8fc55943414faead"
+    },
+    {
+      "path": "corrugated_iron_diff_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/corrugated_iron_diff_1k.jpg",
+      "size": 719557,
+      "sha256": "7f3649dd0d056a55a910146f09b1d5298370696a90f511a255fb4c5715bb4b58"
+    },
+    {
+      "path": "corrugated_iron_normal_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/corrugated_iron_normal_1k.jpg",
+      "size": 755185,
+      "sha256": "e98b839ae681ba929eb80f07348c70d0731b48239abe69268effab18420cd271"
+    },
+    {
+      "path": "corrugated_iron_rough_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/corrugated_iron_rough_1k.jpg",
+      "size": 455677,
+      "sha256": "1addcfc0210fc101f9f12c8e4dbd7a7d2642a5ef76699a8a485f00b5476af357"
+    },
+    {
+      "path": "gravel_embedded_concrete_diff_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/gravel_embedded_concrete_diff_1k.jpg",
+      "size": 1137553,
+      "sha256": "3ea5b493379c4d30c02c04b93361d3e34f91ed04058ffb4ea915702f1cd17049"
+    },
+    {
+      "path": "gravel_embedded_concrete_normal_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/gravel_embedded_concrete_normal_1k.jpg",
+      "size": 1471218,
+      "sha256": "433250def341793e0b544dfb28ad46e5d546de5e94b4cfe2f282c1a9328b5f1a"
+    },
+    {
+      "path": "gravel_embedded_concrete_rough_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/gravel_embedded_concrete_rough_1k.jpg",
+      "size": 548655,
+      "sha256": "6427f98c3e4a94f500f6c0ca0e453daff61592004f248bd06fd9e14d2c6c1ae1"
+    },
+    {
+      "path": "rusty_painted_metal_diff_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/rusty_painted_metal_diff_1k.jpg",
+      "size": 471866,
+      "sha256": "b086937b45c3628116a838363364a29bd3c5d2542cff906ec1d92d681ee80e15"
+    },
+    {
+      "path": "rusty_painted_metal_normal_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/rusty_painted_metal_normal_1k.jpg",
+      "size": 484158,
+      "sha256": "f3372e2f60517df2d0e02c1472eb24071d95182d771c30b7ecd8e1b5142768bb"
+    },
+    {
+      "path": "rusty_painted_metal_rough_1k.jpg",
+      "url": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/rusty_painted_metal_rough_1k.jpg",
+      "size": 318766,
+      "sha256": "2d1c355c793c5886ef9dcecfc06da354e30218a84a9fe28de37741d2f2ed5aaa"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+> The high-fidelity visual profile now uses the strict [asset stabilization workflow](AssetStabilization.md). Run `BuildAAAAssets.bat` before building Sandbox. The original base assets remain checked in; the 24 additional models are fetched/cooked locally.
+
 # OUTPOST ZERO — TPS 0–2
 
 Sandbox now starts one persistent third-person facility. Playable stress/demo

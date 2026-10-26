@@ -51,6 +51,16 @@ function enginePch(source)
     files { root .. "/Build/Pch/pgcpch.h" }
 end
 include "Build/Dependencies.lua"
+project "RuntimeAssets"
+    kind "Utility"
+    common()
+    files { "Scripts/StageRuntimeAssets.py" }
+    filter "files:Scripts/StageRuntimeAssets.py"
+        buildmessage "Verifying and staging runtime assets"
+        buildcommands { 'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root .. '" --output "%{cfg.targetdir}"' }
+        -- Never created: asset-only builds must run preflight/staging as well.
+        buildoutputs { "%{cfg.objdir}/runtime-assets.always" }
+    filter {}
 project "PlagC"
     kind "StaticLib"
     language "C++"
@@ -91,11 +101,9 @@ project "Sandbox"
     ogreLinks()
     ogreSystemLinks()
     debugdir "%{cfg.targetdir}"
-    postbuildcommands {
-        'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root .. '" --output "%{cfg.targetdir}"'
-    }
+    dependson { "RuntimeAssets" }
     filter "system:windows"
-        links { "gdi32", "user32", "shell32", "psapi", "windowscodecs" }
+        links { "gdi32", "user32", "shell32", "psapi" }
     filter { "system:windows", "configurations:Dist" }
         kind "WindowedApp"
         entrypoint "mainCRTStartup"
@@ -112,7 +120,7 @@ project "AssetCooker"
     language "C++"
     cppdialect "C++20"
     common()
-    files { "Tools/AssetCooker/**.cpp" }
+    files { "Tools/AssetCooker/**.cpp", "Tools/AssetCooker/**.h" }
     includedirs { "PlagC/include", "Build/Pch" }
     links { "PlagCImport", "PlagC", "Assimp" }
     debugdir "%{wks.location}/../.."

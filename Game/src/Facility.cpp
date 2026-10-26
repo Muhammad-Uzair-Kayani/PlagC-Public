@@ -19,13 +19,42 @@ Entity TPSGame::Box(const std::string &name, Vec3 p, Vec3 size, unsigned materia
 }
 void TPSGame::Prop(const std::string &name, Vec3 p, AssetHandle<ModelAsset> model, Vec3 half)
 {
+    auto found = propBounds_.find(model.Shared().get());
+    if (found == propBounds_.end())
+    {
+        Vec3 lo{1e20f, 1e20f, 1e20f}, hi{-1e20f, -1e20f, -1e20f};
+        Animator rest(model);
+        for (unsigned i = 0; i < model->meshes.size(); ++i)
+            for (auto v : rest.Deform(i).vertices)
+            {
+                lo = {std::min(lo.x, v.position.x), std::min(lo.y, v.position.y),
+                      std::min(lo.z, v.position.z)};
+                hi = {std::max(hi.x, v.position.x), std::max(hi.y, v.position.y),
+                      std::max(hi.z, v.position.z)};
+            }
+        found = propBounds_.emplace(model.Shared().get(), PropBounds{lo, hi}).first;
+    }
+    const auto [lo, hi] = found->second;
+    Vec3 size{std::max(.02f, hi.x - lo.x), std::max(.02f, hi.y - lo.y),
+              std::max(.02f, hi.z - lo.z)};
+    float scale = std::min({2 * half.x / size.x, 2 * half.y / size.y, 2 * half.z / size.z});
+    Vec3 center{(lo.x + hi.x) * .5f, (lo.y + hi.y) * .5f, (lo.z + hi.z) * .5f};
     auto e = world_->Create(name);
-    world_->SetTransform(e, {p, {}, {1, 1, 1}});
+    world_->SetTransform(e, {{p.x - center.x * scale, p.y - lo.y * scale, p.z - center.z * scale},
+                             {},
+                             {scale, scale, scale}});
     world_->SetModel(e, {model});
     PhysicsComponent c;
     c.body.motion = MotionType::Static;
     c.body.layer = CollisionLayer::StaticWorld;
-    c.collider.dimensions = half;
+    c.collider.type = ColliderType::Compound;
+    auto geometry = std::make_shared<ColliderGeometry>();
+    ColliderChild box;
+    box.dimensions = {std::max(.01f / scale, size.x * .5f), std::max(.01f / scale, size.y * .5f),
+                      std::max(.01f / scale, size.z * .5f)};
+    box.transform.position = center;
+    geometry->children.push_back(box);
+    c.collider.geometry = geometry;
     world_->SetPhysics(e, c);
 }
 void TPSGame::BuildFacility(Engine &)
@@ -44,8 +73,8 @@ void TPSGame::BuildFacility(Engine &)
         world_->SetLight(e, {l});
         return e;
     };
-    auto spotLight = [&](const std::string &name, Vec3 p, Vec3 direction, Vec3 colour,
-                         float power, float radius, float inner = 22, float outer = 38) {
+    auto spotLight = [&](const std::string &name, Vec3 p, Vec3 direction, Vec3 colour, float power,
+                         float radius, float inner = 22, float outer = 38) {
         auto e = world_->Create(name);
         world_->SetTransform(e, {p, {}, {1, 1, 1}});
         LightDesc l;
@@ -64,7 +93,8 @@ void TPSGame::BuildFacility(Engine &)
         return Box(name, p, size, 6, false);
     };
 
-    // Exterior: broad late-afternoon key light, environment reflections and long shadow silhouettes.
+    // Exterior: broad late-afternoon key light, environment reflections and long shadow
+    // silhouettes.
     Box("Courtyard", {0, -.5f, 3}, {84, 1, 74}, 0);
     Box("West perimeter", {-42, 2, 3}, {1, 5, 74}, 1);
     Box("East perimeter", {42, 2, 3}, {1, 5, 74}, 1);
@@ -98,13 +128,15 @@ void TPSGame::BuildFacility(Engine &)
     // Give every interior a distinct colour script so PBR roughness/metalness can be judged
     // under mixed lighting rather than a single flat ambient condition.
     pointLight("Warehouse cold fill", {-26, 4.3f, -3}, {.48f, .68f, 1.f}, 5.5f, 22.f);
-    spotLight("Warehouse inspection spot", {-26, 4.8f, 4}, {0, -1, -.2f}, {.55f, .78f, 1.f}, 8.f, 24.f);
+    spotLight("Warehouse inspection spot", {-26, 4.8f, 4}, {0, -1, -.2f}, {.55f, .78f, 1.f}, 8.f,
+              24.f);
     pointLight("Barracks warm fill", {26, 4.2f, -3}, {1.f, .58f, .3f}, 4.2f, 20.f);
     spotLight("Barracks ceiling spot", {26, 4.8f, -8}, {0, -1, .15f}, {1.f, .72f, .45f}, 6.f, 18.f);
     pointLight("Control cyan fill", {0, 3.8f, -27}, {.12f, .72f, 1.f}, 4.8f, 17.f);
     pointLight("Workshop neutral fill", {-26, 4.2f, -26}, {.72f, .82f, 1.f}, 4.5f, 18.f);
     pointLight("Generator amber key", {26, 3.8f, -26}, {1.f, .36f, .08f}, 6.5f, 20.f);
-    spotLight("Generator service spot", {26, 4.8f, -30}, {0, -1, .25f}, {1.f, .52f, .16f}, 9.f, 20.f);
+    spotLight("Generator service spot", {26, 4.8f, -30}, {0, -1, .25f}, {1.f, .52f, .16f}, 9.f,
+              20.f);
 
     auto partition = [&](const std::string &name, float x, float z, float width, float depth,
                          float floor) {
@@ -169,7 +201,8 @@ void TPSGame::BuildFacility(Engine &)
         auto target = Box("Reactive range target", {x, 1.7f, -16}, {.8f, 1.5f, .3f}, 4);
         targets_[target.value] = {};
         Box("Target stand", {x, .45f, -16}, {.2f, .9f, .3f}, 2);
-        spotLight("Range target spot", {x, 4.5f, -12}, {0, -.7f, -.7f}, {1.f, .82f, .55f}, 4.5f, 12.f, 18, 30);
+        spotLight("Range target spot", {x, 4.5f, -12}, {0, -.7f, -.7f}, {1.f, .82f, .55f}, 4.5f,
+                  12.f, 18, 30);
     }
 
     // Tower: intentionally thin geometry for high-contrast cascaded-shadow inspection.
@@ -183,7 +216,8 @@ void TPSGame::BuildFacility(Engine &)
     Box("Tower north railing", {0, 6.8f, 2.2f}, {10, 1.2f, .15f}, 2);
     Box("Tower south railing", {0, 6.8f, 9.8f}, {10, 1.2f, .15f}, 2);
     Box("Tower landing", {5.5f, 6, 6}, {5, .4f, 3}, 2);
-    spotLight("Tower searchlight", {0, 8.2f, 6}, {.15f, -.5f, -.85f}, {.72f, .86f, 1.f}, 12.f, 55.f, 14, 26);
+    spotLight("Tower searchlight", {0, 8.2f, 6}, {.15f, -.5f, -.85f}, {.72f, .86f, 1.f}, 12.f, 55.f,
+              14, 26);
 
     // Tunnel/lab: darkest zone, dominated by local HDR-scale coloured lights and emissives.
     for (int i = 0; i < 20; ++i)
@@ -199,7 +233,8 @@ void TPSGame::BuildFacility(Engine &)
     partition("Lab rooms", 0, -54, 24, 18, -4);
     pointLight("Lower lab blue key", {-7, -.2f, -54}, {.08f, .3f, 1.f}, 7.5f, 18.f);
     pointLight("Lower lab hazard red", {8, -.5f, -54}, {1.f, .06f, .02f}, 8.5f, 16.f);
-    spotLight("Lower lab examination spot", {0, .8f, -54}, {0, -1, 0}, {.55f, .78f, 1.f}, 10.f, 16.f, 16, 28);
+    spotLight("Lower lab examination spot", {0, .8f, -54}, {0, -1, 0}, {.55f, .78f, 1.f}, 10.f,
+              16.f, 16, 28);
     for (float x : {-8.f, 8.f})
     {
         Prop("Generator", {x, -4, -54}, generator_, {1, 1, 1});

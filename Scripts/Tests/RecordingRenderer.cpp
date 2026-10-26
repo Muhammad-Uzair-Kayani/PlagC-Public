@@ -2,6 +2,7 @@
 // and cannot measure GPU/render-driver costs or verify pixels.
 #include <PlagC/Renderer/Renderer.h>
 #include <unordered_map>
+#include <filesystem>
 #include <stdexcept>
 #include <unordered_set>
 namespace PlagC
@@ -62,6 +63,13 @@ MaterialHandle Renderer::CreateMaterial(const MaterialDesc &d)
     MaterialHandle h{next++};
     impl_->materials.emplace(h.value, d);
     return h;
+}
+void Renderer::UpdateMaterial(MaterialHandle handle, const MaterialDesc &desc)
+{
+    auto it = impl_->materials.find(handle.value);
+    if (it == impl_->materials.end())
+        throw std::runtime_error("stale material");
+    it->second = desc;
 }
 void Renderer::DestroyMaterial(MaterialHandle h)
 {
@@ -173,6 +181,14 @@ TextureHandle Renderer::CreateTexture(unsigned w, unsigned h, std::span<const st
     TextureHandle handle{next++};
     impl_->textures[handle.value] = {bytes.begin(), bytes.end()};
     return handle;
+}
+// Recording-only texture stand-in; the native AssetSlice test validates decoding and pixels.
+TextureHandle Renderer::LoadTexture(const std::string &resource, bool srgb, bool mipmaps)
+{
+    if (!std::filesystem::is_regular_file(std::filesystem::path("Assets/Textures") / resource))
+        throw std::runtime_error("recording texture resource missing: " + resource);
+    const std::uint8_t pixel[] = {255, 255, 255, 255};
+    return CreateTexture(1, 1, pixel, srgb, mipmaps);
 }
 void Renderer::DestroyTexture(TextureHandle h)
 {

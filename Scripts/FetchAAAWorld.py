@@ -1,68 +1,213 @@
 #!/usr/bin/env python3
-"""Fetch verified high-fidelity CC0 Poly Haven models for OUTPOST ZERO."""
+"""Fetch pinned Poly Haven glTF packages without flattening their dependencies.
+Normal fetches use the checked-in lock, never mutable API metadata. Updating that
+lock is an explicit maintainer operation. Source downloads remain out of git.
+"""
+
 from __future__ import annotations
-import hashlib, json, pathlib, sys, urllib.request
-ROOT=pathlib.Path(__file__).resolve().parents[1]; SOURCE=ROOT/"Assets"/"Source"/"AAA"; MANIFEST=SOURCE/"cook_manifest.txt"
-API="https://api.polyhaven.com"; UA="PlagC-AssetPipeline/2.0 (Powered by Poly Haven)"
-# Environment kit: architecture, utilities, security, lighting and micro-props. Runtime binaries are
-# downloaded/cooked locally rather than committed, keeping git small while provenance stays exact.
-ASSETS=[
-("old_military_crate","Assets/Cooked/TPS/Crate.plasset"),("portable_generator","Assets/Cooked/TPS/Generator.plasset"),
-("security_camera_01","Assets/Cooked/TPS/AAA/SecurityCamera.plasset"),("security_camera_02","Assets/Cooked/TPS/AAA/SecurityCamera02.plasset"),
-("modular_factory_facade","Assets/Cooked/TPS/AAA/FactoryFacade.plasset"),("modular_industrial_pipes_01","Assets/Cooked/TPS/AAA/IndustrialPipes.plasset"),
-("modular_pipes","Assets/Cooked/TPS/AAA/ModularPipes.plasset"),("steel_frame_shelves_01","Assets/Cooked/TPS/AAA/SteelShelves.plasset"),
-("exterior_aircon_unit","Assets/Cooked/TPS/AAA/ExteriorAircon.plasset"),("utility_box_01","Assets/Cooked/TPS/AAA/UtilityBox.plasset"),
-("barrel_03","Assets/Cooked/TPS/AAA/Barrel.plasset"),("plastic_crate_02","Assets/Cooked/TPS/AAA/PlasticCrate.plasset"),
-("modular_airduct_rectangular_01","Assets/Cooked/TPS/AAA/Airduct.plasset"),("modular_airduct_circular_01","Assets/Cooked/TPS/AAA/CircularAirduct.plasset"),
-("modular_electric_cables","Assets/Cooked/TPS/AAA/ElectricCables.plasset"),("modular_chainlink_fence","Assets/Cooked/TPS/AAA/ChainlinkFence.plasset"),
-("concrete_road_barrier","Assets/Cooked/TPS/AAA/RoadBarrier.plasset"),("metal_jerrycan","Assets/Cooked/TPS/AAA/Jerrycan.plasset"),
-("industrial_wall_lamp","Assets/Cooked/TPS/AAA/WallLamp.plasset"),("industrial_caged_sconce","Assets/Cooked/TPS/AAA/CagedSconce.plasset"),
-("mounted_fluorescent_lights","Assets/Cooked/TPS/AAA/FluorescentLights.plasset"),("fire_alarm","Assets/Cooked/TPS/AAA/FireAlarm.plasset"),
-("metal_toolbox","Assets/Cooked/TPS/AAA/Toolbox.plasset"),("hand_truck","Assets/Cooked/TPS/AAA/HandTruck.plasset"),
-]
+import argparse, hashlib, json, os, pathlib, sys, tempfile, urllib.parse, urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from AAAAssetCatalog import ASSETS, NODE_RECIPES
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+LOCK = ROOT / "Assets/Manifests/AAAWorld.lock.json"
+UA = "PlagC-AssetPipeline/3.0 (Powered by Poly Haven)"
+API = "https://api.polyhaven.com"
+
+
+def request(url):
+    return urllib.request.urlopen(
+        urllib.request.Request(url, headers={"User-Agent": UA}), timeout=120
+    )
+
+
 def get_json(url):
- req=urllib.request.Request(url,headers={"User-Agent":UA});
- with urllib.request.urlopen(req,timeout=60) as r:return json.load(r)
-def nodes(n,k=()):
- if isinstance(n,dict):
-  if isinstance(n.get("url"),str):yield k,n
-  for a,b in n.items():
-   if a not in {"url","md5","size"}:yield from nodes(b,k+(str(a),))
- elif isinstance(n,list):
-  for i,b in enumerate(n):yield from nodes(b,k+(str(i),))
-def choose(files):
- c=[]
- for k,n in nodes(files):
-  ext=pathlib.PurePosixPath(n["url"].split("?",1)[0]).suffix.lower()
-  if ext not in {".gltf",".glb"}:continue
-  s="/".join(k).lower(); score=(300 if "2k" in s else 200 if "1k" in s else 100)+(20 if ext==".gltf" else 10)
-  c.append((score,k,n))
- if not c:raise RuntimeError("asset has no glTF/GLB")
- return max(c,key=lambda x:x[0])[1:]
-def download(url,dst,md5=None):
- if dst.exists() and (not md5 or hashlib.md5(dst.read_bytes()).hexdigest().lower()==md5.lower()):print(" cached",dst.name);return
- dst.parent.mkdir(parents=True,exist_ok=True); print(" download",dst.name); req=urllib.request.Request(url,headers={"User-Agent":UA})
- with urllib.request.urlopen(req,timeout=240) as r,open(dst,"wb") as f:
-  while True:
-   b=r.read(1024*1024)
-   if not b:break
-   f.write(b)
- if md5 and hashlib.md5(dst.read_bytes()).hexdigest().lower()!=md5.lower():dst.unlink(missing_ok=True);raise RuntimeError("checksum mismatch "+dst.name)
+    with request(url) as stream:
+        return json.load(stream)
+
+
+def safe_relative(value):
+    p = pathlib.PurePosixPath(value)
+    if not value or "\\" in value or p.is_absolute() or ".." in p.parts or ":" in value:
+        raise ValueError("unsafe package path: " + value)
+    return p
+
+
+def package(slug, output, metadata, resolution):
+    try:
+        primary = metadata["gltf"][resolution]["gltf"]
+    except KeyError:
+        raise ValueError(f"{slug}: no {resolution} glTF package") from None
+    url = primary["url"]
+    main = pathlib.PurePosixPath(urllib.parse.urlsplit(url).path).name
+    files = [dict(path=main, url=url, size=primary["size"], md5=primary["md5"])]
+    # API include keys are glTF-relative paths, NOT just URL basenames.
+    for relative, item in sorted(primary.get("include", {}).items()):
+        safe_relative(relative)
+        files.append(
+            dict(path=relative, url=item["url"], size=item["size"], md5=item["md5"])
+        )
+    if len({x["path"] for x in files}) != len(files):
+        raise ValueError("duplicate dependency path")
+    return dict(
+        slug=slug,
+        output=output,
+        source="https://polyhaven.com/a/" + slug,
+        license="CC0-1.0",
+        resolution=resolution,
+        primary=main,
+        files=files,
+    )
+
+
+def matches(path, entry):
+    if not path.is_file() or path.stat().st_size != entry["size"]:
+        return False
+    data = path.read_bytes()
+    if "sha256" in entry:
+        return hashlib.sha256(data).hexdigest() == entry["sha256"]
+    return hashlib.md5(data).hexdigest() == entry["md5"]
+
+
+def download(entry, destination):
+    if matches(destination, entry):
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(
+        prefix=destination.name + ".", suffix=".part", dir=destination.parent
+    )
+    try:
+        with os.fdopen(fd, "wb") as out, request(entry["url"]) as stream:
+            while chunk := stream.read(1024 * 1024):
+                out.write(chunk)
+        if not matches(pathlib.Path(tmp), entry):
+            raise ValueError("size/checksum mismatch: " + entry["path"])
+        os.replace(tmp, destination)
+    finally:
+        pathlib.Path(tmp).unlink(missing_ok=True)
+
+
+def validate_gltf(directory, primary, files):
+    doc = json.loads((directory / primary).read_text(encoding="utf-8"))
+    allowed = {f["path"] for f in files}
+    for item in doc.get("buffers", []) + doc.get("images", []):
+        uri = item.get("uri", "")
+        if not uri or uri.startswith("data:"):
+            continue
+        relative = urllib.parse.unquote(uri)
+        safe_relative(relative)
+        if relative not in allowed:
+            raise ValueError("unlocked glTF dependency: " + relative)
+        if not (directory / relative).is_file():
+            raise ValueError("missing glTF dependency: " + relative)
+
+
+def fetch_asset(asset, source, offline=False):
+    directory = source / asset["slug"]
+    for entry in asset["files"]:
+        relative = safe_relative(entry["path"])
+        target = directory / pathlib.Path(*relative.parts)
+        if offline:
+            if not matches(target, entry):
+                raise ValueError("missing/corrupt cached dependency: " + str(target))
+        else:
+            download(entry, target)
+    validate_gltf(directory, asset["primary"], asset["files"])
+    return directory / asset["primary"]
+
+
 def main():
- SOURCE.mkdir(parents=True,exist_ok=True); cook=[]; evidence=[]
- for slug,out in ASSETS:
-  print("[CINEMATIC]",slug); info=get_json(f"{API}/info/{slug}"); files=get_json(f"{API}/files/{slug}"); keys,primary=choose(files); package=SOURCE/slug; branch=files
-  try:
-   for key in keys[:-1]:branch=branch[key]
-  except (KeyError,TypeError):branch=primary
-  ns=list(nodes(branch)) or [(keys,primary)]; primary_path=None
-  for _,n in ns:
-   url=n["url"]; dst=package/pathlib.PurePosixPath(url.split("?",1)[0]).name; download(url,dst,n.get("md5"))
-   if url==primary["url"]:primary_path=dst
-  if primary_path is None:
-   url=primary["url"];primary_path=package/pathlib.PurePosixPath(url.split("?",1)[0]).name;download(url,primary_path,primary.get("md5"))
-  cook.append(f"{primary_path.relative_to(ROOT)}|{out}"); evidence.append({"slug":slug,"name":info.get("name",slug),"authors":info.get("authors",{}),"source":f"https://polyhaven.com/a/{slug}","license":"CC0 1.0 Universal","files_hash":info.get("files_hash","")})
- MANIFEST.write_text("\n".join(cook)+"\n",encoding="utf-8");(SOURCE/"provenance.json").write_text(json.dumps(evidence,indent=2),encoding="utf-8");print("Prepared",len(cook),"CC0 cinematic packages")
-if __name__=="__main__":
- try:main()
- except Exception as e:print("AAA fetch failed:",e,file=sys.stderr);sys.exit(1)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--asset", action="append", help="fetch only this Poly Haven ID (repeatable)"
+    )
+    parser.add_argument(
+        "--jobs", type=int, default=3, help="bounded concurrent package downloads (1-8)"
+    )
+    parser.add_argument(
+        "--offline", action="store_true", help="verify cache without network"
+    )
+    parser.add_argument(
+        "--refresh-lock",
+        action="store_true",
+        help="explicitly resolve a new complete source lock",
+    )
+    parser.add_argument(
+        "--resolution",
+        choices=["1k", "2k"],
+        default="1k",
+        help="used only with --refresh-lock",
+    )
+    args = parser.parse_args()
+    if args.refresh_lock:
+        assets = []
+        for slug, output in ASSETS:
+            print("[LOCK]", slug, flush=True)
+            asset = package(
+                slug, output, get_json(API + "/files/" + slug), args.resolution
+            )
+            asset.update(NODE_RECIPES.get(slug, {}))
+            assets.append(asset)
+        # Publish a refreshed lock only after complete packages have been fetched and hashed.
+        for asset in assets:
+            primary = fetch_asset(asset, ROOT / "Assets/Source/AAA")
+            for entry in asset["files"]:
+                entry["sha256"] = hashlib.sha256(
+                    (primary.parent / entry["path"]).read_bytes()
+                ).hexdigest()
+        LOCK.parent.mkdir(parents=True, exist_ok=True)
+        LOCK.write_text(
+            json.dumps(dict(version=1, provider="Poly Haven", assets=assets), indent=2)
+            + "\n"
+        )
+    lock = json.loads(LOCK.read_text())
+    selected = set(args.asset or [a["slug"] for a in lock["assets"]])
+    known = {a["slug"] for a in lock["assets"]}
+    if selected - known:
+        parser.error("unknown asset IDs: " + ", ".join(sorted(selected - known)))
+    source = ROOT / "Assets/Source/AAA"
+    source.mkdir(parents=True, exist_ok=True)
+    cook = []
+    receipt = []
+    if not 1 <= args.jobs <= 8:
+        parser.error("--jobs must be between 1 and 8")
+    assets = [a for a in lock["assets"] if a["slug"] in selected]
+
+    def fetch_one(asset):
+        print("[FETCH]", asset["slug"], flush=True)
+        primary = fetch_asset(asset, source, args.offline)
+        return primary, dict(
+            slug=asset["slug"],
+            files=[
+                dict(
+                    path=f["path"],
+                    sha256=hashlib.sha256(
+                        (primary.parent / f["path"]).read_bytes()
+                    ).hexdigest(),
+                )
+                for f in asset["files"]
+            ],
+        )
+
+    with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+        for asset, (primary, evidence) in zip(assets, pool.map(fetch_one, assets)):
+            cook.append(
+                str(primary.relative_to(ROOT)).replace("\\", "/")
+                + "|"
+                + asset["output"]
+            )
+            receipt.append(evidence)
+    # The manifest describes exactly this invocation; failed fetches never publish a partial list.
+    (source / "cook_manifest.txt").write_text("\n".join(cook) + "\n", encoding="utf-8")
+    (source / "verified-source-receipt.json").write_text(
+        json.dumps(receipt, indent=2) + "\n"
+    )
+    print(f"Verified {len(cook)} complete glTF packages")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        print("AAA fetch failed:", error, file=sys.stderr)
+        sys.exit(1)

@@ -109,8 +109,9 @@ int main()
         for (int i = 0; i < 3; ++i)
         {
             app.Stop(engine);
-            Check(engine.Graphics().Statistics().objects == 0,
-                  "shutdown releases every render object");
+            Check(engine.Graphics().Statistics().objects == 0 &&
+                      engine.Graphics().Statistics().lights == 0,
+                  "shutdown releases every render object and light");
             app.Start(engine, c);
             Check(app.HitPoints() == 100 && app.Rifle().rounds == 30,
                   "redeploy resets player state");
