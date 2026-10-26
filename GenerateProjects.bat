@@ -3,6 +3,15 @@ setlocal
 cd /d "%~dp0"
 call FetchDependencies.bat
 if errorlevel 1 exit /b 1
+
+where python >nul 2>nul
+if errorlevel 1 (
+    echo Python is required to fetch and stage OUTPOST ZERO runtime assets.
+    exit /b 1
+)
+python Scripts\FetchVisualAssets.py
+if errorlevel 1 exit /b 1
+
 set "PREMAKE=Tools\premake5.exe"
 if not exist "%PREMAKE%" (
     where premake5 >nul 2>nul
