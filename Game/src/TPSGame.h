@@ -35,6 +35,8 @@ class TPSGame
     std::unique_ptr<PlagC::SceneRenderer> scene_;
     std::unique_ptr<PlagC::AssetScene> assets_;
     PlagC::AssetHandle<PlagC::ModelAsset> operative_, crate_, generator_;
+    PlagC::AssetHandle<PlagC::ModelAsset> securityCamera_, factoryFacade_, industrialPipes_,
+        steelShelves_, exteriorAircon_, utilityBox_, barrel_, plasticCrate_, airduct_;
     PlagC::CharacterHandle character_;
     PlagC::Entity actor_, door_;
     PlagC::ThirdPersonCameraController camera_;
@@ -57,6 +59,8 @@ class TPSGame
     PlagC::LightHandle muzzleLight_;
     void Capture(PlagC::Engine &, bool);
     void InstallVisualMaxMaterials(PlagC::Engine &);
+    void LoadAAAWorldAssets(PlagC::Engine &);
+    void DecorateAAAWorld(PlagC::Engine &);
     void BuildFacility(PlagC::Engine &);
     PlagC::Entity Box(const std::string &, PlagC::Vec3, PlagC::Vec3, unsigned,
                       bool collision = true);
@@ -67,10 +71,10 @@ class TPSGame
 };
 } // namespace Game
 
-// TPSGame.cpp alone receives PC_TPS_VISUAL_MAX from Premake.  This keeps the normal facility
-// implementation clean while guaranteeing the authored material pack is installed immediately
-// before the world geometry is created.  The macro is self-suppressing during its own expansion,
-// so the second BuildFacility token resolves to the real member function.
+// TPSGame.cpp alone receives PC_TPS_VISUAL_MAX from Premake.  Install authored surfaces,
+// substitute high-detail CC0 props, build the gameplay layout, then add the detail dressing pass.
 #ifdef PC_TPS_VISUAL_MAX
-#define BuildFacility(engine) (InstallVisualMaxMaterials(engine), BuildFacility(engine))
+#define BuildFacility(engine)                                                                            \
+    (LoadAAAWorldAssets(engine), InstallVisualMaxMaterials(engine), BuildFacility(engine),               \
+     DecorateAAAWorld(engine))
 #endif
