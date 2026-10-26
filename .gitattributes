@@ -8,3 +8,6 @@
 Build/DependencyFiles.txt text eol=lf
 *.png binary
 *.ppm binary
+*.glb binary
+*.plasset binary
+*.dds binary

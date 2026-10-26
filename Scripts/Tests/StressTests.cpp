@@ -1,6 +1,6 @@
 #include "pgcpch.h"
-#include "../../Sandbox/src/StressSimulation.h"
-#include "../../Sandbox/src/StressHud.h"
+#include "Legacy/StressSimulation.h"
+#include "Legacy/StressHud.h"
 #include <PlagC/Jobs.h>
 #include <PlagC/Thread.h>
 #include <PlagC/World/SceneRenderer.h>

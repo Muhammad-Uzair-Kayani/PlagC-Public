@@ -144,6 +144,36 @@ void AssetScene::Clear()
     impl_->world = 0;
     impl_->stats = {};
 }
+std::optional<Vec3> AssetScene::AnimatedNodePoint(const World &world, Entity entity,
+                                                  const std::string &name, Vec3 local) const
+{
+    Thread::RequireMain();
+    if (impl_->world != world.impl_->identity || !world.Alive(entity))
+        return {};
+    auto it = impl_->instances.find(entity.value);
+    if (it == impl_->instances.end() || !it->second->animator)
+        return {};
+    const auto &joints = it->second->resources->asset->skeleton.joints;
+    for (std::size_t i = 0; i < joints.size(); ++i)
+        if (joints[i].name == name)
+        {
+            auto point = TransformPoint(it->second->animator->Pose()[i], local);
+            const auto t = world.ReadTransform(entity);
+            point = {point.x * t.scale.x, point.y * t.scale.y, point.z * t.scale.z};
+            constexpr float rad = 3.14159265358979323846f / 180;
+            auto rotate = [](float &a, float &b, float angle) {
+                float x = a;
+                a = x * std::cos(angle) - b * std::sin(angle);
+                b = x * std::sin(angle) + b * std::cos(angle);
+            };
+            // Renderer uses Y * X * Z Euler composition.
+            rotate(point.x, point.y, t.rotationDegrees.z * rad);
+            rotate(point.y, point.z, t.rotationDegrees.x * rad);
+            rotate(point.z, point.x, t.rotationDegrees.y * rad);
+            return Vec3{point.x + t.position.x, point.y + t.position.y, point.z + t.position.z};
+        }
+    return {};
+}
 void AssetScene::Update(World &world, double dt)
 {
     Thread::RequireMain();

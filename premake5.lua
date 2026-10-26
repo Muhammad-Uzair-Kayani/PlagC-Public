@@ -80,9 +80,9 @@ project "Sandbox"
         -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
         disablewarnings { "4324" }
     filter {}
-    files { "Sandbox/src/**.cpp", "Sandbox/src/**.h" }
+    files { "Sandbox/src/**.cpp", "Sandbox/src/**.h", "Game/src/**.cpp", "Game/src/**.h" }
     enginePch("Sandbox/src/pgcpch.cpp")
-    includedirs { "PlagC/include" }
+    includedirs { "PlagC/include", "Game/src" }
     links { "PlagC", "GLFW", "spdlog", "Jolt", "Ozz", "OpenAL" }
     filter "system:linux"
         linkoptions { "-Wl,-rpath,'$$ORIGIN'" }

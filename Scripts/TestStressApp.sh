@@ -9,7 +9,7 @@ if [[ ! -f Bin-Int/AssetTests/libOzz.a || ! -f Bin-Int/AssetTests/libOpenAL.so ]
     PlagC/src/Application.cpp PlagC/src/Input/Input.cpp PlagC/src/Physics/PhysicsTypes.cpp PlagC/src/Physics/PhysicsShapes.cpp \
     PlagC/src/Jobs.cpp PlagC/src/Physics/JoltPhysicsWorld.cpp PlagC/src/Physics/PhysicsSystem.cpp \
     PlagC/src/World/World.cpp PlagC/src/World/TransformSystem.cpp PlagC/src/World/SceneRenderer.cpp \
-    Sandbox/src/StressSimulation.cpp Sandbox/src/StressHud.cpp Sandbox/src/StressWorld.cpp \
+    Scripts/Tests/Legacy/StressSimulation.cpp Scripts/Tests/Legacy/StressHud.cpp Scripts/Tests/Legacy/StressWorld.cpp \
     Scripts/Tests/RecordingRenderer.cpp Scripts/Tests/StressAppTests.cpp \
     Bin-Int/PhysicsTests/libJolt.a Bin-Int/AssetTests/libOzz.a -LBin-Int/AssetTests -lOpenAL '-Wl,-rpath,$ORIGIN/../AssetTests' -o Bin-Int/PhysicsTests/stress-app-tests
 Bin-Int/PhysicsTests/stress-app-tests

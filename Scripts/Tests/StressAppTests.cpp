@@ -3,7 +3,7 @@
 #include <PlagC/Application.h>
 #include <PlagC/Thread.h>
 #include <PlagC/Input/Input.h>
-#include "../../Sandbox/src/StressWorld.h"
+#include "Legacy/StressWorld.h"
 #include <fstream>
 namespace PlagC
 {

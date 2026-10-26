@@ -1,23 +1,32 @@
 #include "pgcpch.h"
 #include <PlagC/Application.h>
-#include "StressWorld.h"
-void TestPhysicsFoundation();
-namespace {
-class Sandbox final:public PlagC::Application {
+#include "TPSGame.h"
+namespace
+{
+class Sandbox final : public PlagC::Application
+{
     PlagC::EngineConfig config_;
-    StressWorld stress_;
-    unsigned frames_=0;
-public:
-    explicit Sandbox(const PlagC::EngineConfig& config):config_(config){}
-    void OnStart(PlagC::Engine& engine)override{
-        if(config_.selfTest)TestPhysicsFoundation();
-        stress_.Start(engine,config_);
+    Game::TPSGame game_;
+
+  public:
+    explicit Sandbox(const PlagC::EngineConfig &c) : config_(c)
+    {
     }
-    void OnFrame(PlagC::Engine& engine,double dt)override{
-        stress_.Frame(engine,dt);
-        if((config_.headless||config_.nullPlatform||config_.offscreen)&&!config_.frameLimit&&!config_.stressBenchmark&&!config_.stressSoak&&++frames_>=6)engine.Stop();
+    void OnStart(PlagC::Engine &e) override
+    {
+        game_.Start(e, config_);
     }
-    void OnStop(PlagC::Engine& engine)override{stress_.Stop(engine);}
+    void OnFrame(PlagC::Engine &e, double dt) override
+    {
+        game_.Frame(e, dt);
+    }
+    void OnStop(PlagC::Engine &e) override
+    {
+        game_.Stop(e);
+    }
 };
+} // namespace
+std::unique_ptr<PlagC::Application> PlagC::CreateApplication(const PlagC::EngineConfig &c)
+{
+    return std::make_unique<Sandbox>(c);
 }
-std::unique_ptr<PlagC::Application> PlagC::CreateApplication(const PlagC::EngineConfig& config){return std::make_unique<Sandbox>(config);}

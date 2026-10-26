@@ -1,3 +1,5 @@
+> Historical phase report: playable scene controls below are superseded by [OUTPOST ZERO](TPS.md).
+
 # Integrated FPS Stress World
 
 Sandbox now opens one continuous procedural facility. The former playable test

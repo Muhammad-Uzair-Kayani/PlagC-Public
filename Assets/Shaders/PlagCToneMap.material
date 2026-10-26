@@ -1,0 +1,29 @@
+vertex_program PlagC/ToneVS glsl
+{
+    source PlagCToneMap_vs.glsl
+    default_params { param_named_auto worldViewProj worldviewproj_matrix }
+}
+fragment_program PlagC/TonePS glsl
+{
+    source PlagCToneMap_ps.glsl
+    default_params
+    {
+        param_named sceneTexture int 0
+        param_named exposure float 1
+    }
+}
+material PlagC/ToneMap
+{
+    technique
+    {
+        pass
+        {
+            depth_check off
+            depth_write off
+            cull_hardware none
+            vertex_program_ref PlagC/ToneVS {}
+            fragment_program_ref PlagC/TonePS {}
+            texture_unit { filtering bilinear }
+        }
+    }
+}

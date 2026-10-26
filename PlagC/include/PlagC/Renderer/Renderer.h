@@ -88,6 +88,8 @@ struct CameraDesc
 struct RenderSettings
 {
     bool wireframe = false, vsync = true, shadows = true;
+    bool hdr = false;
+    float exposure = 1;
     Vec3 background{.035f, .055f, .09f};
 };
 // Resource name in Assets/Textures. Empty cubemap disables the environment.

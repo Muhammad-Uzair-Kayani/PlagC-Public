@@ -28,8 +28,6 @@ int main(int argc, char **argv)
                 config.headless = true;
             else if (arg == "--no-audio")
                 config.audioEnabled = false;
-            else if (arg == "--no-asset-demo")
-                config.assetDemo = false;
             else if (arg == "--null")
                 config.nullPlatform = true;
             else if (arg == "--offscreen")
@@ -47,43 +45,27 @@ int main(int argc, char **argv)
                 config.physicsHz = std::stod(value());
             else if (arg == "--physics-scheduler")
                 config.physicsScheduler = value();
-            else if (arg == "--entities")
-                config.stressEntities = number();
-            else if (arg == "--seed")
-                config.stressSeed = number();
-            else if (arg == "--no-progressive")
-                config.stressProgressive = false;
-            else if (arg == "--soak")
-                config.stressSoak = true;
-            else if (arg == "--benchmark")
-                config.stressBenchmark = true;
-            else if (arg == "--seconds")
-                config.stressSeconds = std::stod(value());
-            else if (arg == "--warmup")
-                config.stressWarmup = number();
-            else if (arg == "--csv")
-                config.stressCSV = value();
-            else if (arg == "--self-test")
-                config.selfTest = true;
-            else if (arg == "--stress" || arg == "--physics")
+            else if (arg == "--help")
             {
-            } // Compatibility alias; only one playable world exists.
+                std::cout
+                    << "OUTPOST ZERO: WASD move, mouse look, Shift sprint, Space jump, RMB aim, "
+                       "LMB fire, R reload, E interact, Escape mouse, Backspace redeploy.\n"
+                       "Options: --headless | --null | --offscreen, --frames N, --workers N, "
+                       "--physics-workers N, --physics-hz N, --physics-scheduler native|plagc, "
+                       "--no-audio.\n";
+                return 0;
+            }
             else
-                throw std::invalid_argument(
-                    "Unknown option " + arg +
-                    ". See Docs/StressWorld.md; the old scene selector has been removed.");
+                throw std::invalid_argument("Unknown option " + arg + ". See Docs/TPS.md.");
         }
-        if (config.stressSoak && config.stressBenchmark)
-            throw std::invalid_argument("choose --soak or --benchmark");
         if (unsigned(config.headless) + unsigned(config.nullPlatform) + unsigned(config.offscreen) >
             1)
             throw std::invalid_argument("choose one rendering mode");
-        if (config.stressEntities < 1000 || config.stressEntities > 10000 ||
-            config.physicsWorkers > 64 || config.workers > 32 || !std::isfinite(config.physicsHz) ||
-            config.physicsHz < 1 || config.physicsHz > 240 ||
-            !std::isfinite(config.stressSeconds) || config.stressSeconds < 1 ||
-            config.stressSeconds > 1800 || config.stressWarmup > 10000)
-            throw std::invalid_argument("invalid stress workload limits; see Docs/StressWorld.md");
+        if (config.physicsWorkers > 64 || config.workers > 32 || !std::isfinite(config.physicsHz) ||
+            config.physicsHz < 1 || config.physicsHz > 240)
+            throw std::invalid_argument("invalid worker count or physics rate");
+        if ((config.headless || config.nullPlatform || config.offscreen) && !config.frameLimit)
+            config.frameLimit = 120;
         if (config.physicsScheduler != "native" && config.physicsScheduler != "plagc")
             throw std::invalid_argument("physics scheduler must be native or plagc");
         const unsigned hardware = std::max(1u, std::thread::hardware_concurrency());

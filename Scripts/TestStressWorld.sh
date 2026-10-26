@@ -12,6 +12,6 @@ fi
 "${CXX:-g++}" "${flags[@]}" PlagC/src/Physics/PhysicsTypes.cpp PlagC/src/Physics/PhysicsShapes.cpp \
     PlagC/src/Jobs.cpp PlagC/src/Physics/JoltPhysicsWorld.cpp PlagC/src/Physics/PhysicsSystem.cpp \
     PlagC/src/World/World.cpp PlagC/src/World/TransformSystem.cpp PlagC/src/World/SceneRenderer.cpp \
-    Sandbox/src/StressSimulation.cpp Sandbox/src/StressHud.cpp Scripts/Tests/RecordingRenderer.cpp \
+    Scripts/Tests/Legacy/StressSimulation.cpp Scripts/Tests/Legacy/StressHud.cpp Scripts/Tests/RecordingRenderer.cpp \
     Scripts/Tests/StressTests.cpp Bin-Int/PhysicsTests/libJolt.a -o "$output"
 "$output"

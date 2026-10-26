@@ -11,11 +11,11 @@ if errorlevel 1 exit /b 1
 for %%C in (Debug Release Dist) do (
     msbuild Build\Generated\PlagC.sln /m /p:Configuration=%%C /p:Platform=x64
     if errorlevel 1 exit /b 1
-    Bin\windows-x86_64\%%C\Sandbox.exe --headless --self-test --workers 1
+    Bin\windows-x86_64\%%C\Sandbox.exe --headless --frames 120 --workers 1
     if errorlevel 1 exit /b 1
     Bin\windows-x86_64\%%C\Sandbox.exe --null --workers 4
     if errorlevel 1 exit /b 1
 )
-echo Automated checks passed. Complete the native-renderer checklist in Docs\StressWorld.md.
+echo Automated checks passed. Complete the native-renderer checklist in Docs\TPS.md.
 exit /b 0
 

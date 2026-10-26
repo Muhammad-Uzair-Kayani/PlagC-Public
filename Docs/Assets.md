@@ -1,3 +1,5 @@
+> Historical phase report: playable scene controls below are superseded by [OUTPOST ZERO](TPS.md).
+
 # Asset, animation and audio foundation
 
 PlagC owns CPU asset data, typed handles, the registry/cache and resource lifetimes.

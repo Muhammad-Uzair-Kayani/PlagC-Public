@@ -14,7 +14,8 @@ MeshData MakePrimitive(Primitive type)
                 {{c.x + a * u.x + d * v.x, c.y + a * u.y + d * v.y, c.z + a * u.z + d * v.z},
                  n,
                  uv.first,
-                 uv.second});
+                 uv.second,
+                 u});
         }
         m.indices.insert(m.indices.end(), {b, b + 1, b + 2, b, b + 2, b + 3});
     };

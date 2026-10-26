@@ -15,6 +15,9 @@
 #include <OgrePass.h>
 #include <OgreTextureUnitState.h>
 #include <Compositor/OgreCompositorNodeDef.h>
+#include <Compositor/OgreCompositorWorkspaceDef.h>
+#include <Compositor/Pass/PassScene/OgreCompositorPassSceneDef.h>
+#include <OgreGpuProgramParams.h>
 #include <Compositor/Pass/PassQuad/OgreCompositorPassQuadDef.h>
 #include <OgreRoot.h>
 #include <OgreWorkQueue.h>
@@ -214,19 +217,57 @@ struct Renderer::Impl
                                      Ogre::IdString(workspaceName + "/Node").getReleaseText());
         }
         workspaceName = Name("Workspace", ID());
-        cm->createBasicWorkspaceDef(workspaceName, C(settings.background),
-                                    settings.shadows ? Ogre::IdString("PlagCShadow")
-                                                     : Ogre::IdString());
+        const auto nodeName = "AutoGen " + Ogre::IdString(workspaceName + "/Node").getReleaseText();
+        Ogre::CompositorTargetDef *sceneTarget = nullptr;
+        if (settings.hdr && !nullBackend)
+        {
+            auto *node = cm->addNodeDefinition(nodeName);
+            node->addTextureSourceName("WindowRT", 0, Ogre::TextureDefinitionBase::TEXTURE_INPUT);
+            node->setNumLocalTextureDefinitions(1);
+            auto *texture = node->addTextureDefinition("HDRScene");
+            texture->format = Ogre::PFG_RGBA16_FLOAT;
+            auto *rtv = node->addRenderTextureView("HDRScene");
+            Ogre::RenderTargetViewEntry attachment;
+            attachment.textureName = "HDRScene";
+            rtv->colourAttachments.push_back(attachment);
+            node->setNumTargetPass(2);
+            sceneTarget = node->addTargetPass("HDRScene");
+            auto *pass =
+                static_cast<Ogre::CompositorPassSceneDef *>(sceneTarget->addPass(Ogre::PASS_SCENE));
+            pass->setAllClearColours(C(settings.background));
+            pass->setAllLoadActions(Ogre::LoadAction::Clear);
+            pass->mStoreActionDepth = Ogre::StoreAction::Store;
+            pass->mLastRQ = 199;
+            pass->mShadowNode = settings.shadows ? Ogre::IdString("PlagCShadow") : Ogre::IdString();
+            auto *outputTarget = node->addTargetPass("WindowRT");
+            auto *tone =
+                static_cast<Ogre::CompositorPassQuadDef *>(outputTarget->addPass(Ogre::PASS_QUAD));
+            tone->mMaterialName = "PlagC/ToneMap";
+            tone->addQuadTextureSource(0, "HDRScene");
+            tone->setAllLoadActions(Ogre::LoadAction::DontCare);
+            auto material = Ogre::MaterialManager::getSingleton().getByName("PlagC/ToneMap");
+            material->getTechnique(0)->getPass(0)->getFragmentProgramParameters()->setNamedConstant(
+                "exposure", settings.exposure);
+            auto *overlay = static_cast<Ogre::CompositorPassSceneDef *>(
+                outputTarget->addPass(Ogre::PASS_SCENE));
+            overlay->mFirstRQ = 199;
+            overlay->mLastRQ = 200;
+            auto *definition = cm->addWorkspaceDefinition(workspaceName);
+            definition->connectExternal(0, nodeName, 0);
+        }
+        else
+        {
+            cm->createBasicWorkspaceDef(workspaceName, C(settings.background),
+                                        settings.shadows ? Ogre::IdString("PlagCShadow")
+                                                         : Ogre::IdString());
+            sceneTarget = cm->getNodeDefinitionNonConst(nodeName)->getTargetPass(0);
+        }
         if (environmentTexture && environment.skybox && !nullBackend)
         {
-            auto *node = cm->getNodeDefinitionNonConst(
-                "AutoGen " + Ogre::IdString(workspaceName + "/Node").getReleaseText());
-            auto *target = node->getTargetPass(0);
-            // Preserve opaque depth for the far-plane sky quad. It cannot cover geometry.
-            target->getCompositorPassesNonConst().front()->mStoreActionDepth =
+            sceneTarget->getCompositorPassesNonConst().front()->mStoreActionDepth =
                 Ogre::StoreAction::Store;
             auto *sky =
-                static_cast<Ogre::CompositorPassQuadDef *>(target->addPass(Ogre::PASS_QUAD));
+                static_cast<Ogre::CompositorPassQuadDef *>(sceneTarget->addPass(Ogre::PASS_QUAD));
             sky->mMaterialName = skyMaterial->getName();
             sky->mFrustumCorners = Ogre::CompositorPassQuadDef::CAMERA_DIRECTION;
         }
@@ -756,6 +797,7 @@ void Renderer::SetCamera(const CameraDesc &d)
             "invalid camera");
     auto &p = *impl_;
     p.cameraNode->setPosition(V(d.position));
+    p.cameraNode->setFixedYawAxis(true, Ogre::Vector3::UNIT_Y);
     p.cameraNode->lookAt(V(d.target), Ogre::Node::TS_PARENT);
     p.camera->setFOVy(Ogre::Degree(d.fov));
     p.camera->setNearClipDistance(d.nearClip);
@@ -779,7 +821,8 @@ void Renderer::SetVSync(bool enabled)
 void Renderer::SetSettings(const RenderSettings &d)
 {
     Thread::RequireMain();
-    Require(Finite(d.background), "nonfinite background");
+    Require(Finite(d.background) && std::isfinite(d.exposure) && d.exposure > 0,
+            "invalid render settings");
     auto &p = *impl_;
     p.settings = d;
     for (auto &[id, m] : p.materials)

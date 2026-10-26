@@ -1,3 +1,5 @@
+> Historical phase report: playable scene controls below are superseded by [OUTPOST ZERO](TPS.md).
+
 # Phase 5.5: cameras, gameplay animation and PBR materials
 
 The existing FPS facility is the test scene. It now includes a player-attached

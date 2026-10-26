@@ -17,6 +17,9 @@ class AssetScene
     AssetScene(const AssetScene &) = delete;
     AssetScene &operator=(const AssetScene &) = delete;
     void Update(World &, double dt);
+    // Current animated node point in world space; empty until the instance is updated.
+    std::optional<Vec3> AnimatedNodePoint(const World &, Entity, const std::string &,
+                                          Vec3 local = {}) const;
     void Clear();
     AssetSceneStats Statistics() const;
 

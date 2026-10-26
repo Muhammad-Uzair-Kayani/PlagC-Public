@@ -1,0 +1,51 @@
+[
+  {
+    "repository": "NoLimitNexus/game-models",
+    "commit": "e702964e78ce5f82b4769b81704fc472c2f52ca1",
+    "path": "tools/reference/Mannequin_Medium.glb",
+    "file": "Mannequin.glb",
+    "sha256": "368a4c0733280bc810c004b81f31408f43c00e307cf914061e80f192ba25685b"
+  },
+  {
+    "repository": "NoLimitNexus/game-models",
+    "commit": "e702964e78ce5f82b4769b81704fc472c2f52ca1",
+    "path": "library/animations/Rig_Medium_MovementBasic.glb",
+    "file": "Movement.glb",
+    "sha256": "f4601166eeac557c84ca50bfa4e24614aae0124c73e2bee488b1a9b4d327ee06"
+  },
+  {
+    "repository": "NoLimitNexus/game-models",
+    "commit": "e702964e78ce5f82b4769b81704fc472c2f52ca1",
+    "path": "library/animations/Rig_Medium_CombatRanged.glb",
+    "file": "Combat.glb",
+    "sha256": "fc703d17c47b627e4759c08f5f7ff14d212619495e5d06a43d77789aef64a64e"
+  },
+  {
+    "repository": "NoLimitNexus/game-models",
+    "commit": "e702964e78ce5f82b4769b81704fc472c2f52ca1",
+    "path": "library/animations/Rig_Medium_General.glb",
+    "file": "General.glb",
+    "sha256": "aa111549e09ce0cc2a0f0092911ed83d5e4bf91807c2106339b44bde45d163d5"
+  },
+  {
+    "repository": "Hidencod/tge-assets",
+    "commit": "7be9b573bc74f32ed766b44b3f46550d02ca83b5",
+    "path": "packs/blaster-kit/blaster-e.glb",
+    "file": "Rifle.glb",
+    "sha256": "5e8944fd7405a188a85ad689ab680d478d0ba090f61edae775f3ab8175be5949"
+  },
+  {
+    "repository": "Hidencod/tge-assets",
+    "commit": "7be9b573bc74f32ed766b44b3f46550d02ca83b5",
+    "path": "packs/blaster-kit/crate-medium.glb",
+    "file": "Crate.glb",
+    "sha256": "8601896701bea0428344ccf2f963f53ffffd135fa678b6cd99d9a8dcbfc0c8e5"
+  },
+  {
+    "repository": "Hidencod/tge-assets",
+    "commit": "7be9b573bc74f32ed766b44b3f46550d02ca83b5",
+    "path": "packs/space-kit/machine-barrel.glb",
+    "file": "Generator.glb",
+    "sha256": "ecd46823928292bbb01718966bd4602a71e37a09320f3ba232d9044e909ce4ed"
+  }
+]
