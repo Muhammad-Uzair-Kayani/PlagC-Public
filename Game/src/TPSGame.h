@@ -21,30 +21,12 @@ class TPSGame
     void Tick(PlagC::Engine &, double, const Controls &);
     void Stop(PlagC::Engine &);
     void Reload();
-    void Damage(float n)
-    {
-        health_.Damage(n);
-    }
-    PlagC::CharacterState Player() const
-    {
-        return physics_->ReadCharacter(character_);
-    }
-    const Weapon &Rifle() const
-    {
-        return weapon_;
-    }
-    float HitPoints() const
-    {
-        return health_.value;
-    }
-    unsigned Hits() const
-    {
-        return hits_;
-    }
-    const PlagC::CameraDesc &View() const
-    {
-        return view_;
-    }
+    void Damage(float n) { health_.Damage(n); }
+    PlagC::CharacterState Player() const { return physics_->ReadCharacter(character_); }
+    const Weapon &Rifle() const { return weapon_; }
+    float HitPoints() const { return health_.value; }
+    unsigned Hits() const { return hits_; }
+    const PlagC::CameraDesc &View() const { return view_; }
 
   private:
     PlagC::EngineConfig config_;
@@ -72,6 +54,7 @@ class TPSGame
     double deadTime_ = 0, shotTime_ = 0, hudTime_ = 0, footTime_ = 0;
     std::string animation_ = "Idle";
     PlagC::ObjectHandle flash_;
+    PlagC::LightHandle muzzleLight_;
     void Capture(PlagC::Engine &, bool);
     void BuildFacility(PlagC::Engine &);
     PlagC::Entity Box(const std::string &, PlagC::Vec3, PlagC::Vec3, unsigned,
