@@ -21,11 +21,15 @@ workspace "PlagC"
         symbols "On"
         defines { "NDEBUG" }
         runtime "Release"
+        filter { "configurations:Release", "toolset:msc*" }
+            buildoptions { "/O2" }
     filter "configurations:Dist"
-        optimize "Full"
+        optimize "Speed"
         symbols "Off"
         defines { "NDEBUG", "PC_DIST" }
         runtime "Release"
+        filter { "configurations:Dist", "toolset:msc*" }
+            buildoptions { "/O2" }
     filter {}
     if _OPTIONS["sanitize"] then
         filter "system:linux"
@@ -89,9 +93,18 @@ project "Sandbox"
     filter {}
     ogreLinks()
     ogreSystemLinks()
-    debugdir "%{wks.location}/../.."
+    -- Run from the configuration output so staged Assets and Ogre media are self-contained.
+    debugdir "%{cfg.targetdir}"
+    -- Always stage runtime data when Sandbox is built. This intentionally runs even
+    -- when no C++ source changed, so asset-only edits reach Debug/Release/Dist bins.
+    postbuildcommands {
+        'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root .. '" --output "%{cfg.targetdir}"'
+    }
     filter "system:windows"
         links { "gdi32", "user32", "shell32", "psapi" }
+    filter { "system:windows", "configurations:Dist" }
+        kind "WindowedApp"
+        entrypoint "mainCRTStartup"
     filter "system:linux"
         links { "pthread", "dl", "m" }
     filter "system:macosx"
