@@ -123,6 +123,9 @@ class Renderer
     void UpdateMesh(MeshHandle, std::span<const Vertex>);
     TextureHandle CreateTexture(unsigned width, unsigned height, std::span<const std::uint8_t> rgba,
                                 bool srgb = true, bool mipmaps = true);
+    // Loads an image registered in Ogre's General resource group (Assets/Textures).  This is the
+    // runtime path for authored PBR maps; colour maps should use sRGB, data maps must not.
+    TextureHandle LoadTexture(const std::string &resource, bool srgb = true, bool mipmaps = true);
     void DestroyTexture(TextureHandle);
     MeshHandle LoadModel(const std::string &, bool legacyMesh = true);
     void DestroyMesh(MeshHandle);
