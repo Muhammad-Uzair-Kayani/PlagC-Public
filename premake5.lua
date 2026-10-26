@@ -58,7 +58,6 @@ project "PlagC"
     common()
     warnings "Extra"
     filter "toolset:msc*"
-        -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
         disablewarnings { "4324" }
     filter {}
     files { "PlagC/include/**.h", "PlagC/src/**.h", "PlagC/src/**.cpp" }
@@ -71,7 +70,6 @@ project "PlagC"
     defines { "SPDLOG_COMPILED_LIB" }
     ogreIncludes()
     joltIncludes()
-    -- Static archives contain only their own object files.
     dependson { "GLFW", "spdlog", "OgreMain", "OgreHlmsCommon", "OgreHlmsPbs", "OgreHlmsUnlit", "OgreRenderNULL" }
     if not _OPTIONS["null-platform"] then dependson { "OgreRenderGL3Plus" } end
 project "Sandbox"
@@ -81,7 +79,6 @@ project "Sandbox"
     common()
     warnings "Extra"
     filter "toolset:msc*"
-        -- Explicit cache-line alignment in JobSystem::Deque intentionally pads it.
         disablewarnings { "4324" }
     filter {}
     files { "Sandbox/src/**.cpp", "Sandbox/src/**.h", "Game/src/**.cpp", "Game/src/**.h" }
@@ -93,15 +90,12 @@ project "Sandbox"
     filter {}
     ogreLinks()
     ogreSystemLinks()
-    -- Run from the configuration output so staged Assets and Ogre media are self-contained.
     debugdir "%{cfg.targetdir}"
-    -- Always stage runtime data when Sandbox is built. This intentionally runs even
-    -- when no C++ source changed, so asset-only edits reach Debug/Release/Dist bins.
     postbuildcommands {
         'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root .. '" --output "%{cfg.targetdir}"'
     }
     filter "system:windows"
-        links { "gdi32", "user32", "shell32", "psapi" }
+        links { "gdi32", "user32", "shell32", "psapi", "windowscodecs" }
     filter { "system:windows", "configurations:Dist" }
         kind "WindowedApp"
         entrypoint "mainCRTStartup"
@@ -109,8 +103,9 @@ project "Sandbox"
         links { "pthread", "dl", "m" }
     filter "system:macosx"
         links { "Cocoa.framework", "IOKit.framework", "CoreFoundation.framework" }
+    filter "files:Game/src/TPSGame.cpp"
+        defines { "PC_TPS_VISUAL_MAX" }
     filter {}
-
 
 project "AssetCooker"
     kind "ConsoleApp"
