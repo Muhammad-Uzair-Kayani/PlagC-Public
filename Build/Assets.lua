@@ -5,7 +5,7 @@ local manifest=json.decode(io.readfile(path.join(assetRoot,"Build/AssetVendors.j
 for _,name in ipairs({"Assimp","Ozz","OpenAL"}) do
     local config=manifest[name]
     project(name)
-        kind(name=="OpenAL" and "SharedLib" or "StaticLib")
+        kind "StaticLib"
         language "C++"
         cppdialect "C++20"
         common()
@@ -16,9 +16,11 @@ for _,name in ipairs({"Assimp","Ozz","OpenAL"}) do
             defines { "_CRT_SECURE_NO_WARNINGS", "NOMINMAX" }
         filter {}
     if name=="OpenAL" then
+        -- OpenAL Soft's public headers otherwise declare the API as dllimport on
+        -- Windows. Keep this define on every target that includes those headers.
+        defines { "AL_LIBTYPE_STATIC" }
         filter "system:windows"
-            targetname "OpenAL32"
-            defines { "HAVE_WINMM=1", "AL_API=__declspec(dllexport)", "ALC_API=__declspec(dllexport)", "_WIN32_WINNT=0x0601", "_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR" }
+            defines { "HAVE_WINMM=1", "_WIN32_WINNT=0x0601", "_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR" }
             files { path.join(assetRoot,"Vendor/openal/alc/backends/winmm.cpp") }
             links { "winmm", "ole32", "shell32", "user32" }
         filter "system:linux"
@@ -34,6 +36,9 @@ for _,name in ipairs({"Assimp","Ozz","OpenAL"}) do
 end
 function assetRuntimeIncludes()
     includedirs { path.join(assetRoot,"Vendor/ozz/include"),path.join(assetRoot,"Vendor/openal/include") }
+    -- Required by OpenAL Soft when consumers include AL/al.h and AL/alc.h while
+    -- linking the implementation statically (notably avoids __declspec(dllimport)).
+    defines { "AL_LIBTYPE_STATIC" }
 end
 project "PlagCImport"
     kind "StaticLib"
