@@ -66,3 +66,11 @@ class TPSGame
     void Sound(PlagC::Engine &, unsigned, PlagC::Vec3);
 };
 } // namespace Game
+
+// TPSGame.cpp alone receives PC_TPS_VISUAL_MAX from Premake.  This keeps the normal facility
+// implementation clean while guaranteeing the authored material pack is installed immediately
+// before the world geometry is created.  The macro is self-suppressing during its own expansion,
+// so the second BuildFacility token resolves to the real member function.
+#ifdef PC_TPS_VISUAL_MAX
+#define BuildFacility(engine) (InstallVisualMaxMaterials(engine), BuildFacility(engine))
+#endif
