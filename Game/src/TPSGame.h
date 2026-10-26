@@ -56,6 +56,7 @@ class TPSGame
     PlagC::ObjectHandle flash_;
     PlagC::LightHandle muzzleLight_;
     void Capture(PlagC::Engine &, bool);
+    void InstallVisualMaxMaterials(PlagC::Engine &);
     void BuildFacility(PlagC::Engine &);
     PlagC::Entity Box(const std::string &, PlagC::Vec3, PlagC::Vec3, unsigned,
                       bool collision = true);
