@@ -11,7 +11,10 @@ namespace PlagCGame
 namespace
 {
 constexpr float Rad = 3.14159265358979323846f / 180.0f;
-constexpr PlagC::Vec3 PlayerPosition{0.0f, 0.0f, 0.0f};
+// World origin intersects authored CityStreet building geometry. Use the same
+// open-street Z position that was visible during the earlier character calibration.
+constexpr PlagC::Vec3 PlayerPosition{0.0f, 0.0f, 4.0f};
+constexpr PlagC::Vec3 CameraTarget{0.0f, 1.0f, 4.0f};
 
 PlagC::Entity ModelEntity(PlagC::World &world, std::string name,
                           PlagC::AssetHandle<PlagC::ModelAsset> asset,
@@ -54,8 +57,6 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     environment_ = ModelEntity(*world_, "CityStreet Environment", cityStreet,
                                {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}});
 
-    // Native rigged reference character. No UAL retargeting and no arbitrary model scale.
-    // The source mesh is approximately 1.92 m tall in its authored coordinate system.
     player_ = ModelEntity(*world_, "Joker", playerAsset_,
                           {PlayerPosition, {0, 180.0f, 0}, {1, 1, 1}});
     PlagC::AnimatorComponent animator;
@@ -75,9 +76,9 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     world_->SetLight(sun_, {sun});
 
     camera_ = world_->Create("Gameplay Camera");
-    world_->SetTransform(camera_, {{0.0f, 1.45f, 4.0f}, {}, {1, 1, 1}});
+    world_->SetTransform(camera_, {{0.0f, 1.45f, 8.0f}, {}, {1, 1, 1}});
     PlagC::CameraComponent camera;
-    camera.target = {0.0f, 1.0f, 0.0f};
+    camera.target = CameraTarget;
     camera.fov = 55.0f;
     camera.nearClip = 0.05f;
     camera.farClip = 350.0f;
@@ -151,7 +152,7 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
         clips += std::to_string(i + 1) + "=" + playerAsset_->animations[i].name;
     }
     engine.Logger().Write(PlagC::Severity::Info, "WORLD",
-                          "CityStreet Joker native-rig test ready: " + clips);
+                          "CityStreet Joker native-rig test ready at open-street spawn: " + clips);
 }
 
 void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
@@ -182,15 +183,14 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
     const float yaw = cameraYaw_ * Rad;
     const float pitch = cameraPitch_ * Rad;
     const float cp = std::cos(pitch);
-    const PlagC::Vec3 target{0.0f, 1.0f, 0.0f};
     const PlagC::Vec3 direction{std::sin(yaw) * cp, std::sin(pitch), -std::cos(yaw) * cp};
     const float distance = 4.0f;
-    const PlagC::Vec3 cameraPosition{target.x - direction.x * distance,
-                                     target.y - direction.y * distance,
-                                     target.z - direction.z * distance};
+    const PlagC::Vec3 cameraPosition{CameraTarget.x - direction.x * distance,
+                                     CameraTarget.y - direction.y * distance,
+                                     CameraTarget.z - direction.z * distance};
     world_->SetTransform(camera_, {cameraPosition, {}, {1, 1, 1}});
     auto camera = world_->Read(camera_).camera.value();
-    camera.target = target;
+    camera.target = CameraTarget;
     world_->SetCamera(camera_, camera);
 
     assetScene_->Update(*world_, dt);
