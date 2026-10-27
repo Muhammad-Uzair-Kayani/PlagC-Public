@@ -2,7 +2,7 @@
 #include <PlagC/Window.h>
 #include <PlagC/Events.h>
 #include <PlagC/Thread.h>
-#include <PlagC/Input/InputProfiler.h>
+#include <PlagC/LatencyProfiler.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include "Input/GLFWInput.h"
@@ -25,9 +25,10 @@ struct Window::Impl {
     bool nullPlatform = false;
     void Emit(Event event) noexcept {
         try {
-            InputProfiler::OnCallback(event);
+            LatencyProfiler::OnCallback(event);
             const auto before = Input::state_.GetMouseDelta();
             Input::state_.Apply(event);
+            LatencyProfiler::OnInputStateApplied(event);
             if (event.type == EventType::MouseMoved) {
                 const auto after = Input::state_.GetMouseDelta();
                 event.dx = after.x - before.x; event.dy = after.y - before.y;
@@ -69,7 +70,7 @@ Window::Window(EventBus& events, const WindowConfig& config) : impl_(std::make_u
     glfwSetMouseButtonCallback(impl_->handle, [](GLFWwindow* w,int button,int action,int mods){ Event e{action == GLFW_PRESS ? EventType::MousePressed : EventType::MouseReleased}; e.button = FromGLFWButton(button); e.code = static_cast<int>(e.button); e.modifiers = FromGLFWModifiers(mods); Impl::Self(w).Emit(e); });
 }
 Window::~Window() { Thread::RequireMain(); if (impl_->handle) glfwDestroyWindow(impl_->handle); glfwTerminate(); activeWindow = false; Input::state_.Reset(); }
-void Window::Poll() { Thread::RequireMain(); Input::state_.BeginFrame(); InputProfiler::BeginPoll(); glfwPollEvents(); InputProfiler::EndPoll(); if (impl_->eventFailure) { impl_->eventFailure = false; throw std::runtime_error("window event delivery failed/overflowed"); } }
+void Window::Poll() { Thread::RequireMain(); Input::state_.BeginFrame(); LatencyProfiler::BeginPoll(); glfwPollEvents(); LatencyProfiler::EndPoll(); if (impl_->eventFailure) { impl_->eventFailure = false; throw std::runtime_error("window event delivery failed/overflowed"); } }
 bool Window::ShouldClose() const { Thread::RequireMain(); return glfwWindowShouldClose(impl_->handle) != 0; }
 void Window::RequestClose() { Thread::RequireMain(); glfwSetWindowShouldClose(impl_->handle, GLFW_TRUE); }
 void Window::SetTitle(const std::string& value) { Thread::RequireMain(); glfwSetWindowTitle(impl_->handle,value.c_str()); }
