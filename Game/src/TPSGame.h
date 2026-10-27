@@ -1,4 +1,5 @@
 #pragma once
+#include "WeaponAnimation.h"
 #include <PlagC/Application.h>
 #include <PlagC/Assets/AssetScene.h>
 #include <PlagC/World/SceneRenderer.h>
@@ -92,6 +93,7 @@ class TPSGame
     bool human_ = false, groundedLast_ = false;
     double landingTime_ = 0, hitTime_ = 0;
     float heading_ = 180, doorSlide_ = 0, fallPeak_ = 0;
+    Game::WeaponAnimation weaponAnimation_;
     double deadTime_ = 0, shotTime_ = 0, hudTime_ = 0, footTime_ = 0;
     std::string animation_ = "Idle";
     PlagC::ObjectHandle flash_;

@@ -111,6 +111,7 @@ void TPSGame::Start(Engine &e, const EngineConfig &config)
     weapon_ = {};
     hits_ = 0;
     deadTime_ = shotTime_ = 0;
+    weaponAnimation_ = {};
     camera_ = {};
     heading_ = 180;
     doorSlide_ = 0;
@@ -209,7 +210,10 @@ void TPSGame::Start(Engine &e, const EngineConfig &config)
         if (found == operative_->animations.end())
             throw std::runtime_error(std::string("Missing TPS clip: ") + name);
         graph.states.push_back({name, unsigned(found - operative_->animations.begin()),
-                                std::string(name) != "Death" && std::string(name) != "Reload", 1});
+                                std::string(name) != "Death" && std::string(name) != "Reload" &&
+                                    std::string(name) != "Hit" && std::string(name) != "Land" &&
+                                    std::string(name) != "Jump" && std::string(name) != "Fire",
+                                1});
     }
     for (unsigned i = 0; i < graph.states.size(); ++i)
         for (unsigned j = 0; j < graph.states.size(); ++j)
@@ -218,6 +222,14 @@ void TPSGame::Start(Engine &e, const EngineConfig &config)
                     {i, j, .12f, {{"Mode", AnimationCompare::Equal, float(j)}}});
     AnimatorComponent animator;
     animator.controller.emplace(graph, unsigned(operative_->animations.size()));
+    AnimationUpperBody upper;
+    upper.root = human_ ? "spine_01" : "spine";
+    // Resolve by rig name, never by an imported joint index.
+    if (std::none_of(operative_->skeleton.joints.begin(), operative_->skeleton.joints.end(),
+                     [&](const auto &j) { return j.name == upper.root; }))
+        throw std::runtime_error("Missing weapon animation spine root");
+    upper.pose = {graph.states[3].clip, 0, 0, false, false};
+    animator.upperBody = upper;
     world_->SetAnimator(actor_, animator);
     if (e.Audio().Available())
         for (unsigned kind = 0; kind < 5; ++kind)
@@ -412,7 +424,10 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     Vec3 f{std::cos(yaw), 0, std::sin(yaw)}, right{-f.z, 0, f.x};
     Vec3 move = Add(Scale(f, input.forward), Scale(right, input.right));
     float length = Length(move);
-    float speed = input.aim ? 2.3f : input.walk ? 1.7f : input.sprint ? 7.f : 3.7f;
+    float speed = input.aim      ? (input.sprint ? 3.7f : 2.3f)
+                  : input.walk   ? 1.7f
+                  : input.sprint ? 7.f
+                                 : 3.7f;
     if (length > 1)
         move = Scale(move, 1 / length);
     move = Scale(move, speed);
@@ -449,8 +464,12 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
         if (deadTime_ > 2.8)
             restart_ = true;
     }
+    const bool fire = health_.Alive() && input.fire && weapon_.cooldown <= 0 &&
+                      weapon_.reload <= 0 && hitTime_ <= 0 && weapon_.rounds;
+    const bool weaponBlocked = !health_.Alive() || weapon_.reload > 0 || hitTime_ > 0;
+    weaponAnimation_.Update(dt, input.aim, input.fire && weapon_.rounds > 0, fire, weaponBlocked);
     float desired = heading_;
-    if (health_.Alive() && (input.aim || input.fire))
+    if (health_.Alive() && weaponAnimation_.ready)
         desired = 90 - camera_.look.yaw;
     else if (Length(move) > .1f)
         desired = std::atan2(move.x, move.z) / Rad;
@@ -459,8 +478,6 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
                                   {0, heading_, 0},
                                   {actorScale_, actorScale_, actorScale_}});
     view_ = camera_.Update(*physics_, Add(player.position, {0, .65f, 0}), input.aim, dt);
-    const bool fire = health_.Alive() && input.fire && weapon_.cooldown <= 0 &&
-                      weapon_.reload <= 0 && weapon_.rounds;
     if (fire)
         shotTime_ = .10;
     float velocity =
@@ -468,8 +485,6 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     unsigned mode = !health_.Alive()     ? 7
                     : !player.grounded   ? 6
                     : weapon_.reload > 0 ? 5
-                    : shotTime_ > 0      ? 4
-                    : input.aim          ? 3
                     : velocity > 5       ? 2
                     : velocity > .2f     ? 1
                                          : 0;
@@ -479,20 +494,25 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
             mode = player.velocity.y > .8f ? 6 : 9;
         else if (hitTime_ > 0)
             mode = 11;
-        else if (weapon_.reload <= 0 && shotTime_ <= 0 && input.aim && velocity > .2f)
+        else if (weapon_.reload <= 0 && weaponAnimation_.ready && velocity > .2f)
         {
             if (input.forward > .25f)
-                mode = input.right < -.25f ? 19 : input.right > .25f ? 20 : 14;
+                mode = input.right < -.25f  ? 19
+                       : input.right > .25f ? 20
+                       : velocity > 2.4f    ? 15
+                                            : 14;
             else if (input.forward < -.25f)
                 mode = input.right < -.25f ? 21 : input.right > .25f ? 22 : 16;
             else
                 mode = input.right < 0 ? 17 : 18;
         }
-        else if (weapon_.reload <= 0 && shotTime_ <= 0 && !input.aim)
+        else if (weapon_.reload <= 0 && !weaponAnimation_.ready)
             mode = landingTime_ > 0 ? 10 : velocity > 5 ? 8 : velocity > 2.4f ? 2 : mode;
     }
     auto animator = world_->Read(actor_).animator.value();
     animator.controller->SetFloat("Mode", float(mode));
+    animator.upperBody->weight = weaponAnimation_.weight;
+    animator.upperBody->recoilRadians = weaponAnimation_.Recoil();
     world_->SetAnimator(actor_, animator);
     phaseStart = std::chrono::steady_clock::now();
     assets_->Update(*world_, dt);

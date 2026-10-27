@@ -135,7 +135,7 @@ class AnimationController
         return *graph_;
     }
     // Declaration order defines priority. Triggers are consumed only by the
-    // selected transition. Transitions are not evaluated during a crossfade.
+    // selected transition. The animator can interrupt a fade from its current blended pose.
     std::optional<AnimationTransition> Evaluate()
     {
         for (const auto &t : graph_->transitions)

@@ -313,6 +313,16 @@ void World::SetAnimator(Entity e, const AnimatorComponent &c)
     if (c.fadeDuration > 0 && (c.previous.clip >= model->asset->animations.size() ||
                                !std::isfinite(c.previous.time) || !std::isfinite(c.previous.speed)))
         throw std::invalid_argument("invalid previous animation state");
+    if (c.upperBody)
+    {
+        const auto &layer = *c.upperBody;
+        if (layer.pose.clip >= model->asset->animations.size() || !std::isfinite(layer.pose.time) ||
+            !std::isfinite(layer.pose.speed) || !std::isfinite(layer.weight) || layer.weight < 0 ||
+            layer.weight > 1 || !std::isfinite(layer.recoilRadians) ||
+            std::none_of(model->asset->skeleton.joints.begin(), model->asset->skeleton.joints.end(),
+                         [&](const auto &j) { return j.name == layer.root; }))
+            throw std::invalid_argument("invalid upper body animation binding");
+    }
     if (c.controller)
         c.controller->Graph().Validate(unsigned(model->asset->animations.size()));
     impl_->registry.emplace_or_replace<AnimatorComponent>(raw, c);

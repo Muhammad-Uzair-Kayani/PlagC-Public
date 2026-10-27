@@ -20,6 +20,8 @@ struct Animator::Impl
     std::vector<ozz::unique_ptr<ozz::animation::Animation>> clips;
     ozz::animation::SamplingJob::Context context;
     std::vector<ozz::math::SoaTransform> locals, blendSource, blendTarget;
+    std::vector<ozz::math::SoaTransform> lastBase, interruptedSource;
+    bool interrupted = false;
     std::vector<ozz::math::Float4x4> matrices;
     std::vector<Matrix4> pose;
     explicit Impl(AssetHandle<ModelAsset> a) : model(std::move(a))
@@ -142,6 +144,7 @@ void Animator::Update(AnimatorComponent &component, double dt)
     if (!component.controller)
     {
         Update(component.state, dt);
+        ApplyUpperBody(component);
         return;
     }
     auto &controller = *component.controller;
@@ -152,23 +155,31 @@ void Animator::Update(AnimatorComponent &component, double dt)
         component.state = {node.clip, 0, node.speed, true, node.loop};
         component.controllerStarted = true;
     }
-    if (component.fadeDuration == 0)
-        if (auto transition = controller.Evaluate())
-        {
-            component.previous = component.state;
-            const auto &node = controller.Current();
-            component.state = {node.clip, 0, node.speed, true, node.loop};
-            component.fadeElapsed = 0;
-            component.fadeDuration = transition->crossfade;
-        }
+    if (auto transition = controller.Evaluate())
+    {
+        impl_->interrupted = component.fadeDuration > 0 && !impl_->lastBase.empty();
+        if (impl_->interrupted)
+            impl_->interruptedSource = impl_->lastBase;
+        component.previous = component.state;
+        const auto &node = controller.Current();
+        component.state = {node.clip, 0, node.speed, true, node.loop};
+        component.fadeElapsed = 0;
+        component.fadeDuration = transition->crossfade;
+    }
     if (component.fadeDuration <= 0)
     {
         Update(component.state, dt);
+        ApplyUpperBody(component);
         return;
     }
     auto &p = *impl_;
-    Update(component.previous, dt);
-    p.blendSource = p.locals;
+    if (p.interrupted)
+        p.blendSource = p.interruptedSource;
+    else
+    {
+        Update(component.previous, dt);
+        p.blendSource = p.locals;
+    }
     Update(component.state, dt);
     p.blendTarget = p.locals;
     component.fadeElapsed = std::min(component.fadeDuration, component.fadeElapsed + dt);
@@ -187,6 +198,79 @@ void Animator::Update(AnimatorComponent &component, double dt)
     p.ModelPose();
     if (weight >= 1)
         component.fadeDuration = 0;
+    ApplyUpperBody(component);
+}
+void Animator::ApplyUpperBody(AnimatorComponent &component)
+{
+    impl_->lastBase = impl_->locals;
+    if (!component.upperBody)
+        return;
+    auto &layer = *component.upperBody;
+    if (!std::isfinite(layer.weight) || layer.weight < 0 || layer.weight > 1 ||
+        !std::isfinite(layer.recoilRadians))
+        throw std::invalid_argument("invalid upper body layer");
+    auto &p = *impl_;
+    const auto &joints = p.model->skeleton.joints;
+    auto root = std::find_if(joints.begin(), joints.end(),
+                             [&](const auto &j) { return j.name == layer.root; });
+    if (root == joints.end())
+        throw std::invalid_argument("upper body root missing");
+    if (layer.weight == 0)
+        return;
+    const unsigned rootIndex = unsigned(root - joints.begin());
+    p.blendSource = p.locals;
+    // Hold a stable ready pose, not the source clip's raise/lower cycle.
+    Update(layer.pose, 0);
+    p.blendTarget = p.locals;
+    std::vector<ozz::math::SimdFloat4> mask(p.locals.size());
+    for (unsigned block = 0; block < mask.size(); ++block)
+    {
+        float weights[4]{};
+        float rx[4]{}, rw[4]{1, 1, 1, 1};
+        for (unsigned lane = 0; lane < 4; ++lane)
+        {
+            unsigned i = block * 4 + lane;
+            if (i >= joints.size())
+                continue;
+            for (int ancestor = int(i); ancestor >= 0; ancestor = joints[ancestor].parent)
+                if (unsigned(ancestor) == rootIndex)
+                {
+                    weights[lane] = 1;
+                    break;
+                }
+            if (i == rootIndex)
+            {
+                rx[lane] = std::sin(layer.recoilRadians * .5f);
+                rw[lane] = std::cos(layer.recoilRadians * .5f);
+            }
+        }
+        mask[block] = ozz::math::simd_float4::LoadPtrU(weights);
+        auto recoil = ozz::math::SoaQuaternion::Load(
+            ozz::math::simd_float4::LoadPtrU(rx), ozz::math::simd_float4::zero(),
+            ozz::math::simd_float4::zero(), ozz::math::simd_float4::LoadPtrU(rw));
+        p.blendTarget[block].rotation = p.blendTarget[block].rotation * recoil;
+    }
+    ozz::animation::BlendingJob::Layer layers[2];
+    layers[0].weight = 1;
+    layers[0].transform = ozz::make_span(p.blendSource);
+    // Complementary per-joint weights preserve the base exactly below the mask.
+    std::vector<ozz::math::SimdFloat4> baseMask(mask.size());
+    for (unsigned i = 0; i < mask.size(); ++i)
+    {
+        mask[i] = mask[i] * ozz::math::simd_float4::Load1(layer.weight);
+        baseMask[i] = ozz::math::simd_float4::one() - mask[i];
+    }
+    layers[0].joint_weights = ozz::make_span(baseMask);
+    layers[1].weight = 1;
+    layers[1].transform = ozz::make_span(p.blendTarget);
+    layers[1].joint_weights = ozz::make_span(mask);
+    ozz::animation::BlendingJob blend;
+    blend.layers = ozz::make_span(layers);
+    blend.rest_pose = p.skeleton->joint_rest_poses();
+    blend.output = ozz::make_span(p.locals);
+    if (!blend.Run())
+        throw std::runtime_error("upper body blend failed");
+    p.ModelPose();
 }
 std::span<const Matrix4> Animator::Pose() const
 {
