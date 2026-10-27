@@ -1,6 +1,7 @@
 #include "pgcpch.h"
 #include "SurvivalGame.h"
 #include "Worlds/CityStreetWorld.h"
+#include "Worlds/JoelRigValidationWorld.h"
 #include "Worlds/RigValidationWorld.h"
 #include <algorithm>
 #include <filesystem>
@@ -16,6 +17,8 @@ std::unique_ptr<IGameWorld> CreateWorld(std::string_view name, const PlagC::Engi
         return std::make_unique<CityStreetWorld>(config);
     if (name == "RigValidation")
         return std::make_unique<RigValidationWorld>();
+    if (name == "JoelRigValidation")
+        return std::make_unique<JoelRigValidationWorld>();
     return {};
 }
 } // namespace
