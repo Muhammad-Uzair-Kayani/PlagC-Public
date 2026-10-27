@@ -34,58 +34,32 @@ class Engine
     ~Engine();
     struct SystemTimings
     {
-        double physicsMs = 0, animationMs = 0, syncMs = 0;
-        double landscapeMs = 0, audioMs = 0, hudMs = 0;
+        double inputMs = 0, gameplayMs = 0;
+        double physicsInputMs = 0, physicsMs = 0, physicsReadbackMs = 0;
+        double characterWorldMs = 0, cameraMs = 0;
+        double animationSetupMs = 0, animationMs = 0;
+        double combatMs = 0, syncMs = 0;
+        double syncStructureMs = 0, syncResourceMs = 0, syncTransformMs = 0,
+               syncPropertyMs = 0, syncLightCameraMs = 0, syncTraversalMs = 0;
+        std::uint64_t syncScanned = 0, syncTransforms = 0, syncPropertyCalls = 0,
+                      syncLightCalls = 0, syncCameraCalls = 0, syncCreated = 0,
+                      syncDestroyed = 0;
+        double landscapeMs = 0, rendererStateMs = 0, audioMs = 0, hudMs = 0;
     } timings; // Owner-thread diagnostics, reset before each application frame.
-    Log &Logger()
-    {
-        return logger_;
-    }
-    EventBus &Events()
-    {
-        return events_;
-    }
-    JobSystem &Jobs()
-    {
-        return *jobs_;
-    }
-    Renderer &Graphics()
-    {
-        return *renderer_;
-    }
-    AssetManager &Assets()
-    {
-        return *assets_;
-    }
-    AudioSystem &Audio()
-    {
-        return *audio_;
-    }
-    Profiler &Profile()
-    {
-        return profiler_;
-    }
-    const Profiler &Profile() const
-    {
-        return profiler_;
-    }
-    Window *MainWindow()
-    {
-        return window_.get();
-    }
-    // false removes engine pacing and requests VSync off; true caps at 60 FPS.
+    Log &Logger(){return logger_;}
+    EventBus &Events(){return events_;}
+    JobSystem &Jobs(){return *jobs_;}
+    Renderer &Graphics(){return *renderer_;}
+    AssetManager &Assets(){return *assets_;}
+    AudioSystem &Audio(){return *audio_;}
+    Profiler &Profile(){return profiler_;}
+    const Profiler &Profile() const{return profiler_;}
+    Window *MainWindow(){return window_.get();}
     void SetFPSLocked(bool enabled);
     bool IsFPSLocked() const;
     void PaceFrame(FrameLimiter::Clock::time_point start) const;
-    void Stop()
-    {
-        running_ = false;
-    }
-    bool Running() const
-    {
-        return running_;
-    }
-
+    void Stop(){running_ = false;}
+    bool Running() const{return running_;}
   private:
     Log logger_;
     EventBus events_;
@@ -105,10 +79,7 @@ class Application
     virtual ~Application() = default;
     virtual void OnStart(Engine &) = 0;
     virtual void OnFrame(Engine &, double deltaSeconds) = 0;
-    virtual void OnStop(Engine &)
-    {
-    }
+    virtual void OnStop(Engine &){}
 };
-// Client implements this; engine provides main and owns initialization.
 std::unique_ptr<Application> CreateApplication(const EngineConfig &);
 } // namespace PlagC
