@@ -20,6 +20,9 @@ struct AnimationUpperBody
 };
 struct AnimatorComponent
 {
+    // Optional external animation source. SurvivalGame currently uses a retargeted
+    // runtime model instead, but the field remains for compatibility with World validation.
+    AssetHandle<ModelAsset> animationSource;
     AnimationState state;
     std::optional<AnimationController> controller;
     std::optional<AnimationUpperBody> upperBody;
