@@ -39,7 +39,7 @@ workspace "PlagC"
         filter {}
     end
 function common()
-    local suffix = (_OPTIONS["null-platform"] and "-null" or "") .. (_OPTIONS["sanitize"] and ("-" .. _OPTIONS["sanitize"] or ""))
+    local suffix = (_OPTIONS["null-platform"] and "-null" or "") .. (_OPTIONS["sanitize"] and ("-" .. _OPTIONS["sanitize"]) or "")
     targetdir (root .. "/Bin" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}")
     objdir (root .. "/Bin-Int" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}")
 end
