@@ -1,11 +1,22 @@
 #include "pgcpch.h"
 #include "SurvivalGame.h"
+#include "Worlds/CityStreetWorld.h"
 #include <algorithm>
 #include <filesystem>
 #include <stdexcept>
 
 namespace PlagCGame
 {
+namespace
+{
+std::unique_ptr<IGameWorld> CreateWorld(std::string_view name)
+{
+    if (name == "CityStreet")
+        return std::make_unique<CityStreetWorld>();
+    return {};
+}
+} // namespace
+
 void SurvivalGame::Start(PlagC::Engine &engine, const PlagC::EngineConfig &config,
                          std::string_view world)
 {
@@ -42,9 +53,27 @@ void SurvivalGame::Start(PlagC::Engine &engine, const PlagC::EngineConfig &confi
         engine.Logger().Write(PlagC::Severity::Info, "ASSET",
                               "Loaded " + std::to_string(manifest_->Assets().size()) +
                                   " assets for world " + activeWorld_);
+
+        world_ = CreateWorld(activeWorld_);
+        if (world_)
+            world_->Start(engine);
+        else
+            engine.Logger().Write(PlagC::Severity::Warn, "WORLD",
+                                  activeWorld_ + " currently has an asset-only runtime shell");
     }
     catch (...)
     {
+        if (world_)
+        {
+            try
+            {
+                world_->Stop(engine);
+            }
+            catch (...)
+            {
+            }
+            world_.reset();
+        }
         if (manifest_)
         {
             try
@@ -72,14 +101,22 @@ void SurvivalGame::Start(PlagC::Engine &engine, const PlagC::EngineConfig &confi
     }
 }
 
-void SurvivalGame::Frame(PlagC::Engine &, double)
+void SurvivalGame::Frame(PlagC::Engine &engine, double dt)
 {
-    // The selected world's assets are now guaranteed ready before gameplay starts.
-    // World/entity creation is the next layer.
+    if (world_)
+        world_->Frame(engine, dt);
 }
 
 void SurvivalGame::Stop(PlagC::Engine &engine)
 {
+    // Renderer/world objects borrow handles from the loaded asset snapshots, so the
+    // selected world must release its entities/resources before the manifest unloads.
+    if (world_)
+    {
+        world_->Stop(engine);
+        world_.reset();
+    }
+
     if (manifest_)
     {
         manifest_->UnloadAll(engine.Assets());
