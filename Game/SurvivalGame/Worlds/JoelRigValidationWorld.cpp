@@ -26,7 +26,7 @@ unsigned Clip(const PlagC::ModelAsset &asset, std::string_view name)
 void JoelRigValidationWorld::Start(PlagC::Engine &engine)
 {
     auto joel = engine.Assets().Get<PlagC::ModelAsset>(
-        "Game://Characters/Validation/JoelRigV3/JoelRigV3.plasset");
+        "Game://Characters/Validation/JoelRigV4/JoelRigV4.plasset");
     auto ual = engine.Assets().Get<PlagC::ModelAsset>(
         "Game://Animations/UAL/UAL1_Standard.plasset");
     if (!joel || !ual)
@@ -47,7 +47,7 @@ void JoelRigValidationWorld::Start(PlagC::Engine &engine)
     sceneRenderer_->SetProfiling(true);
 #endif
 
-    player_ = world_->Create("Joel Rig V3");
+    player_ = world_->Create("Joel Rig V4");
     world_->SetTransform(player_, {{0, 0, 0}, {0, 180, 0}, {1, 1, 1}});
     world_->SetModel(player_, {playerAsset_, true});
     PlagC::AnimatorComponent animator;
@@ -127,7 +127,7 @@ void JoelRigValidationWorld::Start(PlagC::Engine &engine)
 
     if (auto *window = engine.MainWindow())
     {
-        window->SetTitle("PlagC | Joel Rig V3 Validation");
+        window->SetTitle("PlagC | Joel Rig V4 Validation");
         window->SetCursorCaptured(true);
     }
     engine.SetFPSLocked(false);
@@ -138,7 +138,7 @@ void JoelRigValidationWorld::Start(PlagC::Engine &engine)
 
     engine.Logger().Write(
         PlagC::Severity::Info, "RIG",
-        "Joel Rig V3 ready: repaired arm/hand weights, rigid fingers; 1 T-pose, 2 idle, 3 walk, 4 jog, 5 crouch idle, 6 crouch walk, 7 pistol aim, 8 reload");
+        "Joel Rig V4 ready: corrected shoulder/elbow/wrist/knee bind pivots + repaired weights; 1 T-pose, 2 idle, 3 walk, 4 jog, 5 crouch idle, 6 crouch walk, 7 pistol aim, 8 reload");
 }
 
 void JoelRigValidationWorld::Frame(PlagC::Engine &engine, double dt)
@@ -163,7 +163,7 @@ void JoelRigValidationWorld::Frame(PlagC::Engine &engine, double dt)
         world_->SetAnimator(player_, animator);
         activeClip_ = requestedClip_;
         engine.Logger().Write(PlagC::Severity::Info, "RIG",
-                              "Playing Joel Rig V3 clip: " + playerAsset_->animations[activeClip_].name);
+                              "Playing Joel Rig V4 clip: " + playerAsset_->animations[activeClip_].name);
     }
 
     const float yaw = cameraYaw_ * Rad;
