@@ -84,4 +84,7 @@ class Application
     virtual void OnFrame(Engine &, double) = 0;
     virtual void OnStop(Engine &) {}
 };
+// Implemented by the client (Sandbox/Game). The engine owns main() and calls
+// this factory after Engine initialization.
+std::unique_ptr<Application> CreateApplication(const EngineConfig&);
 } // namespace PlagC
