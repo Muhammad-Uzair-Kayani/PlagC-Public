@@ -19,6 +19,9 @@ struct AssetInfo
 };
 // Owner-thread registry/cache. CPU reads execute on Jobs; renderer/audio finalization is separate.
 // Handles hold immutable snapshots across unload/reload and manager destruction.
+//
+// Legacy relative paths resolve against the default cooked root. Games may add named mounts and
+// address them as "MountName://relative/path.plasset" without changing the engine-wide default root.
 class AssetManager
 {
   public:
@@ -26,6 +29,12 @@ class AssetManager
     ~AssetManager();
     AssetManager(const AssetManager &) = delete;
     AssetManager &operator=(const AssetManager &) = delete;
+
+    void Mount(std::string name, std::filesystem::path root);
+    void Unmount(const std::string &name);
+    bool HasMount(const std::string &name) const;
+    std::filesystem::path MountedRoot(const std::string &name) const;
+
     template <class T> AssetHandle<T> Load(const std::string &path)
     {
         auto a = LoadBase(path, T::Type);
