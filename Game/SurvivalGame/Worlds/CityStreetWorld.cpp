@@ -16,6 +16,9 @@ using Clock = std::chrono::steady_clock;
 constexpr float Pi = 3.14159265358979323846f;
 constexpr float Rad = Pi / 180.0f;
 constexpr int MagazineSize = 12;
+constexpr float JoelScale = 0.72f;
+constexpr float PistolScale = 0.0045f;
+constexpr PlagC::Vec3 PlayerSpawn{0.0f, 1.20f, 4.0f};
 
 double Milliseconds(Clock::time_point start)
 {
@@ -25,6 +28,10 @@ double Milliseconds(Clock::time_point start)
 PlagC::Vec3 Add(PlagC::Vec3 a, PlagC::Vec3 b)
 {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+PlagC::Vec3 Sub(PlagC::Vec3 a, PlagC::Vec3 b)
+{
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
 PlagC::Vec3 Scale(PlagC::Vec3 v, float s)
 {
@@ -54,6 +61,56 @@ PlagC::Entity ModelEntity(PlagC::World &world, std::string name,
     world.SetTransform(entity, transform);
     world.SetModel(entity, {std::move(asset), true});
     return entity;
+}
+
+std::shared_ptr<const PlagC::ColliderGeometry>
+BuildStaticModelGeometry(PlagC::AssetHandle<PlagC::ModelAsset> asset)
+{
+    if (!asset)
+        throw std::invalid_argument("static collision requires a model asset");
+
+    auto geometry = std::make_shared<PlagC::ColliderGeometry>();
+    PlagC::Animator bindPose(asset);
+
+    for (unsigned meshIndex = 0; meshIndex < asset->meshes.size(); ++meshIndex)
+    {
+        const auto mesh = bindPose.Deform(meshIndex);
+        const auto base = static_cast<std::uint32_t>(geometry->vertices.size());
+        geometry->vertices.reserve(geometry->vertices.size() + mesh.vertices.size());
+        geometry->indices.reserve(geometry->indices.size() + mesh.indices.size());
+        for (const auto &vertex : mesh.vertices)
+            geometry->vertices.push_back(vertex.position);
+        for (const auto index : mesh.indices)
+            geometry->indices.push_back(base + index);
+    }
+
+    if (geometry->vertices.size() < 4 || geometry->indices.empty())
+        throw std::runtime_error("model produced no usable static collision geometry");
+    return geometry;
+}
+
+void AttachStaticModelCollision(PlagC::World &world, PlagC::Entity entity,
+                                PlagC::AssetHandle<PlagC::ModelAsset> asset)
+{
+    PlagC::PhysicsComponent physics;
+    physics.body.motion = PlagC::MotionType::Static;
+    physics.body.layer = PlagC::CollisionLayer::StaticWorld;
+    physics.collider.type = PlagC::ColliderType::Mesh;
+    physics.collider.dimensions = {1, 1, 1};
+    physics.collider.geometry = BuildStaticModelGeometry(std::move(asset));
+    world.SetPhysics(entity, physics);
+}
+
+PlagC::CharacterDesc PlayerCharacterDesc(PlagC::Vec3 position)
+{
+    PlagC::CharacterDesc character;
+    character.position = position;
+    character.radius = 0.34f;
+    character.halfHeight = 0.56f;
+    character.mass = 78.0f;
+    character.maxSlopeDegrees = 45.0f;
+    character.stepHeight = 0.35f;
+    return character;
 }
 
 PlagC::AnimationStateMachine LocomotionGraph(const PlagC::ModelAsset &asset)
@@ -94,7 +151,13 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     if (!cityStreet || !joel || !ual || !pistol || !jeep)
         throw std::runtime_error("CityStreetWorld required assets are not ready");
 
-    playerAsset_ = PlagC::RetargetAnimations(joel, ual);
+    // UAL1_Standard is the non-root-motion library. Physics owns world translation,
+    // so keep Joel's authored root/pelvis translations and retarget rotation deltas only.
+    PlagC::AnimationRetargetConfig retarget;
+    retarget.rootTranslation = false;
+    retarget.pelvisTranslation = false;
+    retarget.translationScale = 1.0f;
+    playerAsset_ = PlagC::RetargetAnimations(joel, ual, retarget);
 
     world_ = std::make_unique<PlagC::World>();
 
@@ -115,38 +178,34 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
 
     environment_ = ModelEntity(*world_, "CityStreet Environment", cityStreet,
                                {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}});
-
-    // Broad gameplay collision for the first playable slice. Authored mesh collision
-    // extraction is a later world-cooking step; this already gives Jolt grounding,
-    // gravity, jumping and a stable street test surface.
-    auto streetCollider = world_->Create("CityStreet Collision");
-    world_->SetTransform(streetCollider, {{0, -0.25f, 0}, {}, {1, 1, 1}});
-    PlagC::PhysicsComponent streetPhysics;
-    streetPhysics.body.motion = PlagC::MotionType::Static;
-    streetPhysics.body.layer = PlagC::CollisionLayer::StaticWorld;
-    streetPhysics.collider.type = PlagC::ColliderType::Box;
-    streetPhysics.collider.dimensions = {11.5f, 0.25f, 14.0f};
-    world_->SetPhysics(streetCollider, streetPhysics);
+    AttachStaticModelCollision(*world_, environment_, cityStreet);
 
     player_ = ModelEntity(*world_, "Joel", playerAsset_,
-                          {{0.0f, 0.20f, 4.0f}, {0, playerYaw_, 0}, {1, 1, 1}});
+                          {PlayerSpawn, {0, playerYaw_, 0}, {JoelScale, JoelScale, JoelScale}});
 
     auto graph = LocomotionGraph(*playerAsset_);
     PlagC::AnimatorComponent animator;
     animator.state.clip = graph.states[0].clip;
     animator.controller.emplace(graph, unsigned(playerAsset_->animations.size()));
     PlagC::AnimationUpperBody weaponLayer;
-    weaponLayer.root = "spine_01";
+    weaponLayer.root = "spine_03";
     weaponLayer.pose = {Clip(*playerAsset_, "Pistol_Idle_Loop"), 0, 1, true, true};
-    weaponLayer.weight = 1.0f;
+    // Do not force a weapon pose while the weapon is not actively being used.
+    weaponLayer.weight = 0.0f;
     animator.upperBody = weaponLayer;
     world_->SetAnimator(player_, animator);
 
     pistol_ = ModelEntity(*world_, "Pistol", pistol,
-                          {{0.0f, 1.2f, 4.0f}, {0, playerYaw_, 0}, {1, 1, 1}});
+                          {PlayerSpawn, {0, playerYaw_, 0}, {PistolScale, PistolScale, PistolScale}});
+    {
+        auto pistolModel = world_->Read(pistol_).model.value();
+        pistolModel.visible = false;
+        world_->SetModel(pistol_, pistolModel);
+    }
 
     jeep_ = ModelEntity(*world_, "Jeep", jeep,
                         {{-4.0f, 0.60f, -3.0f}, {0, 28, 0}, {1, 1, 1}});
+    AttachStaticModelCollision(*world_, jeep_, jeep);
 
     sun_ = world_->Create("Sun");
     world_->SetTransform(sun_, {{0, 12, 0}, {}, {1, 1, 1}});
@@ -160,7 +219,7 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     camera_ = world_->Create("Gameplay Camera");
     world_->SetTransform(camera_, {{0, 3.2f, 8.5f}, {}, {1, 1, 1}});
     PlagC::CameraComponent camera;
-    camera.target = {0.0f, 1.2f, 4.0f};
+    camera.target = {PlayerSpawn.x, PlayerSpawn.y + 0.45f, PlayerSpawn.z};
     camera.fov = 58.0f;
     camera.nearClip = 0.08f;
     camera.farClip = 350.0f;
@@ -168,14 +227,7 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     world_->SetActiveCamera(camera_);
 
     physics_->Synchronize();
-    PlagC::CharacterDesc characterDesc;
-    characterDesc.position = {0.0f, 1.15f, 4.0f};
-    characterDesc.radius = 0.34f;
-    characterDesc.halfHeight = 0.56f;
-    characterDesc.mass = 78.0f;
-    characterDesc.maxSlopeDegrees = 45.0f;
-    characterDesc.stepHeight = 0.35f;
-    character_ = physics_->CreateCharacter(characterDesc);
+    character_ = physics_->CreateCharacter(PlayerCharacterDesc(PlayerSpawn));
 
     key_ = engine.Events().Subscribe(PlagC::EventType::KeyPressed,
                                      [this, &engine](const PlagC::Event &event) {
@@ -235,7 +287,7 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
 
     engine.Logger().Write(
         PlagC::Severity::Info, "WORLD",
-        "CityStreet combat slice ready: WASD, Shift sprint, Ctrl crouch, Space jump, RMB aim, LMB fire, R reload");
+        "CityStreet corrected: authored mesh collision + 0.72 Joel scale + corrected forward axis + weapon scale/socket baseline");
 }
 
 void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
@@ -270,7 +322,8 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
         cameraPitch_ = std::clamp(cameraPitch_ - float(mouse.y) * 0.10f, -25.0f, 55.0f);
     }
 
-    const bool aiming = cursorCaptured_ && PlagC::Input::IsMouseButtonPressed(PlagC::MouseCode::Right);
+    const bool aiming = cursorCaptured_ &&
+                        PlagC::Input::IsMouseButtonPressed(PlagC::MouseCode::Right);
     crouched_ = PlagC::Input::IsKeyPressed(PlagC::KeyCode::LeftControl) ||
                 PlagC::Input::IsKeyPressed(PlagC::KeyCode::RightControl);
 
@@ -308,36 +361,57 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
     engine.timings.physicsMs = Milliseconds(t);
 
     t = Clock::now();
-    const auto character = physics_->ReadCharacter(character_);
+    auto character = physics_->ReadCharacter(character_);
+    if (character.position.y < -4.0f)
+    {
+        physics_->DestroyCharacter(character_);
+        character_ = physics_->CreateCharacter(PlayerCharacterDesc(PlayerSpawn));
+        character = physics_->ReadCharacter(character_);
+    }
     engine.timings.physicsReadbackMs = Milliseconds(t);
 
     t = Clock::now();
     if (aiming)
-        playerYaw_ += std::remainder(180.0f + cameraYaw_ - playerYaw_, 360.0f) *
+        playerYaw_ += std::remainder(90.0f + cameraYaw_ - playerYaw_, 360.0f) *
                       (1.0f - std::exp(-float(dt) * 16.0f));
     else if (LengthXZ(movement) > 0.05f)
     {
-        const float desired = std::atan2(movement.x, movement.z) / Rad;
+        // Joel's mesh points along +X. Gameplay movement yaw is expressed as though
+        // model forward were +Z, therefore subtract 90 degrees from the movement yaw.
+        const float desired = std::atan2(movement.x, movement.z) / Rad - 90.0f;
         playerYaw_ += std::remainder(desired - playerYaw_, 360.0f) *
                       (1.0f - std::exp(-float(dt) * 14.0f));
     }
     world_->SetTransform(player_,
-                         {{character.position.x, character.position.y - 0.95f, character.position.z},
-                          {0, playerYaw_, 0}, {1, 1, 1}});
+                         {{character.position.x, character.position.y, character.position.z},
+                          {0, playerYaw_, 0}, {JoelScale, JoelScale, JoelScale}});
     engine.timings.characterWorldMs = Milliseconds(t);
 
     t = Clock::now();
-    const PlagC::Vec3 target{character.position.x, character.position.y + (crouched_ ? 0.30f : 0.55f),
+    const PlagC::Vec3 target{character.position.x,
+                             character.position.y + (crouched_ ? 0.22f : 0.45f),
                              character.position.z};
     const float pitch = cameraPitch_ * Rad;
     const float cp = std::cos(pitch);
-    const PlagC::Vec3 lookDirection{std::sin(yaw) * cp, std::sin(pitch), -std::cos(yaw) * cp};
-    const float distance = aiming ? 3.2f : 4.8f;
-    const PlagC::Vec3 shoulder = Add(target, Scale(right, aiming ? 0.45f : 0.15f));
-    const PlagC::Vec3 cameraPosition = Add(shoulder, Scale(lookDirection, -distance));
+    const PlagC::Vec3 lookDirection{std::sin(yaw) * cp, std::sin(pitch),
+                                     -std::cos(yaw) * cp};
+    const float distance = aiming ? 3.0f : 4.2f;
+    const PlagC::Vec3 shoulder = Add(target, Scale(right, aiming ? 0.38f : 0.12f));
+    const PlagC::Vec3 desiredCamera = Add(shoulder, Scale(lookDirection, -distance));
+    PlagC::Vec3 cameraPosition = desiredCamera;
+
+    // Prevent the third-person camera from leaving the authored city volume or
+    // clipping through buildings by casting from the shoulder to the desired camera.
+    const auto cameraRay = Sub(desiredCamera, shoulder);
+    if (auto hit = physics_->Raycast(shoulder, cameraRay))
+    {
+        const float fraction = std::max(0.08f, hit->fraction - 0.03f);
+        cameraPosition = Add(shoulder, Scale(cameraRay, fraction));
+    }
+
     world_->SetTransform(camera_, {cameraPosition, {}, {1, 1, 1}});
     auto cameraComponent = world_->Read(camera_).camera.value();
-    cameraComponent.target = Add(target, Scale(lookDirection, aiming ? 10.0f : 0.0f));
+    cameraComponent.target = Add(target, Scale(lookDirection, aiming ? 8.0f : 0.0f));
     cameraComponent.fov = aiming ? 48.0f : 58.0f;
     world_->SetCamera(camera_, cameraComponent);
     engine.timings.cameraMs = Milliseconds(t);
@@ -349,16 +423,16 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
             reloadTime_ = playerAsset_->animations[Clip(*playerAsset_, "Pistol_Reload")].duration;
     }
 
-    const bool fire = fireQueued_ && cursorCaptured_ && reloadTime_ <= 0 && shotCooldown_ <= 0 && rounds_ > 0;
+    const bool fire = fireQueued_ && cursorCaptured_ && reloadTime_ <= 0 &&
+                      shotCooldown_ <= 0 && rounds_ > 0;
     fireQueued_ = false;
     if (fire)
     {
         --rounds_;
         shotCooldown_ = 0.18;
         fireAnimationTime_ = playerAsset_->animations[Clip(*playerAsset_, "Pistol_Shoot")].duration;
-        const PlagC::Vec3 origin = cameraPosition;
         const PlagC::Vec3 ray = Scale(lookDirection, 150.0f);
-        if (auto hit = physics_->Raycast(origin, ray))
+        if (auto hit = physics_->Raycast(cameraPosition, ray))
             engine.Logger().Write(PlagC::Severity::Debug, "COMBAT",
                                   "Pistol hit at " + std::to_string(hit->position.x) + ", " +
                                       std::to_string(hit->position.y) + ", " +
@@ -381,8 +455,9 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
         mode = 1;
     animator.controller->SetFloat("Mode", float(mode));
 
+    const bool weaponActive = aiming || reloadTime_ > 0 || fireAnimationTime_ > 0;
     auto &upper = *animator.upperBody;
-    upper.weight = 1.0f;
+    upper.weight = weaponActive ? 1.0f : 0.0f;
     upper.recoilRadians = fireAnimationTime_ > 0 ? -0.035f : 0.0f;
     if (reloadTime_ > 0)
     {
@@ -399,19 +474,35 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
     else if (aiming)
         upper.pose = {Clip(*playerAsset_, "Pistol_Aim_Neutral"), 0, 1, false, false};
     else
-        upper.pose = {Clip(*playerAsset_, "Pistol_Idle_Loop"), upper.pose.time, 1, true, true};
+        upper.pose = {Clip(*playerAsset_, "Pistol_Idle_Loop"), 0, 1, true, true};
     world_->SetAnimator(player_, animator);
     engine.timings.animationSetupMs = Milliseconds(t);
 
     t = Clock::now();
     assetScene_->Update(*world_, dt);
 
-    // Pistol follows the animated right hand. Orientation is still a simple authored
-    // offset; position already comes from the final retargeted/blended skeleton pose.
-    if (auto hand = assetScene_->AnimatedNodePoint(*world_, player_, "hand_r", {0.02f, 0.0f, 0.02f}))
     {
-        world_->SetTransform(pistol_, {*hand, {0, playerYaw_ - 90.0f, 90.0f}, {0.82f, 0.82f, 0.82f}});
-        assetScene_->Update(*world_, 0.0);
+        auto pistolModel = world_->Read(pistol_).model.value();
+        if (pistolModel.visible != weaponActive)
+        {
+            pistolModel.visible = weaponActive;
+            world_->SetModel(pistol_, pistolModel);
+        }
+    }
+
+    if (weaponActive)
+    {
+        // The pistol source is authored at a non-metre scale and along its local X axis.
+        // hand_r +Y follows the palm/finger direction on the UAL skeleton, giving a
+        // stable grip point without pretending the raw model origin is a socket.
+        if (auto hand = assetScene_->AnimatedNodePoint(*world_, player_, "hand_r",
+                                                       {0.0f, 0.07f, 0.0f}))
+        {
+            world_->SetTransform(pistol_,
+                                 {*hand, {0, playerYaw_, 0},
+                                  {PistolScale, PistolScale, PistolScale}});
+            assetScene_->Update(*world_, 0.0);
+        }
     }
     engine.timings.animationMs = Milliseconds(t);
 
