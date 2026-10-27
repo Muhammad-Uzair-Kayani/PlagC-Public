@@ -12,6 +12,11 @@ namespace
 {
 constexpr float Rad = 3.14159265358979323846f / 180.0f;
 constexpr PlagC::Vec3 InitialPlayerPosition{0.0f, 0.0f, 4.0f};
+// Joker's source FBX was exported through a glTF wrapper with a 0.01 scale.
+// PlagC's current CPU skinning path keeps that wrapper in joint model-space, so
+// the deformed character is ~0.019 m tall instead of ~1.917 m. Compensate only
+// in this validation scene until skinning is canonicalized relative to mesh space.
+constexpr float PlayerVisualScale = 100.0f;
 
 float LengthXZ(PlagC::Vec3 v)
 {
@@ -62,7 +67,8 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
                                {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}});
 
     player_ = ModelEntity(*world_, "Joker", playerAsset_,
-                          {playerPosition_, {0, playerYaw_, 0}, {1, 1, 1}});
+                          {playerPosition_, {0, playerYaw_, 0},
+                           {PlayerVisualScale, PlayerVisualScale, PlayerVisualScale}});
     PlagC::AnimatorComponent animator;
     animator.state = {requestedClip_, 0, 1, true, true};
     world_->SetAnimator(player_, animator);
@@ -221,7 +227,9 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
                       (1.0f - std::exp(-float(dt) * 12.0f));
     }
 
-    world_->SetTransform(player_, {playerPosition_, {0, playerYaw_, 0}, {1, 1, 1}});
+    world_->SetTransform(player_,
+                         {playerPosition_, {0, playerYaw_, 0},
+                          {PlayerVisualScale, PlayerVisualScale, PlayerVisualScale}});
 
     const float pitch = cameraPitch_ * Rad;
     const float cp = std::cos(pitch);
