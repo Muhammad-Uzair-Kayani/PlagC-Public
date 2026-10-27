@@ -11,6 +11,7 @@ struct AssetManager::Impl
 {
     JobSystem &jobs;
     std::filesystem::path root;
+    std::unordered_map<std::string, std::filesystem::path> mounts;
     JobGroup group;
     struct Entry
     {
@@ -29,8 +30,32 @@ struct AssetManager::Impl
     }
     std::pair<std::string, std::filesystem::path> Resolve(const std::string &path) const
     {
+        if (path.empty())
+            throw std::invalid_argument("asset path cannot be empty");
+
+        const auto scheme = path.find("://");
+        if (scheme != std::string::npos)
+        {
+            const std::string mountName = path.substr(0, scheme);
+            const std::string relativeText = path.substr(scheme + 3);
+            auto found = mounts.find(mountName);
+            if (found == mounts.end())
+                throw std::invalid_argument("unknown asset mount: " + mountName);
+
+            std::filesystem::path relative(relativeText);
+            if (relative.empty() || relative.is_absolute())
+                throw std::invalid_argument("mounted asset path must be relative");
+
+            const auto &mountRoot = found->second;
+            auto full = std::filesystem::weakly_canonical(mountRoot / relative);
+            auto relativeKey = full.lexically_relative(mountRoot);
+            if (relativeKey.empty() || *relativeKey.begin() == "..")
+                throw std::invalid_argument("asset path escapes mount: " + mountName);
+            return {mountName + "://" + relativeKey.generic_string(), full};
+        }
+
         std::filesystem::path relative(path);
-        if (relative.empty() || relative.is_absolute())
+        if (relative.is_absolute())
             throw std::invalid_argument("asset path must be relative to cooked root");
         auto full = std::filesystem::weakly_canonical(root / relative);
         auto key = full.lexically_relative(root);
@@ -79,6 +104,42 @@ AssetManager::~AssetManager()
 {
     Thread::RequireMain();
     impl_->jobs.Wait(impl_->group);
+}
+void AssetManager::Mount(std::string name, std::filesystem::path root)
+{
+    Thread::RequireMain();
+    if (name.empty() || name.find("://") != std::string::npos)
+        throw std::invalid_argument("invalid asset mount name");
+    if (root.empty())
+        throw std::invalid_argument("asset mount root cannot be empty");
+
+    auto canonical = std::filesystem::weakly_canonical(root);
+    auto [it, inserted] = impl_->mounts.emplace(std::move(name), std::move(canonical));
+    if (!inserted)
+        throw std::runtime_error("asset mount already exists: " + it->first);
+}
+void AssetManager::Unmount(const std::string &name)
+{
+    Thread::RequireMain();
+    Wait();
+    const std::string prefix = name + "://";
+    for (const auto &[key, entry] : impl_->entries)
+        if (key.rfind(prefix, 0) == 0)
+            throw std::runtime_error("cannot unmount asset root while mounted assets are registered: " + name);
+    impl_->mounts.erase(name);
+}
+bool AssetManager::HasMount(const std::string &name) const
+{
+    Thread::RequireMain();
+    return impl_->mounts.find(name) != impl_->mounts.end();
+}
+std::filesystem::path AssetManager::MountedRoot(const std::string &name) const
+{
+    Thread::RequireMain();
+    auto found = impl_->mounts.find(name);
+    if (found == impl_->mounts.end())
+        return {};
+    return found->second;
 }
 void AssetManager::Request(const std::string &path, AssetType type)
 {
