@@ -42,7 +42,8 @@ class CityStreetWorld final : public IGameWorld
 
     float cameraYaw_ = 0.0f;
     float cameraPitch_ = 18.0f;
-    float playerYaw_ = 180.0f;
+    // Joel's authored forward axis is +X, while PlagC gameplay forward is -Z at yaw 0.
+    float playerYaw_ = 90.0f;
     bool cursorCaptured_ = true;
     bool jumpQueued_ = false;
     bool reloadQueued_ = false;
