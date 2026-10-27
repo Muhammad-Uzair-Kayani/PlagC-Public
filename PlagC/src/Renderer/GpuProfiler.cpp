@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include <PlagC/GpuProfiler.h>
+#ifdef PC_ENABLE_PROFILING
 #ifndef PC_OGRE_NULL_ONLY
 #include <GL/gl3w.h>
 #endif
@@ -30,7 +31,6 @@ GpuProfiler::GpuProfiler(RendererBackend backend) : impl_(std::make_unique<Impl>
 #ifndef PC_OGRE_NULL_ONLY
     if (backend == RendererBackend::OpenGL)
     {
-        // Ogre's GL3+ loader is initialized before Renderer creates this object.
         if (glGenQueries && glQueryCounter && glGetQueryObjectiv && glGetQueryObjectui64v)
         {
             for (auto &slot : p.slots)
@@ -61,7 +61,6 @@ void GpuProfiler::BeginFrame()
     p.latest.valid = false;
 #ifndef PC_OGRE_NULL_ONLY
     if (!p.latest.supported || p.backend != RendererBackend::OpenGL) return;
-    // Read an old query only when the driver says it is ready. Never wait for the GPU here.
     for (auto &slot : p.slots)
     {
         if (!slot.pending) continue;
@@ -80,7 +79,6 @@ void GpuProfiler::BeginFrame()
         slot.pending = false;
     }
     auto &slot = p.slots[p.write];
-    // If the GPU is more than RingSize frames behind, skip this sample rather than stalling.
     if (!slot.pending)
     {
         glQueryCounter(slot.begin, GL_TIMESTAMP);
@@ -105,3 +103,4 @@ GpuFrameTiming GpuProfiler::Latest() const
     return impl_->latest;
 }
 } // namespace PlagC
+#endif // PC_ENABLE_PROFILING
