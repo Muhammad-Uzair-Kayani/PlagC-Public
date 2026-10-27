@@ -25,15 +25,15 @@ struct GpuProfiler::Impl
     };
     RendererBackend backend=RendererBackend::Null;std::array<Slot,RingSize> slots{};std::uint32_t write=0;std::uint64_t frame=0;GpuFrameTiming latest{};
 };
-namespace { GpuProfiler::Impl* active=nullptr; }
+namespace { GpuProfiler* active=nullptr; }
 GpuProfiler::GpuProfiler(RendererBackend backend):impl_(std::make_unique<Impl>()){auto&p=*impl_;p.backend=backend;
 #ifndef PC_OGRE_NULL_ONLY
-if(backend==RendererBackend::OpenGL&&glGenQueries&&glQueryCounter&&glGetQueryObjectiv&&glGetQueryObjectui64v&&glFenceSync&&glClientWaitSync){for(auto&slot:p.slots){glGenQueries(1,&slot.begin);glGenQueries(1,&slot.end);for(auto&q:slot.passes){glGenQueries(1,&q.begin);glGenQueries(1,&q.end);}}p.latest.supported=true;active=&p;}
+if(backend==RendererBackend::OpenGL&&glGenQueries&&glQueryCounter&&glGetQueryObjectiv&&glGetQueryObjectui64v&&glFenceSync&&glClientWaitSync){for(auto&slot:p.slots){glGenQueries(1,&slot.begin);glGenQueries(1,&slot.end);for(auto&q:slot.passes){glGenQueries(1,&q.begin);glGenQueries(1,&q.end);}}p.latest.supported=true;active=this;}
 #endif
 }
 GpuProfiler::~GpuProfiler(){
 #ifndef PC_OGRE_NULL_ONLY
-if(impl_&&active==impl_.get())active=nullptr;if(impl_&&impl_->latest.supported&&impl_->backend==RendererBackend::OpenGL)for(auto&slot:impl_->slots){if(slot.fence)glDeleteSync(slot.fence);if(slot.begin)glDeleteQueries(1,&slot.begin);if(slot.end)glDeleteQueries(1,&slot.end);for(auto&q:slot.passes){if(q.begin)glDeleteQueries(1,&q.begin);if(q.end)glDeleteQueries(1,&q.end);}}
+if(active==this)active=nullptr;if(impl_&&impl_->latest.supported&&impl_->backend==RendererBackend::OpenGL)for(auto&slot:impl_->slots){if(slot.fence)glDeleteSync(slot.fence);if(slot.begin)glDeleteQueries(1,&slot.begin);if(slot.end)glDeleteQueries(1,&slot.end);for(auto&q:slot.passes){if(q.begin)glDeleteQueries(1,&q.begin);if(q.end)glDeleteQueries(1,&q.end);}}
 #endif
 }
 void GpuProfiler::BeginFrame(){auto&p=*impl_;++p.frame;p.latest.valid=false;p.latest.outstandingFrames=0;
@@ -48,14 +48,14 @@ if(!p.latest.supported||p.backend!=RendererBackend::OpenGL)return;auto&slot=p.sl
 }
 void GpuProfiler::BeginPass(GpuPass pass){
 #ifndef PC_OGRE_NULL_ONLY
-if(!active||active->backend!=RendererBackend::OpenGL||!active->latest.supported)return;auto&slot=active->slots[active->write];if(!slot.started||slot.pending)return;auto&q=slot.passes[static_cast<std::size_t>(pass)];if(q.issued)return;glQueryCounter(q.begin,GL_TIMESTAMP);
+if(!active)return;auto&p=*active->impl_;if(p.backend!=RendererBackend::OpenGL||!p.latest.supported)return;auto&slot=p.slots[p.write];if(!slot.started||slot.pending)return;auto&q=slot.passes[static_cast<std::size_t>(pass)];if(q.issued)return;glQueryCounter(q.begin,GL_TIMESTAMP);
 #else
 (void)pass;
 #endif
 }
 void GpuProfiler::EndPass(GpuPass pass){
 #ifndef PC_OGRE_NULL_ONLY
-if(!active||active->backend!=RendererBackend::OpenGL||!active->latest.supported)return;auto&slot=active->slots[active->write];if(!slot.started||slot.pending)return;auto&q=slot.passes[static_cast<std::size_t>(pass)];if(q.issued)return;glQueryCounter(q.end,GL_TIMESTAMP);q.issued=true;
+if(!active)return;auto&p=*active->impl_;if(p.backend!=RendererBackend::OpenGL||!p.latest.supported)return;auto&slot=p.slots[p.write];if(!slot.started||slot.pending)return;auto&q=slot.passes[static_cast<std::size_t>(pass)];if(q.issued)return;glQueryCounter(q.end,GL_TIMESTAMP);q.issued=true;
 #else
 (void)pass;
 #endif
