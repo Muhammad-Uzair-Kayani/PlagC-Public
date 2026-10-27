@@ -29,7 +29,12 @@ share the weapon pose, with different camera/movement behavior.
 
 Weapon weight rises over 0.10 s and falls over 0.18 s. Held fire keeps it raised
 between shots; a 0.28 s grace period after the last shot prevents tap-fire pumping.
-Reload, hit and death suppress the weapon layer and cancel pending recoil.
+Reload now plays on the same masked upper-body layer while locomotion continues.
+Its sample time is normalized to Weapon::ReloadDuration (2.1 seconds), so changing
+movement cannot restart it. Reload suppresses recoil. Aim/reload transitions use
+0.12-second crossfades from the displayed upper-body pose, including interrupted
+fades; reload completion returns directly to aim or fades the layer down to idle.
+Hit and death suppress the weapon layer.
 Hit, Land, Jump, Reload and Death clips do not loop. Base-state crossfades can be
 interrupted from their current blended pose instead of waiting out stale input.
 
@@ -37,7 +42,8 @@ interrupted from their current blended pose instead of waiting out stale input.
 
 `bash Scripts/TestWeaponAnimation.sh Assets/Cooked/TPS/Human.plasset` checks both
 rigs: repeated shots, ADS toggles, release grace, suppression, unchanged lower-body
-poses/clocks, finite matrices, and zero-time continuity when interrupting a fade.
+poses/clocks, finite matrices, reload without leg interruption, and zero-time continuity when
+interrupting both body and weapon-action fades.
 It requires the pinned Ozz library from the existing asset test build.
 `bash Scripts/TestTPS.sh` covers the existing gameplay regression suite.
 

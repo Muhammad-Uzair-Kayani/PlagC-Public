@@ -74,6 +74,39 @@ void TestRig(const char *path, const char *rootName)
         layered.Update(state, 0);
         Check(Difference(readySpine, layered.Pose()[root]) > .001f,
               "recoil did not affect the weapon chain");
+        // Reload must preserve locomotion and crossfade from the displayed weapon pose.
+        unsigned actionIndex = 0;
+        for (unsigned action : {clip("Reload"), clip("Aim"), clip("Reload"), clip("Aim")})
+        {
+            auto beforeAction = std::vector<Matrix4>(layered.Pose().begin(), layered.Pose().end());
+            state.upperBody->pose.clip = action;
+            state.upperBody->pose.time = 0;
+            state.upperBody->recoilRadians = 0;
+            layered.Update(state, 0);
+            for (unsigned i = 0; i < beforeAction.size(); ++i)
+                Check(Difference(beforeAction[i], layered.Pose()[i]) < 2e-4,
+                      "weapon action transition popped");
+            // Complete one reload, then deliberately interrupt subsequent fades.
+            const unsigned frames = actionIndex++ == 0 ? 126 : 4;
+            for (unsigned frame = 0; frame < frames; ++frame)
+            {
+                state.upperBody->pose.time =
+                    action == clip("Reload")
+                        ? (frame + 1) / 126. * asset->animations[action].duration
+                        : 0;
+                plain.Update(base, 1. / 60);
+                layered.Update(state, 1. / 60);
+                for (unsigned i = 0; i < asset->skeleton.joints.size(); ++i)
+                {
+                    bool masked = false;
+                    for (int j = int(i); j >= 0; j = asset->skeleton.joints[j].parent)
+                        masked |= unsigned(j) == root;
+                    if (!masked)
+                        Check(Difference(plain.Pose()[i], layered.Pose()[i]) < 2e-4,
+                              "reload changed locomotion");
+                }
+            }
+        }
         weapon.Update(.05, false, false, false, false);
         Check(weapon.ready, "release lost hold grace");
         weapon.Update(.5, false, false, false, false);

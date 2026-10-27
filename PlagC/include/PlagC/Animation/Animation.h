@@ -41,7 +41,7 @@ class Animator
     MeshData Deform(
         unsigned mesh) const; // CPU skinning baseline; GPU skinning can replace this adapter.
   private:
-    void ApplyUpperBody(AnimatorComponent &);
+    void ApplyUpperBody(AnimatorComponent &, double dt);
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };

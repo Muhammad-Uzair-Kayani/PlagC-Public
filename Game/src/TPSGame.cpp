@@ -466,8 +466,10 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     }
     const bool fire = health_.Alive() && input.fire && weapon_.cooldown <= 0 &&
                       weapon_.reload <= 0 && hitTime_ <= 0 && weapon_.rounds;
-    const bool weaponBlocked = !health_.Alive() || weapon_.reload > 0 || hitTime_ > 0;
-    weaponAnimation_.Update(dt, input.aim, input.fire && weapon_.rounds > 0, fire, weaponBlocked);
+    const bool weaponBlocked = !health_.Alive() || hitTime_ > 0;
+    const bool reloading = weapon_.reload > 0;
+    weaponAnimation_.Update(dt, input.aim || reloading,
+                            !reloading && input.fire && weapon_.rounds > 0, fire, weaponBlocked);
     float desired = heading_;
     if (health_.Alive() && weaponAnimation_.ready)
         desired = 90 - camera_.look.yaw;
@@ -482,19 +484,18 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
         shotTime_ = .10;
     float velocity =
         std::sqrt(player.velocity.x * player.velocity.x + player.velocity.z * player.velocity.z);
-    unsigned mode = !health_.Alive()     ? 7
-                    : !player.grounded   ? 6
-                    : weapon_.reload > 0 ? 5
-                    : velocity > 5       ? 2
-                    : velocity > .2f     ? 1
-                                         : 0;
+    unsigned mode = !health_.Alive()   ? 7
+                    : !player.grounded ? 6
+                    : velocity > 5     ? 2
+                    : velocity > .2f   ? 1
+                                       : 0;
     if (human_ && health_.Alive())
     {
         if (!player.grounded)
             mode = player.velocity.y > .8f ? 6 : 9;
         else if (hitTime_ > 0)
             mode = 11;
-        else if (weapon_.reload <= 0 && weaponAnimation_.ready && velocity > .2f)
+        else if (weaponAnimation_.ready && velocity > .2f)
         {
             if (input.forward > .25f)
                 mode = input.right < -.25f  ? 19
@@ -506,13 +507,21 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
             else
                 mode = input.right < 0 ? 17 : 18;
         }
-        else if (weapon_.reload <= 0 && !weaponAnimation_.ready)
+        else if (!weaponAnimation_.ready)
             mode = landingTime_ > 0 ? 10 : velocity > 5 ? 8 : velocity > 2.4f ? 2 : mode;
     }
     auto animator = world_->Read(actor_).animator.value();
     animator.controller->SetFloat("Mode", float(mode));
     animator.upperBody->weight = weaponAnimation_.weight;
-    animator.upperBody->recoilRadians = weaponAnimation_.Recoil();
+    animator.upperBody->recoilRadians = reloading ? 0 : weaponAnimation_.Recoil();
+    const auto &weaponNode =
+        animator.controller->Graph().states[reloading && !weaponBlocked ? 5 : 3];
+    animator.upperBody->pose.clip = weaponNode.clip;
+    animator.upperBody->pose.time =
+        reloading && !weaponBlocked
+            ? std::clamp(1. - weapon_.reload / Weapon::ReloadDuration, 0., 1.) *
+                  operative_->animations[weaponNode.clip].duration
+            : 0;
     world_->SetAnimator(actor_, animator);
     phaseStart = std::chrono::steady_clock::now();
     assets_->Update(*world_, dt);

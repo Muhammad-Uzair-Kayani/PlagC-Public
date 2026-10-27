@@ -22,6 +22,9 @@ struct Animator::Impl
     std::vector<ozz::math::SoaTransform> locals, blendSource, blendTarget;
     std::vector<ozz::math::SoaTransform> lastBase, interruptedSource;
     bool interrupted = false;
+    std::vector<ozz::math::SoaTransform> lastUpper, upperSource;
+    unsigned upperClip = 0;
+    double upperFade = .12;
     std::vector<ozz::math::Float4x4> matrices;
     std::vector<Matrix4> pose;
     explicit Impl(AssetHandle<ModelAsset> a) : model(std::move(a))
@@ -144,7 +147,7 @@ void Animator::Update(AnimatorComponent &component, double dt)
     if (!component.controller)
     {
         Update(component.state, dt);
-        ApplyUpperBody(component);
+        ApplyUpperBody(component, dt);
         return;
     }
     auto &controller = *component.controller;
@@ -169,7 +172,7 @@ void Animator::Update(AnimatorComponent &component, double dt)
     if (component.fadeDuration <= 0)
     {
         Update(component.state, dt);
-        ApplyUpperBody(component);
+        ApplyUpperBody(component, dt);
         return;
     }
     auto &p = *impl_;
@@ -198,13 +201,16 @@ void Animator::Update(AnimatorComponent &component, double dt)
     p.ModelPose();
     if (weight >= 1)
         component.fadeDuration = 0;
-    ApplyUpperBody(component);
+    ApplyUpperBody(component, dt);
 }
-void Animator::ApplyUpperBody(AnimatorComponent &component)
+void Animator::ApplyUpperBody(AnimatorComponent &component, double dt)
 {
     impl_->lastBase = impl_->locals;
     if (!component.upperBody)
+    {
+        impl_->lastUpper.clear();
         return;
+    }
     auto &layer = *component.upperBody;
     if (!std::isfinite(layer.weight) || layer.weight < 0 || layer.weight > 1 ||
         !std::isfinite(layer.recoilRadians))
@@ -216,10 +222,13 @@ void Animator::ApplyUpperBody(AnimatorComponent &component)
     if (root == joints.end())
         throw std::invalid_argument("upper body root missing");
     if (layer.weight == 0)
+    {
+        p.lastUpper.clear();
         return;
+    }
     const unsigned rootIndex = unsigned(root - joints.begin());
     p.blendSource = p.locals;
-    // Hold a stable ready pose, not the source clip's raise/lower cycle.
+    // The caller supplies the weapon clock (held aim or normalized reload).
     Update(layer.pose, 0);
     p.blendTarget = p.locals;
     std::vector<ozz::math::SimdFloat4> mask(p.locals.size());
@@ -250,6 +259,34 @@ void Animator::ApplyUpperBody(AnimatorComponent &component)
             ozz::math::simd_float4::zero(), ozz::math::simd_float4::LoadPtrU(rw));
         p.blendTarget[block].rotation = p.blendTarget[block].rotation * recoil;
     }
+    // Snapshot the displayed weapon pose when changing actions, including when
+    // interrupting an existing fade. Never blend reload through an Idle state.
+    if (!p.lastUpper.empty() && p.upperClip != layer.pose.clip)
+    {
+        p.upperSource = p.lastUpper;
+        p.upperFade = 0;
+    }
+    if (p.lastUpper.empty())
+        p.upperFade = .12;
+    p.upperClip = layer.pose.clip;
+    if (p.upperFade < .12)
+    {
+        p.upperFade = std::min(.12, p.upperFade + dt);
+        const float alpha = float(p.upperFade / .12);
+        ozz::animation::BlendingJob::Layer actionLayers[2];
+        actionLayers[0].weight = 1 - alpha;
+        actionLayers[0].transform = ozz::make_span(p.upperSource);
+        actionLayers[1].weight = alpha;
+        actionLayers[1].transform = ozz::make_span(p.blendTarget);
+        ozz::animation::BlendingJob actionBlend;
+        actionBlend.layers = ozz::make_span(actionLayers);
+        actionBlend.rest_pose = p.skeleton->joint_rest_poses();
+        actionBlend.output = ozz::make_span(p.locals);
+        if (!actionBlend.Run())
+            throw std::runtime_error("weapon action blend failed");
+        p.blendTarget = p.locals;
+    }
+    p.lastUpper = p.blendTarget;
     ozz::animation::BlendingJob::Layer layers[2];
     layers[0].weight = 1;
     layers[0].transform = ozz::make_span(p.blendSource);

@@ -20,13 +20,14 @@ struct Health
 };
 struct Weapon
 {
+    static constexpr double ReloadDuration = 2.1;
     unsigned rounds = 30, reserve = 150;
     double cooldown = 0, reload = 0;
     bool Reload()
     {
         if (reload > 0 || rounds == 30 || !reserve)
             return false;
-        reload = 2.1;
+        reload = ReloadDuration;
         return true;
     }
     void Tick(double dt)
