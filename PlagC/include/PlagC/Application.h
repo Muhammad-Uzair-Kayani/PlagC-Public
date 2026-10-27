@@ -14,6 +14,8 @@ namespace PlagC
 struct EngineConfig
 {
     RendererBackend rendererBackend = RendererBackend::Auto;
+    std::string game;
+    std::string world;
     std::string performanceCSV;
     unsigned performanceWarmup = 120;
     double performanceSeconds = 60;
