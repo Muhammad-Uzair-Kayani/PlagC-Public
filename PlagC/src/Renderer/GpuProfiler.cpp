@@ -4,6 +4,8 @@
 #ifdef PC_ENABLE_PROFILING
 #ifndef PC_OGRE_NULL_ONLY
 #include <GL/gl3w.h>
+#include <OgreRoot.h>
+#include <Compositor/OgreCompositorManager2.h>
 #include <Compositor/OgreCompositorWorkspace.h>
 #include <Compositor/OgreCompositorWorkspaceListener.h>
 #include <Compositor/Pass/OgreCompositorPass.h>
@@ -83,16 +85,19 @@ struct GpuProfiler::Impl
         bool pending=false,started=false;std::uint64_t frame=0;std::array<PassQuery,GpuPassCount> passes{};
     };
     RendererBackend backend=RendererBackend::Null;std::array<Slot,RingSize> slots{};std::uint32_t write=0;std::uint64_t frame=0;GpuFrameTiming latest{};std::array<std::vector<double>,GpuPassCount> samples{};
+#ifndef PC_OGRE_NULL_ONLY
+    Ogre::CompositorManager2* compositorManager=nullptr;
+#endif
 };
 namespace{GpuProfiler*active=nullptr;}
 GpuProfiler::GpuProfiler(RendererBackend backend):impl_(std::make_unique<Impl>()){auto&p=*impl_;p.backend=backend;
 #ifndef PC_OGRE_NULL_ONLY
-if(backend==RendererBackend::OpenGL&&glGenQueries&&glQueryCounter&&glGetQueryObjectiv&&glGetQueryObjectui64v&&glFenceSync&&glClientWaitSync){for(auto&slot:p.slots){glGenQueries(1,&slot.begin);glGenQueries(1,&slot.end);for(auto&q:slot.passes){glGenQueries(1,&q.begin);glGenQueries(1,&q.end);}}p.latest.supported=true;active=this;}
+if(backend==RendererBackend::OpenGL&&glGenQueries&&glQueryCounter&&glGetQueryObjectiv&&glGetQueryObjectui64v&&glFenceSync&&glClientWaitSync){for(auto&slot:p.slots){glGenQueries(1,&slot.begin);glGenQueries(1,&slot.end);for(auto&q:slot.passes){glGenQueries(1,&q.begin);glGenQueries(1,&q.end);}}p.latest.supported=true;active=this;if(auto*root=Ogre::Root::getSingletonPtr()){p.compositorManager=root->getCompositorManager2();if(p.compositorManager)p.compositorManager->addListener(&workspaceListener);}}
 #endif
 }
 GpuProfiler::~GpuProfiler(){
 #ifndef PC_OGRE_NULL_ONLY
-if(active==this)active=nullptr;if(impl_&&impl_->latest.supported&&impl_->backend==RendererBackend::OpenGL)for(auto&slot:impl_->slots){if(slot.fence)glDeleteSync(slot.fence);if(slot.begin)glDeleteQueries(1,&slot.begin);if(slot.end)glDeleteQueries(1,&slot.end);for(auto&q:slot.passes){if(q.begin)glDeleteQueries(1,&q.begin);if(q.end)glDeleteQueries(1,&q.end);}}
+if(impl_&&impl_->compositorManager)impl_->compositorManager->removeListener(&workspaceListener);if(active==this)active=nullptr;if(impl_&&impl_->latest.supported&&impl_->backend==RendererBackend::OpenGL)for(auto&slot:impl_->slots){if(slot.fence)glDeleteSync(slot.fence);if(slot.begin)glDeleteQueries(1,&slot.begin);if(slot.end)glDeleteQueries(1,&slot.end);for(auto&q:slot.passes){if(q.begin)glDeleteQueries(1,&q.begin);if(q.end)glDeleteQueries(1,&q.end);}}
 #endif
 }
 void GpuProfiler::AttachWorkspace(void*workspace){
