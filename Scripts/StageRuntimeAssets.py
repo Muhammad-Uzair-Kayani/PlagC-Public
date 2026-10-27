@@ -2,7 +2,7 @@
 """Stage the runtime data needed by Sandbox beside a selected build output.
 
 The copy is incremental: unchanged files are left alone, changed/new files are copied,
-and stale files under the staged roots are removed.  This makes the staging step cheap
+and stale files under the staged roots are removed. This makes the staging step cheap
 enough to run on every Sandbox build, including asset-only rebuilds.
 """
 
@@ -64,6 +64,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--sentinel", type=Path)
     parser.add_argument(
         "--profile", choices=["base", "visual", "inspection"], default="visual"
     )
@@ -79,6 +80,7 @@ def main() -> int:
         or output.is_relative_to(root / "Vendor/ogre-next/Samples/Media")
     ):
         raise ValueError("Output must not overlap repository asset sources")
+
     # Preserve the paths used by RendererConfig and AssetManager so Sandbox can
     # run with its working directory set to the configuration output folder.
     verify(root, args.profile, args.asset)
@@ -88,6 +90,15 @@ def main() -> int:
     for directory in ["Hlms", "models"]:
         sync_tree(root / media / directory, output / media / directory)
     verify(output, args.profile, args.asset)
+
+    # Visual Studio's custom-build rule declares this file as its output. Create
+    # it only after staging and verification succeed, so MSBuild never reports a
+    # successful command with a missing declared output.
+    if args.sentinel is not None:
+        sentinel = args.sentinel.resolve()
+        sentinel.parent.mkdir(parents=True, exist_ok=True)
+        sentinel.touch()
+
     return 0
 
 
