@@ -57,8 +57,8 @@ project "RuntimeAssets"
     files { "Scripts/StageRuntimeAssets.py" }
     filter "files:Scripts/StageRuntimeAssets.py"
         buildmessage "Verifying and staging runtime assets"
-        buildcommands { 'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root .. '" --output "%{cfg.targetdir}"' }
-        -- Never created: asset-only builds must run preflight/staging as well.
+        buildcommands { 'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root .. '" --output "%{cfg.targetdir}" --sentinel "%{cfg.objdir}/runtime-assets.always"' }
+        -- The staging script touches this only after verification succeeds.
         buildoutputs { "%{cfg.objdir}/runtime-assets.always" }
     filter {}
 project "PlagC"
