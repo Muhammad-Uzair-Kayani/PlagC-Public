@@ -39,7 +39,7 @@ workspace "PlagC"
         filter {}
     end
 function common()
-    local suffix = (_OPTIONS["null-platform"] and "-null" or "") .. (_OPTIONS["sanitize"] and ("-" .. _OPTIONS["sanitize"]) or "")
+    local suffix = (_OPTIONS["null-platform"] and "-null" or "") .. (_OPTIONS["sanitize"] and ("-" .. _OPTIONS["sanitize"] or ""))
     targetdir (root .. "/Bin" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}")
     objdir (root .. "/Bin-Int" .. suffix .. "/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}")
 end
@@ -91,9 +91,21 @@ project "Sandbox"
     filter "toolset:msc*"
         disablewarnings { "4324" }
     filter {}
-    files { "Sandbox/src/**.cpp", "Sandbox/src/**.h", "Game/src/**.cpp", "Game/src/**.h" }
+    files {
+        "Sandbox/src/**.cpp", "Sandbox/src/**.h",
+        "Game/src/**.cpp", "Game/src/**.h",
+        "Game/Framework/**.cpp", "Game/Framework/**.h",
+        "Game/Default/**.cpp", "Game/Default/**.h",
+        "Game/SurvivalGame/**.cpp", "Game/SurvivalGame/**.h"
+    }
     enginePch("Sandbox/src/pgcpch.cpp")
-    includedirs { "PlagC/include", "Game/src" }
+    includedirs {
+        "PlagC/include",
+        "Game/src",
+        "Game/Framework",
+        "Game/Default",
+        "Game/SurvivalGame"
+    }
     links { "PlagC", "GLFW", "spdlog", "Jolt", "Ozz", "OpenAL" }
     filter "system:linux"
         linkoptions { "-Wl,-rpath,'$$ORIGIN'" }
@@ -116,7 +128,7 @@ project "Sandbox"
         links { "pthread", "dl", "m" }
     filter "system:macosx"
         links { "Cocoa.framework", "IOKit.framework", "CoreFoundation.framework" }
-    filter "files:Game/src/**.cpp"
+    filter "files:Game/**.cpp"
         defines { "PC_TPS_VISUAL_MAX" }
     filter {}
 
