@@ -25,9 +25,11 @@ class CityStreetWorld final : public IGameWorld
     std::unique_ptr<PlagC::AssetScene> assetScene_;
     std::unique_ptr<PlagC::SceneRenderer> sceneRenderer_;
 
+    PlagC::AssetHandle<PlagC::ModelAsset> playerAsset_;
     PlagC::CharacterHandle character_;
     PlagC::Entity environment_;
     PlagC::Entity player_;
+    PlagC::Entity pistol_;
     PlagC::Entity jeep_;
     PlagC::Entity grass_;
     PlagC::Entity vegetation_;
@@ -43,5 +45,13 @@ class CityStreetWorld final : public IGameWorld
     float playerYaw_ = 180.0f;
     bool cursorCaptured_ = true;
     bool jumpQueued_ = false;
+    bool reloadQueued_ = false;
+    bool fireQueued_ = false;
+    bool crouched_ = false;
+    int rounds_ = 12;
+    int reserve_ = 48;
+    double shotCooldown_ = 0.0;
+    double reloadTime_ = 0.0;
+    double fireAnimationTime_ = 0.0;
 };
 } // namespace PlagCGame
