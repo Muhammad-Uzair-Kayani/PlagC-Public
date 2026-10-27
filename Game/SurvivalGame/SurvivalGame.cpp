@@ -1,6 +1,7 @@
 #include "pgcpch.h"
 #include "SurvivalGame.h"
 #include "Worlds/CityStreetWorld.h"
+#include "Worlds/RigValidationWorld.h"
 #include <algorithm>
 #include <filesystem>
 #include <stdexcept>
@@ -13,6 +14,8 @@ std::unique_ptr<IGameWorld> CreateWorld(std::string_view name, const PlagC::Engi
 {
     if (name == "CityStreet")
         return std::make_unique<CityStreetWorld>(config);
+    if (name == "RigValidation")
+        return std::make_unique<RigValidationWorld>();
     return {};
 }
 } // namespace
@@ -65,35 +68,17 @@ void SurvivalGame::Start(PlagC::Engine &engine, const PlagC::EngineConfig &confi
     {
         if (world_)
         {
-            try
-            {
-                world_->Stop(engine);
-            }
-            catch (...)
-            {
-            }
+            try { world_->Stop(engine); } catch (...) {}
             world_.reset();
         }
         if (manifest_)
         {
-            try
-            {
-                manifest_->UnloadAll(engine.Assets());
-            }
-            catch (...)
-            {
-            }
+            try { manifest_->UnloadAll(engine.Assets()); } catch (...) {}
             manifest_.reset();
         }
         if (gameAssetsMounted_)
         {
-            try
-            {
-                engine.Assets().Unmount("Game");
-            }
-            catch (...)
-            {
-            }
+            try { engine.Assets().Unmount("Game"); } catch (...) {}
             gameAssetsMounted_ = false;
         }
         activeWorld_.clear();
