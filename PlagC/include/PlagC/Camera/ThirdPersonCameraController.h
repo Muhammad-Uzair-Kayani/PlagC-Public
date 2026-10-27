@@ -12,6 +12,8 @@ class ThirdPersonCameraController
     CameraDesc Update(PhysicsSystem &physics, Vec3 pivot, bool aim, double dt)
     {
         if (!std::isfinite(dt) || dt < 0) throw std::invalid_argument("invalid camera timestep");
+        // The supplied pivot is the gameplay/world character position for this frame.
+        LatencyProfiler::OnWorldTransform();
         look.pitch = std::clamp(look.pitch, -65.f, 65.f);
         auto f = look.Forward(); constexpr float r = 3.14159265f / 180;
         Vec3 right{-std::sin(look.yaw * r), 0, std::cos(look.yaw * r)};
