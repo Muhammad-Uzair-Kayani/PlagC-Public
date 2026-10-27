@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include <PlagC/Application.h>
+#include <PlagC/GpuProfiler.h>
 #include <PlagC/Thread.h>
 #include <PlagC/PerformanceCapture.h>
 int main(int argc, char **argv)
@@ -38,6 +39,7 @@ int main(int argc, char **argv)
         if(!std::isfinite(config.performanceSeconds)||config.performanceSeconds<=0||config.performanceSeconds>3600)throw std::invalid_argument("performance duration must be in (0, 3600] seconds");
         const auto bootStart=std::chrono::steady_clock::now(); PlagC::Engine engine(config); auto application=PlagC::CreateApplication(config); if(!application)throw std::runtime_error("CreateApplication returned null");
         struct Drain{PlagC::JobSystem&jobs;~Drain(){jobs.Shutdown();}}drain{engine.Jobs()};
+        PlagC::GpuProfiler gpuProfiler(engine.Graphics().Backend());
         PlagC::PerformanceCapture capture(config.performanceCSV,config.performanceWarmup,config.performanceSeconds);
         const auto loadStart=std::chrono::steady_clock::now();application->OnStart(engine);const auto ready=std::chrono::steady_clock::now();
         capture.Startup(std::chrono::duration<double,std::milli>(loadStart-bootStart).count(),std::chrono::duration<double,std::milli>(ready-loadStart).count(),config.workers,config.physicsWorkers,config.physicsScheduler,config.headless||config.nullPlatform||config.offscreen);
@@ -48,10 +50,10 @@ int main(int argc, char **argv)
             const auto frameStart=std::chrono::steady_clock::now();auto*window=engine.MainWindow();if(window)window->Poll();engine.Events().Pump();const auto pollEnd=std::chrono::steady_clock::now();if(window&&window->ShouldClose())break;
             const auto now=std::chrono::steady_clock::now();engine.Assets().Pump();const auto assetEnd=std::chrono::steady_clock::now();engine.timings={};PlagC::DetailedTimings()={};
             const auto updateStart=std::chrono::steady_clock::now();application->OnFrame(engine,std::chrono::duration<double>(now-previous).count());const auto updateEnd=std::chrono::steady_clock::now();
-            engine.Graphics().Render(std::chrono::duration<double>(now-previous).count());const auto renderEnd=std::chrono::steady_clock::now();previous=now;engine.PaceFrame(frameStart);const auto frameEnd=std::chrono::steady_clock::now();
-            const auto renderStats=engine.Graphics().Statistics();const double updateMs=ms(updateEnd-updateStart);const double knownGameMs=engine.timings.physicsMs+engine.timings.animationMs+engine.timings.syncMs+engine.timings.landscapeMs+engine.timings.audioMs+engine.timings.hudMs;
+            gpuProfiler.BeginFrame();engine.Graphics().Render(std::chrono::duration<double>(now-previous).count());gpuProfiler.EndFrame();const auto renderEnd=std::chrono::steady_clock::now();previous=now;engine.PaceFrame(frameStart);const auto frameEnd=std::chrono::steady_clock::now();
+            const auto renderStats=engine.Graphics().Statistics();const auto gpu=gpuProfiler.Latest();const double updateMs=ms(updateEnd-updateStart);const double knownGameMs=engine.timings.physicsMs+engine.timings.animationMs+engine.timings.syncMs+engine.timings.landscapeMs+engine.timings.audioMs+engine.timings.hudMs;
             auto detail=PlagC::DetailedTimings();
-            PlagC::FrameProfile profile;profile.frameMs=ms(frameEnd-frameStart);profile.pollEventsMs=ms(pollEnd-frameStart);profile.assetPumpMs=ms(assetEnd-pollEnd);profile.gameUpdateMs=updateMs;profile.physicsMs=engine.timings.physicsMs;profile.animationMs=engine.timings.animationMs;profile.sceneSyncMs=engine.timings.syncMs;profile.landscapeMs=engine.timings.landscapeMs;profile.audioMs=engine.timings.audioMs;profile.hudMs=engine.timings.hudMs;profile.gameOtherMs=std::max(0.0,updateMs-knownGameMs);profile.renderSubmitMs=ms(renderEnd-updateEnd);profile.rendererCpuMs=renderStats.cpuMilliseconds;profile.pacingMs=ms(frameEnd-renderEnd);profile.unaccountedMs=std::max(0.0,profile.frameMs-profile.pollEventsMs-profile.assetPumpMs-profile.gameUpdateMs-profile.renderSubmitMs-profile.pacingMs);profile.animation=detail.animation;profile.animation.otherMs=std::max(0.0,profile.animationMs-profile.animation.poseMs-profile.animation.skinningMs-profile.animation.uploadMs);profile.renderer=detail.renderer;profile.renderer.renderFrameMs=renderStats.cpuMilliseconds;profile.renderer.otherMs=std::max(0.0,profile.renderSubmitMs-profile.renderer.renderFrameMs);profile.render=renderStats;
+            PlagC::FrameProfile profile;profile.frameMs=ms(frameEnd-frameStart);profile.pollEventsMs=ms(pollEnd-frameStart);profile.assetPumpMs=ms(assetEnd-pollEnd);profile.gameUpdateMs=updateMs;profile.physicsMs=engine.timings.physicsMs;profile.animationMs=engine.timings.animationMs;profile.sceneSyncMs=engine.timings.syncMs;profile.landscapeMs=engine.timings.landscapeMs;profile.audioMs=engine.timings.audioMs;profile.hudMs=engine.timings.hudMs;profile.gameOtherMs=std::max(0.0,updateMs-knownGameMs);profile.renderSubmitMs=ms(renderEnd-updateEnd);profile.rendererCpuMs=renderStats.cpuMilliseconds;profile.pacingMs=ms(frameEnd-renderEnd);profile.unaccountedMs=std::max(0.0,profile.frameMs-profile.pollEventsMs-profile.assetPumpMs-profile.gameUpdateMs-profile.renderSubmitMs-profile.pacingMs);profile.animation=detail.animation;profile.animation.otherMs=std::max(0.0,profile.animationMs-profile.animation.poseMs-profile.animation.skinningMs-profile.animation.uploadMs);profile.renderer=detail.renderer;profile.renderer.renderFrameMs=renderStats.cpuMilliseconds;profile.renderer.otherMs=std::max(0.0,profile.renderSubmitMs-profile.renderer.renderFrameMs);profile.gpuSupported=gpu.supported;profile.gpuValid=gpu.valid;profile.gpuTotalMs=gpu.totalMs;profile.gpuLatencyFrames=gpu.latencyFrames;profile.render=renderStats;
             engine.Profile().Submit(profile);
             if(engine.Profile().ConsumePublished())
             {
@@ -74,8 +76,11 @@ int main(int argc, char **argv)
                     <<"|  `- Other               "<<p.gameOtherMs<<" ms\n"
                     <<"`- Renderer               "<<p.renderSubmitMs<<" ms | P99 "<<p.renderP99Ms<<" | Max "<<p.renderMaxMs<<"\n"
                     <<"   |- Ogre renderOneFrame "<<p.renderer.renderFrameMs<<" ms\n"
-                    <<"   `- Wrapper/Other       "<<p.renderer.otherMs<<" ms\n"
-                    <<"NOTE: Ogre renderOneFrame is CPU wall time and may include driver/GPU wait; it is not a GPU timestamp.\n"
+                    <<"   `- Wrapper/Other       "<<p.renderer.otherMs<<" ms\n";
+                if(p.gpuSupported&&p.gpuValid)out<<"GPU\n`- Frame                  "<<p.gpuTotalMs<<" ms | P99 "<<p.gpuP99Ms<<" | Max "<<p.gpuMaxMs<<" | Samples "<<p.gpuSamples<<" | Query latency "<<p.gpuLatencyFrames<<" frames\n";
+                else if(p.gpuSupported)out<<"GPU\n`- Frame                  waiting for asynchronous timestamp results\n";
+                else out<<"GPU\n`- Frame                  unsupported by active backend\n";
+                out<<"NOTE: GPU Frame uses asynchronous hardware timestamps and never waits for query completion.\n"
                     <<"RENDER STATS | Draws "<<p.render.drawCalls<<" | Tri "<<p.render.triangles<<" | Inst "<<p.render.instances<<" | Obj "<<p.render.objects<<" | Lights "<<p.render.lights;
                 engine.Logger().Write(PlagC::Severity::Info,"PROFILER",out.str());
             }
