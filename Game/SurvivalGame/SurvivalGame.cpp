@@ -9,10 +9,10 @@ namespace PlagCGame
 {
 namespace
 {
-std::unique_ptr<IGameWorld> CreateWorld(std::string_view name)
+std::unique_ptr<IGameWorld> CreateWorld(std::string_view name, const PlagC::EngineConfig &config)
 {
     if (name == "CityStreet")
-        return std::make_unique<CityStreetWorld>();
+        return std::make_unique<CityStreetWorld>(config);
     return {};
 }
 } // namespace
@@ -54,7 +54,7 @@ void SurvivalGame::Start(PlagC::Engine &engine, const PlagC::EngineConfig &confi
                               "Loaded " + std::to_string(manifest_->Assets().size()) +
                                   " assets for world " + activeWorld_);
 
-        world_ = CreateWorld(activeWorld_);
+        world_ = CreateWorld(activeWorld_, config);
         if (world_)
             world_->Start(engine);
         else
@@ -109,8 +109,6 @@ void SurvivalGame::Frame(PlagC::Engine &engine, double dt)
 
 void SurvivalGame::Stop(PlagC::Engine &engine)
 {
-    // Renderer/world objects borrow handles from the loaded asset snapshots, so the
-    // selected world must release its entities/resources before the manifest unloads.
     if (world_)
     {
         world_->Stop(engine);
