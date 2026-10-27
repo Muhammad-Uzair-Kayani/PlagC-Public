@@ -29,10 +29,7 @@ class CityStreetWorld final : public IGameWorld
     PlagC::CharacterHandle character_;
     PlagC::Entity environment_;
     PlagC::Entity player_;
-    PlagC::Entity pistol_;
     PlagC::Entity jeep_;
-    PlagC::Entity grass_;
-    PlagC::Entity vegetation_;
     PlagC::Entity camera_;
     PlagC::Entity sun_;
 
@@ -40,19 +37,11 @@ class CityStreetWorld final : public IGameWorld
     PlagC::EventBus::Connection focus_;
     PlagC::EventBus::Connection mouse_;
 
+    unsigned requestedClip_ = 0;
+    unsigned activeClip_ = ~0u;
     float cameraYaw_ = 0.0f;
     float cameraPitch_ = 18.0f;
-    // Joel's authored forward axis is +X, while PlagC gameplay forward is -Z at yaw 0.
-    float playerYaw_ = 90.0f;
     bool cursorCaptured_ = true;
     bool jumpQueued_ = false;
-    bool reloadQueued_ = false;
-    bool fireQueued_ = false;
-    bool crouched_ = false;
-    int rounds_ = 12;
-    int reserve_ = 48;
-    double shotCooldown_ = 0.0;
-    double reloadTime_ = 0.0;
-    double fireAnimationTime_ = 0.0;
 };
 } // namespace PlagCGame
