@@ -14,12 +14,12 @@ workspace "PlagC"
             buildoptions { "/utf-8", "/permissive-", "/Zc:__cplusplus" }
     filter "configurations:Debug"
         symbols "On"
-        defines { "PC_DEBUG" }
+        defines { "PC_DEBUG", "PC_ENABLE_PROFILING" }
         runtime "Debug"
     filter "configurations:Release"
         optimize "Speed"
         symbols "On"
-        defines { "NDEBUG" }
+        defines { "NDEBUG", "PC_ENABLE_PROFILING" }
         runtime "Release"
         filter { "configurations:Release", "toolset:msc*" }
             buildoptions { "/O2" }
