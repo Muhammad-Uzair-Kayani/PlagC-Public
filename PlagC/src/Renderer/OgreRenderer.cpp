@@ -312,6 +312,7 @@ Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::ma
 #endif
     }
     p.root->initialise(false);
+    p.root->getRenderSystem()->setMetricsRecordingEnabled(true);
     Ogre::NameValuePairList options;
     options["vsync"] = "true";
     if (!config.nullBackend && !config.offscreen)
@@ -992,6 +993,9 @@ void Renderer::Render(double dt)
             o.animation->addTime(float(std::min(dt, .25)) * o.speed);
     if (!p.root->renderOneFrame())
         throw std::runtime_error("Ogre stopped rendering");
+    const auto &metrics = p.root->getRenderSystem()->getMetrics();
+    p.stats.drawCalls = metrics.mDrawCount;
+    p.stats.triangles = metrics.mFaceCount;
     ++p.stats.frames;
     p.stats.cpuMilliseconds =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();

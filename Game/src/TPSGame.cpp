@@ -356,6 +356,7 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
 {
     if (!std::isfinite(dt) || dt < 0)
         throw std::invalid_argument("invalid TPS timestep");
+    const double measuredFrameMs = dt * 1000;
     dt = std::min(dt, .1);
     weapon_.Tick(dt);
     shotTime_ = std::max(0., shotTime_ - dt);
@@ -372,7 +373,10 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     if (!health_.Alive())
         move = {};
     physics_->SetCharacterInput(character_, move, input.jump && health_.Alive());
+    auto phaseStart = std::chrono::steady_clock::now();
     physics_->Advance(dt);
+    e.timings.physicsMs = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - phaseStart).count();
     auto player = Player();
     fallPeak_ = std::max(fallPeak_, player.position.y);
     if (player.grounded)
@@ -419,7 +423,10 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     auto animator = world_->Read(actor_).animator.value();
     animator.controller->SetFloat("Mode", float(mode));
     world_->SetAnimator(actor_, animator);
+    phaseStart = std::chrono::steady_clock::now();
     assets_->Update(*world_, dt);
+    e.timings.animationMs = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - phaseStart).count();
     animation_ = world_->Read(actor_).animator->controller->Current().name;
     if (fire)
         Shoot(e);
@@ -428,7 +435,10 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     auto door = world_->ReadTransform(door_);
     door.position.x = doorSlide_;
     world_->SetTransform(door_, door);
+    phaseStart = std::chrono::steady_clock::now();
     scene_->Sync(*world_, physics_->Presentation());
+    e.timings.syncMs = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - phaseStart).count();
     e.Graphics().SetCamera(view_);
     e.Graphics().SetVisible(flash_, shotTime_ > 0);
     if (e.Audio().Available())
@@ -455,8 +465,13 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
         if (!health_.Alive())
             text << "\nDOWN - REDEPLOYING";
         if (stats_)
-            text << "\nENTITIES " << world_->Size() << "  FRAME MS " << int(dt * 1000)
+        {
+            const auto render = e.Graphics().Statistics();
+            text << "\nDRAWS " << render.drawCalls << "  TRIANGLES " << render.triangles
+                 << "  RENDER CPU MS " << int(render.cpuMilliseconds);
+            text << "\nENTITIES " << world_->Size() << "  FRAME MS " << int(measuredFrameMs)
                  << "  F11 FPS LOCK " << e.IsFPSLocked();
+        }
         hud_.Update(e.Graphics(), text.str());
     }
     float aspect = 16.f / 9;

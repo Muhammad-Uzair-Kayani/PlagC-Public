@@ -12,6 +12,9 @@ namespace PlagC
 {
 struct EngineConfig
 {
+    std::string performanceCSV;
+    unsigned performanceWarmup = 120;
+    double performanceSeconds = 60;
     bool headless = false, nullPlatform = false, offscreen = false;
     bool audioEnabled = true, assetDemo = true;
     unsigned workers = 0, frameLimit = 0, physicsWorkers = 2;
@@ -27,6 +30,10 @@ class Engine
   public:
     explicit Engine(const EngineConfig &);
     ~Engine();
+    struct SystemTimings
+    {
+        double physicsMs = 0, animationMs = 0, syncMs = 0;
+    } timings; // Owner-thread diagnostics, reset before each application frame.
     Log &Logger()
     {
         return logger_;

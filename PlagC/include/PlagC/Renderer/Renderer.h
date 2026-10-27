@@ -105,6 +105,7 @@ struct RenderStats
     std::size_t objects = 0, meshes = 0, materials = 0, lights = 0;
     double cpuMilliseconds = 0;
     std::size_t textures = 0;
+    std::size_t drawCalls = 0, triangles = 0; // Ogre metrics across all rendered passes.
 };
 struct RendererConfig
 {
