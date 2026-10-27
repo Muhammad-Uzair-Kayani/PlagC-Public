@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include <PlagC/Input/Input.h>
+#include <PlagC/LatencyProfiler.h>
 #include <PlagC/Thread.h>
 namespace PlagC {
 void InputState::BeginFrame() { delta_ = {}; scroll_ = {}; }
@@ -31,9 +32,9 @@ void InputState::Apply(const Event& e) {
     if (e.type == EventType::MouseScrolled) { scroll_.x += e.x; scroll_.y += e.y; }
 }
 InputState Input::state_;
-bool Input::IsKeyPressed(KeyCode k) { Thread::RequireMain(); return state_.IsKeyPressed(k); }
-bool Input::IsMouseButtonPressed(MouseCode b) { Thread::RequireMain(); return state_.IsMouseButtonPressed(b); }
+bool Input::IsKeyPressed(KeyCode k) { Thread::RequireMain(); LatencyProfiler::OnGameRead(); return state_.IsKeyPressed(k); }
+bool Input::IsMouseButtonPressed(MouseCode b) { Thread::RequireMain(); LatencyProfiler::OnGameRead(); return state_.IsMouseButtonPressed(b); }
 Vec2 Input::GetMousePosition() { Thread::RequireMain(); return state_.GetMousePosition(); }
-Vec2 Input::GetMouseDelta() { Thread::RequireMain(); return state_.GetMouseDelta(); }
+Vec2 Input::GetMouseDelta() { Thread::RequireMain(); LatencyProfiler::OnGameRead(); return state_.GetMouseDelta(); }
 Vec2 Input::GetScrollDelta() { Thread::RequireMain(); return state_.GetScrollDelta(); }
 }
