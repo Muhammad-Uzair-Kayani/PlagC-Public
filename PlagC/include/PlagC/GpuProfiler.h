@@ -12,10 +12,11 @@ struct GpuFrameTiming
     bool valid = false;
     double totalMs = 0;
     std::uint32_t latencyFrames = 0;
+    // Number of previously submitted frame fences not yet signaled when BeginFrame polls them.
+    // This is a non-blocking estimate of GPU work queued ahead, not display scan-out latency.
+    std::uint32_t outstandingFrames = 0;
 };
 #ifdef PC_ENABLE_PROFILING
-// Backend-aware, non-blocking GPU timer. BeginFrame/EndFrame must run on the render thread
-// with the graphics context current. Results are intentionally consumed several frames late.
 class GpuProfiler
 {
   public:
@@ -31,7 +32,6 @@ class GpuProfiler
     std::unique_ptr<Impl> impl_;
 };
 #else
-// Dist: compile-time no-op. No GL query objects, timestamps, polling, allocation or driver calls.
 class GpuProfiler
 {
   public:
