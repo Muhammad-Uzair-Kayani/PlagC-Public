@@ -58,7 +58,7 @@ void SurvivalGame::Start(PlagC::Engine &engine, const PlagC::EngineConfig &confi
         if (world_)
             world_->Start(engine);
         else
-            engine.Logger().Write(PlagC::Severity::Warn, "WORLD",
+            engine.Logger().Write(PlagC::Severity::Warning, "WORLD",
                                   activeWorld_ + " currently has an asset-only runtime shell");
     }
     catch (...)
