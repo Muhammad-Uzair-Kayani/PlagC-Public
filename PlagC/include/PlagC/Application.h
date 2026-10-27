@@ -6,6 +6,7 @@
 #include <PlagC/Renderer/Renderer.h>
 #include <memory>
 #include <PlagC/FrameLimiter.h>
+#include <PlagC/Profiler.h>
 #include <PlagC/Assets/AssetManager.h>
 #include <PlagC/Audio/AudioSystem.h>
 namespace PlagC
@@ -34,6 +35,7 @@ class Engine
     struct SystemTimings
     {
         double physicsMs = 0, animationMs = 0, syncMs = 0;
+        double landscapeMs = 0, audioMs = 0, hudMs = 0;
     } timings; // Owner-thread diagnostics, reset before each application frame.
     Log &Logger()
     {
@@ -59,6 +61,14 @@ class Engine
     {
         return *audio_;
     }
+    Profiler &Profile()
+    {
+        return profiler_;
+    }
+    const Profiler &Profile() const
+    {
+        return profiler_;
+    }
     Window *MainWindow()
     {
         return window_.get();
@@ -79,6 +89,7 @@ class Engine
   private:
     Log logger_;
     EventBus events_;
+    Profiler profiler_;
     std::unique_ptr<JobSystem> jobs_;
     std::unique_ptr<Window> window_;
     std::unique_ptr<Renderer> renderer_;
