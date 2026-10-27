@@ -19,6 +19,7 @@ void main()
 
     // Slight zenith lift preserves colour separation after the HDR filmic pass.
     float zenith = smoothstep(0.0, 0.8, worldDir.y);
-    vec3 sky = env * mix(vec3(1.0), vec3(0.88, 0.94, 1.08), zenith);
+    vec3 atmosphere=mix(vec3(.42,.48,.52),vec3(.08,.23,.43),zenith);
+    vec3 sky = mix(env * mix(vec3(1.0), vec3(0.88, 0.94, 1.08), zenith),atmosphere,.93);
     fragColour = vec4(sky + horizonTint + sunColour, 1.0);
 }

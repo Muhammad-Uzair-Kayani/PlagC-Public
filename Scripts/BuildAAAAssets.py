@@ -14,6 +14,7 @@ def main():
     parser.add_argument("--cooker", required=True, type=pathlib.Path)
     parser.add_argument("--asset", action="append")
     parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--rebuild", action="store_true", help="recook already validated assets")
     parser.add_argument(
         "--output",
         action="append",
@@ -50,6 +51,10 @@ def main():
         dest = asset["output"]
         out = ROOT / dest
         out.parent.mkdir(parents=True, exist_ok=True)
+        cached = receipt["models"].get(asset["slug"], {})
+        if not args.rebuild and out.is_file() and cached.get("output") == dest and cached.get("sha256") == digest(out):
+            print("Reused validated", asset["slug"], flush=True)
+            continue
         temporary = out.with_suffix(".plasset.part")
         try:
             command = [str(cooker), str(ROOT / source), str(temporary)]
@@ -81,6 +86,10 @@ def main():
         cwd=ROOT,
         check=True,
     )
+    if not args.asset:
+        subprocess.run([sys.executable, str(ROOT / "Scripts/BuildLandscapeAssets.py"),
+                        "--cooker", str(cooker)] + (["--offline"] if args.offline else [])
+                       + (["--rebuild"] if args.rebuild else []), cwd=ROOT, check=True)
     for output in args.output or []:
         subprocess.run(
             [

@@ -1,6 +1,11 @@
 #version 330 core
 uniform sampler2D sceneTexture;
 uniform float exposure;
+uniform sampler2D bloomTexture;
+uniform float bloomStrength;
+uniform sampler2D depthTexture;
+uniform float cameraNear, cameraFar, fogDensity;
+uniform vec3 fogColour;
 in vec2 texCoord;
 out vec4 fragColour;
 
@@ -36,36 +41,6 @@ vec3 fxaa(vec2 uv)
     return (sampleScene(uv - dir * 0.5) + sampleScene(uv + dir * 0.5) + c * 2.0) * 0.25;
 }
 
-vec3 bright(vec2 uv, float threshold)
-{
-    vec3 c = sampleScene(uv);
-    float b = max(max(c.r, c.g), c.b);
-    float knee = 0.55;
-    float soft = clamp((b - threshold + knee) / (2.0 * knee), 0.0, 1.0);
-    soft = soft * soft * knee;
-    float contribution = max(b - threshold, soft) / max(b, 1e-4);
-    return c * contribution;
-}
-
-// Wide multi-scale bloom from the HDR scene.  The taps intentionally span several radii:
-// tiny highlights stay sharp while lamps, emissive rails and muzzle flashes receive a soft halo.
-vec3 bloom(vec2 uv)
-{
-    vec2 px = 1.0 / vec2(textureSize(sceneTexture, 0));
-    vec3 b = bright(uv, 1.05) * 0.18;
-    const float r1 = 2.0;
-    const float r2 = 5.0;
-    const float r3 = 11.0;
-    vec2 d1 = px * r1, d2 = px * r2, d3 = px * r3;
-    b += (bright(uv + vec2( d1.x, 0), 1.05) + bright(uv + vec2(-d1.x, 0), 1.05) +
-          bright(uv + vec2(0,  d1.y), 1.05) + bright(uv + vec2(0, -d1.y), 1.05)) * 0.085;
-    b += (bright(uv + d2, 1.05) + bright(uv - d2, 1.05) +
-          bright(uv + vec2(d2.x, -d2.y), 1.05) + bright(uv + vec2(-d2.x, d2.y), 1.05)) * 0.055;
-    b += (bright(uv + vec2( d3.x, 0), 1.05) + bright(uv + vec2(-d3.x, 0), 1.05) +
-          bright(uv + vec2(0,  d3.y), 1.05) + bright(uv + vec2(0, -d3.y), 1.05)) * 0.035;
-    return b;
-}
-
 vec3 aces(vec3 x)
 {
     return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
@@ -81,7 +56,12 @@ float hash12(vec2 p)
 void main()
 {
     vec3 hdr = fxaa(texCoord);
-    hdr += bloom(texCoord) * 0.72;
+    float depth=texture(depthTexture,texCoord).r;
+    // Ogre GL3+ uses reversed Z. Reconstruct axial view distance from the depth buffer.
+    float distanceToCamera=cameraNear*cameraFar/max(cameraNear+depth*(cameraFar-cameraNear),.00001);
+    float fog=depth>.000001 ? 1.0-exp(-max(0.0,distanceToCamera-25.0)*fogDensity) : 0.0;
+    hdr=mix(hdr,fogColour,clamp(fog,0.0,.93));
+    hdr += max(texture(bloomTexture, texCoord).rgb, vec3(0)) * bloomStrength;
     hdr *= exposure;
 
     // Very small cinematic grade: preserve neutral materials but push highlights slightly warm

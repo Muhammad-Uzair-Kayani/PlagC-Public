@@ -33,6 +33,14 @@ class StagingTests(unittest.TestCase):
         (directory / "VisualTextures.lock.json").write_text(
             json.dumps({"files": [{"path": "map.jpg", "sha256": digest(texture)}]})
         )
+        human = root / "Assets/Cooked/TPS/Human.plasset"
+        human.write_bytes(b"human")
+        landscape_lock = directory / "Landscape.lock.json"
+        landscape_lock.write_text(json.dumps({"files": []}))
+        (directory / "Landscape.LICENSES.txt").write_text("CC0")
+        built = root / "Assets/Cooked/TPS/Landscape/build-receipt.json"
+        built.parent.mkdir(parents=True)
+        built.write_text(json.dumps({"lock_sha256": digest(landscape_lock), "human_sha256": digest(human)}))
         (root / RECEIPT).write_text(
             json.dumps(
                 {
@@ -89,6 +97,22 @@ class StagingTests(unittest.TestCase):
             p = root / "Assets/Manifests/AAAWorld.lock.json"
             p.write_text(p.read_text() + "\n")
             with self.assertRaisesRegex(ValueError, "different source lock"):
+                verify(root)
+
+    def test_changed_human_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.fixture(root)
+            (root / "Assets/Cooked/TPS/Human.plasset").write_bytes(b"changed")
+            with self.assertRaisesRegex(ValueError, "human changed"):
+                verify(root)
+
+    def test_missing_human_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.fixture(root)
+            (root / "Assets/Cooked/TPS/Human.plasset").unlink()
+            with self.assertRaisesRegex(ValueError, "Human/landscape"):
                 verify(root)
 
     def test_overlap_is_rejected_without_deleting_source(self):

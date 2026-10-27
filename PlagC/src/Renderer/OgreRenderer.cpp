@@ -224,14 +224,29 @@ struct Renderer::Impl
         {
             auto *node = cm->addNodeDefinition(nodeName);
             node->addTextureSourceName("WindowRT", 0, Ogre::TextureDefinitionBase::TEXTURE_INPUT);
-            node->setNumLocalTextureDefinitions(1);
+            node->setNumLocalTextureDefinitions(7);
             auto *texture = node->addTextureDefinition("HDRScene");
             texture->format = Ogre::PFG_RGBA16_FLOAT;
             auto *rtv = node->addRenderTextureView("HDRScene");
             Ogre::RenderTargetViewEntry attachment;
             attachment.textureName = "HDRScene";
             rtv->colourAttachments.push_back(attachment);
-            node->setNumTargetPass(2);
+            auto *depth = node->addTextureDefinition("HDRDepth");
+            depth->format = Ogre::PFG_D32_FLOAT;
+            rtv->depthAttachment.textureName = "HDRDepth";
+            const char *bloomTargets[]{"BloomHalf", "BloomQuarter", "BloomH", "BloomV",
+                                       "BloomFinal"};
+            for (unsigned i = 0; i < 5; ++i)
+            {
+                auto *bloom = node->addTextureDefinition(bloomTargets[i]);
+                bloom->format = Ogre::PFG_RGBA16_FLOAT;
+                bloom->widthFactor = bloom->heightFactor = (i == 0 || i == 4) ? .5f : .25f;
+                auto *view = node->addRenderTextureView(bloomTargets[i]);
+                Ogre::RenderTargetViewEntry entry;
+                entry.textureName = bloomTargets[i];
+                view->colourAttachments.push_back(entry);
+            }
+            node->setNumTargetPass(7);
             sceneTarget = node->addTargetPass("HDRScene");
             auto *pass =
                 static_cast<Ogre::CompositorPassSceneDef *>(sceneTarget->addPass(Ogre::PASS_SCENE));
@@ -240,15 +255,46 @@ struct Renderer::Impl
             pass->mStoreActionDepth = Ogre::StoreAction::Store;
             pass->mLastRQ = 199;
             pass->mShadowNode = settings.shadows ? Ogre::IdString("PlagCShadow") : Ogre::IdString();
+            const char *bloomMaterials[]{"PlagC/BloomExtract", "PlagC/BloomDownsample",
+                                         "PlagC/BloomBlurH", "PlagC/BloomBlurV",
+                                         "PlagC/BloomUpsample"};
+            const char *bloomSources[]{"HDRScene", "BloomHalf", "BloomQuarter", "BloomH",
+                                       "BloomHalf"};
+            for (unsigned i = 0; i < 5; ++i)
+            {
+                auto *target = node->addTargetPass(bloomTargets[i]);
+                auto *quad =
+                    static_cast<Ogre::CompositorPassQuadDef *>(target->addPass(Ogre::PASS_QUAD));
+                quad->mMaterialName = bloomMaterials[i];
+                quad->addQuadTextureSource(0, bloomSources[i]);
+                // Bind every active sampler explicitly, even for modes that use just sourceTexture.
+                quad->addQuadTextureSource(1, i == 4 ? "BloomV" : bloomSources[i]);
+                quad->setAllLoadActions(Ogre::LoadAction::DontCare);
+            }
+            Ogre::MaterialManager::getSingleton()
+                .getByName("PlagC/BloomExtract")
+                ->getTechnique(0)
+                ->getPass(0)
+                ->getFragmentProgramParameters()
+                ->setNamedConstant("threshold", settings.bloomThreshold);
             auto *outputTarget = node->addTargetPass("WindowRT");
             auto *tone =
                 static_cast<Ogre::CompositorPassQuadDef *>(outputTarget->addPass(Ogre::PASS_QUAD));
             tone->mMaterialName = "PlagC/ToneMap";
             tone->addQuadTextureSource(0, "HDRScene");
+            tone->addQuadTextureSource(1, "BloomFinal");
+            tone->addQuadTextureSource(2, "HDRDepth");
             tone->setAllLoadActions(Ogre::LoadAction::DontCare);
             auto material = Ogre::MaterialManager::getSingleton().getByName("PlagC/ToneMap");
             material->getTechnique(0)->getPass(0)->getFragmentProgramParameters()->setNamedConstant(
                 "exposure", settings.exposure);
+            material->getTechnique(0)->getPass(0)->getFragmentProgramParameters()->setNamedConstant(
+                "bloomStrength", settings.bloom ? settings.bloomStrength : 0.f);
+            auto fog = material->getTechnique(0)->getPass(0)->getFragmentProgramParameters();
+            fog->setNamedConstant("cameraNear", camera->getNearClipDistance());
+            fog->setNamedConstant("cameraFar", camera->getFarClipDistance());
+            fog->setNamedConstant("fogDensity", settings.fogDensity);
+            fog->setNamedConstant("fogColour", V(settings.fogColour));
             auto *overlay = static_cast<Ogre::CompositorPassSceneDef *>(
                 outputTarget->addPass(Ogre::PASS_SCENE));
             overlay->mFirstRQ = 199;
@@ -589,6 +635,11 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
     if (d.model == MaterialModel::Pbr)
     {
         auto *b = static_cast<Ogre::HlmsPbsDatablock *>(m.value);
+        Require(std::isfinite(d.alphaCutoff) && d.alphaCutoff >= 0 && d.alphaCutoff <= 1,
+                "invalid alpha cutoff");
+        b->setAlphaTest(d.alphaCutoff > 0 ? Ogre::CMPF_GREATER_EQUAL : Ogre::CMPF_ALWAYS_PASS);
+        b->setAlphaTestThreshold(d.alphaCutoff);
+        b->setTwoSidedLighting(d.doubleSided);
         b->setWorkflow(Ogre::HlmsPbsDatablock::MetallicWorkflow);
         b->setDiffuse(V(d.colour));
         b->setRoughness(std::max(.02f, d.roughness));
@@ -596,7 +647,8 @@ void Renderer::UpdateMaterial(MaterialHandle h, const MaterialDesc &d)
         b->setEmissive(V(d.emissive));
         b->setNormalMapWeight(d.normalScale);
         Ogre::HlmsSamplerblock sampler;
-        sampler.setFiltering(Ogre::TFO_TRILINEAR);
+        sampler.setFiltering(Ogre::TFO_ANISOTROPIC);
+        sampler.mMaxAnisotropy = 8;
         sampler.setAddressingMode(Ogre::TAM_WRAP);
         const Ogre::PbsTextureTypes slots[]{Ogre::PBSM_NORMAL, Ogre::PBSM_METALLIC,
                                             Ogre::PBSM_ROUGHNESS, Ogre::PBSM_DETAIL_WEIGHT,
@@ -834,6 +886,16 @@ void Renderer::SetCamera(const CameraDesc &d)
     p.camera->setFOVy(Ogre::Degree(d.fov));
     p.camera->setNearClipDistance(d.nearClip);
     p.camera->setFarClipDistance(d.farClip);
+    if (!p.nullBackend && p.settings.hdr)
+    {
+        auto parameters = Ogre::MaterialManager::getSingleton()
+                              .getByName("PlagC/ToneMap")
+                              ->getTechnique(0)
+                              ->getPass(0)
+                              ->getFragmentProgramParameters();
+        parameters->setNamedConstant("cameraNear", d.nearClip);
+        parameters->setNamedConstant("cameraFar", d.farClip);
+    }
     p.camera->setAutoAspectRatio(d.aspect == 0);
     if (d.aspect > 0)
         p.camera->setAspectRatio(d.aspect);
@@ -855,6 +917,10 @@ void Renderer::SetSettings(const RenderSettings &d)
     Thread::RequireMain();
     Require(Finite(d.background) && std::isfinite(d.exposure) && d.exposure > 0,
             "invalid render settings");
+    Require(std::isfinite(d.bloomStrength) && d.bloomStrength >= 0 &&
+                std::isfinite(d.bloomThreshold) && d.bloomThreshold > 0 &&
+                std::isfinite(d.fogDensity) && d.fogDensity >= 0 && Finite(d.fogColour),
+            "invalid bloom/fog settings");
     auto &p = *impl_;
     p.settings = d;
     for (auto &[id, m] : p.materials)
@@ -996,6 +1062,7 @@ void Renderer::Render(double dt)
     const auto &metrics = p.root->getRenderSystem()->getMetrics();
     p.stats.drawCalls = metrics.mDrawCount;
     p.stats.triangles = metrics.mFaceCount;
+    p.stats.instances = metrics.mInstanceCount;
     ++p.stats.frames;
     p.stats.cpuMilliseconds =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();

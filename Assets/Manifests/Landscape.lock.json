@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "repository": "Seyamalam/blood-league-kickoff",
+  "revision": "aa02a4e6d8337a0604d2da131bcbbeb1f01badf0",
+  "files": [
+    {
+      "path": "Assets/Source/Landscape/night-striker.glb",
+      "url": "https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/night-striker.glb",
+      "sha256": "a466828c67a4acc9b2413212ce6d9cde235e3aed9b675680c14fd9673858f118",
+      "bytes": 6465208
+    },
+    {
+      "path": "Assets/Source/Landscape/universal-animation-library.glb",
+      "url": "https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/universal-animation-library.glb",
+      "sha256": "4c748767741a3e495d89667b9a218b690ba9810b9517a12e960780e3ca72c4e9",
+      "bytes": 2714756
+    },
+    {
+      "path": "Assets/Source/Landscape/LICENSE-ANIMATIONS.txt",
+      "url": "https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/LICENSE-ANIMATIONS.txt",
+      "sha256": "6d01f55c6e4c49a2c9963e147e561945ae2c83958c8ca667d90a6bffdbfac061",
+      "bytes": 332
+    },
+    {
+      "path": "Assets/Source/Landscape/LICENSE-BASE-CHARACTERS.txt",
+      "url": "https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/LICENSE-BASE-CHARACTERS.txt",
+      "sha256": "0f4beaf0fe360a7732e58bbe3dbf60a2422367fbea60cb9ea4add968f383268e",
+      "bytes": 806
+    },
+    {
+      "path": "Assets/Textures/Landscape_Grass_Color.jpg",
+      "url": "https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/ambientcg/grass007/color.jpg",
+      "sha256": "6dd286ae898027012d9a773896607229e1802b4c13b0f4a4d47a05b01092a9c3",
+      "bytes": 1767495
+    },
+    {
+      "path": "Assets/Textures/Landscape_Grass_Normal.jpg",
+      "url": "https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/ambientcg/grass007/normal-gl.jpg",
+      "sha256": "f686c7254441a74850002c2652a1688e5dd01eb289c50957820d0b80a395b852",
+      "bytes": 2172754
+    },
+    {
+      "path": "Assets/Textures/Landscape_Grass_Roughness.jpg",
+      "url": "https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/ambientcg/grass007/roughness.jpg",
+      "sha256": "e27ef6c1a81d73fa56848f8c7ede670200ddbf02de4e8784bb42f1c4d6684366",
+      "bytes": 676747
+    },
+    {
+      "path": "Assets/Source/Landscape/LICENSE-GRASS.txt",
+      "url": "https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/ambientcg/grass007/LICENSE.txt",
+      "sha256": "a73ff15409f9718c07dba7b22d9041d6a8b74fc0aeb62ba41af0f541f5178fb9",
+      "bytes": 388
+    }
+  ]
+}

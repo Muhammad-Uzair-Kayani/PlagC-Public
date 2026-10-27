@@ -19,3 +19,7 @@ mannequin's body material with a navy uniform and attaches the rifle to the righ
 hand. It does not modify the original source files. This is a stylized humanoid,
 not a production military character. Runtime facility geometry, procedural
 material textures and synthesized audio are original PlagC project content.
+
+The default Visual Max scene now uses the Quaternius human assembled by
+`Scripts/PrepareHuman.py`; see `Assets/Manifests/Landscape.LICENSES.txt`.
+The mannequin above remains the base regression profile asset.

@@ -7,8 +7,10 @@ if errorlevel 1 (
     exit /b 1
 )
 where msbuild >nul 2>nul
+if errorlevel 1 call :FindVisualStudio
+where msbuild >nul 2>nul
 if errorlevel 1 (
-    echo ERROR: Run from a VS2022 Developer Command Prompt with MSBuild on PATH.
+    echo ERROR: MSBuild not found. Install the VS2022 Desktop development with C++ workload.
     exit /b 1
 )
 if not exist "Build\Generated\PlagC.sln" (
@@ -23,3 +25,11 @@ if errorlevel 1 exit /b 1
 echo [PlagC] Source packages, cooked models and PBR textures validated.
 echo [PlagC] Build Sandbox to verify and stage the complete runtime into its configuration folder.
 exit /b 0
+
+:FindVisualStudio
+set "PLAGC_VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%PLAGC_VSWHERE%" exit /b 1
+for /f "usebackq tokens=*" %%I in (`"%PLAGC_VSWHERE%" -latest -version "[17.0,18.0)" -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "PLAGC_VSINSTALL=%%I"
+if not defined PLAGC_VSINSTALL exit /b 1
+call "%PLAGC_VSINSTALL%\Common7\Tools\VsDevCmd.bat" -arch=x64
+exit /b %errorlevel%

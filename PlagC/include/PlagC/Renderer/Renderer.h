@@ -65,6 +65,8 @@ struct MaterialDesc
         emissiveTexture;
     Vec3 emissive{};
     float normalScale = 1;
+    float alphaCutoff = 0; // Zero is opaque; positive values enable cutout alpha testing.
+    bool doubleSided = false;
     bool overlay = false; // Immutable: no depth test/write; for camera-relative diagnostic text.
 };
 enum class LightType
@@ -89,6 +91,10 @@ struct RenderSettings
 {
     bool wireframe = false, vsync = true, shadows = true;
     bool hdr = false;
+    bool bloom = true;
+    float bloomStrength = .18f, bloomThreshold = 1.1f;
+    float fogDensity = 0;
+    Vec3 fogColour{.42f, .48f, .52f};
     float exposure = 1;
     Vec3 background{.035f, .055f, .09f};
 };
@@ -105,7 +111,8 @@ struct RenderStats
     std::size_t objects = 0, meshes = 0, materials = 0, lights = 0;
     double cpuMilliseconds = 0;
     std::size_t textures = 0;
-    std::size_t drawCalls = 0, triangles = 0; // Ogre metrics across all rendered passes.
+    std::size_t drawCalls = 0, triangles = 0,
+                instances = 0; // Ogre metrics across all rendered passes.
 };
 struct RendererConfig
 {

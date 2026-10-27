@@ -48,6 +48,7 @@ class PerformanceCapture
 #endif
         return -1; // Unsupported/unavailable, never reported as zero usage.
     }
+
   public:
     PerformanceCapture(const std::string &path, unsigned warmup, double seconds)
         : warmup_(warmup), limitMs_(seconds * 1000)
@@ -66,7 +67,8 @@ class PerformanceCapture
         csv_ << std::fixed << std::setprecision(4)
              << "frame,elapsed_ms,frame_ms,update_cpu_ms,render_cpu_ms,physics_cpu_ms,"
                 "animation_cpu_ms,sync_cpu_ms,draw_calls,triangles,objects,meshes,materials,"
-                "textures,lights,resident_mib,fps_locked,vsync,width,height,minimized,gpu_ms\n";
+                "textures,lights,render_instances,resident_mib,fps_locked,vsync,width,height,"
+                "minimized,gpu_ms\n";
     }
     void Startup(double engineMs, double sceneMs, unsigned workers, unsigned physicsWorkers,
                  const std::string &scheduler, bool synthetic)
@@ -117,11 +119,11 @@ class PerformanceCapture
         else
             samples_.push_back(frameMs);
         csv_ << ++frame_ << ',' << elapsedMs_ << ',' << frameMs << ',' << updateMs << ','
-             << s.cpuMilliseconds << ',' << physicsMs << ',' << animationMs << ',' << syncMs
-             << ',' << s.drawCalls << ',' << s.triangles << ',' << s.objects << ',' << s.meshes
-             << ',' << s.materials << ',' << s.textures << ',' << s.lights << ',' << residentMiB_
-             << ',' << locked << ',' << vsync << ',' << width << ',' << height << ',' << minimized
-             << ",NA\n";
+             << s.cpuMilliseconds << ',' << physicsMs << ',' << animationMs << ',' << syncMs << ','
+             << s.drawCalls << ',' << s.triangles << ',' << s.objects << ',' << s.meshes << ','
+             << s.materials << ',' << s.textures << ',' << s.lights << ',' << s.instances << ','
+             << residentMiB_ << ',' << locked << ',' << vsync << ',' << width << ',' << height
+             << ',' << minimized << ",NA\n";
         return elapsedMs_ >= limitMs_;
     }
     void Finish()
@@ -134,7 +136,8 @@ class PerformanceCapture
             sum += ms;
         std::sort(samples_.begin(), samples_.end());
         auto percentile = [&](double p) {
-            return samples_.empty() ? 0. : samples_[std::size_t(std::ceil(p * samples_.size())) - 1];
+            return samples_.empty() ? 0.
+                                    : samples_[std::size_t(std::ceil(p * samples_.size())) - 1];
         };
         summary_ << "recorded_frames=" << frame_ << "\nminimized_frames=" << minimized_
                  << "\nvalid_frames=" << samples_.size()

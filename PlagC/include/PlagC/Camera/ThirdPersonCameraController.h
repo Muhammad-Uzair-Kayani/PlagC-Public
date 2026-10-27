@@ -31,7 +31,7 @@ class ThirdPersonCameraController
         float scale = arm_ / distance;
         Vec3 p{pivot.x + offset.x * scale, pivot.y + offset.y * scale, pivot.z + offset.z * scale};
         fov_ += ((aim ? 48.f : 65.f) - fov_) * (1 - std::exp(-float(dt) * 12));
-        return {p, {p.x + f.x, p.y + f.y, p.z + f.z}, fov_, .05f, 200};
+        return {p, {p.x + f.x, p.y + f.y, p.z + f.z}, fov_, .05f, 600};
     }
 };
 } // namespace PlagC

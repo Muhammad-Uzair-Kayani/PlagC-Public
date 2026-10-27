@@ -47,6 +47,7 @@ void StartupDiagnostics(Engine &engine)
                               "Assets/Cooked/TPS/Crate.plasset",
                               "Assets/Cooked/TPS/Generator.plasset",
 #ifdef PC_TPS_VISUAL_MAX
+                              "Assets/Cooked/TPS/Human.plasset",
                               "Assets/Cooked/TPS/AAA/Crate.plasset",
                               "Assets/Cooked/TPS/AAA/Generator.plasset",
                               "Assets/Cooked/TPS/AAA/SecurityCamera.plasset",
@@ -102,6 +103,7 @@ void TPSGame::Capture(Engine &e, bool enabled)
 }
 void TPSGame::Start(Engine &e, const EngineConfig &config)
 {
+    renderer_ = &e.Graphics();
     StartupDiagnostics(e);
     config_ = config;
     e.SetFPSLocked(false);
@@ -115,7 +117,17 @@ void TPSGame::Start(Engine &e, const EngineConfig &config)
     doorOpen_ = false;
     fallPeak_ = 1;
     restart_ = false;
+    human_ = false;
+    actorScale_ = .82f;
+#ifdef PC_TPS_VISUAL_MAX
+    human_ = true;
+    actorScale_ = 1.f;
+    operative_ = e.Assets().Load<ModelAsset>("TPS/Human.plasset");
+#else
     operative_ = e.Assets().Load<ModelAsset>("TPS/Operative.plasset");
+#endif
+    groundedLast_ = false;
+    landingTime_ = hitTime_ = 0;
     crate_ = e.Assets().Load<ModelAsset>("TPS/Crate.plasset");
     generator_ = e.Assets().Load<ModelAsset>("TPS/Generator.plasset");
     world_ = std::make_unique<World>();
@@ -172,14 +184,25 @@ void TPSGame::Start(Engine &e, const EngineConfig &config)
 #ifdef PC_TPS_VISUAL_MAX
     DecorateAAAWorld(e);
 #endif
+    landscape_ = std::make_unique<Landscape>(e.Graphics());
+    landscape_->Build(*world_);
+    BuildSettlement(e);
     physics_->Synchronize();
     character_ = physics_->CreateCharacter({{0, 1.1f, 27}});
     actor_ = world_->Create("Operative");
-    world_->SetTransform(actor_, {{0, .2f, 27}, {0, 180, 0}, {.82f, .82f, .82f}});
+    world_->SetTransform(actor_,
+                         {{0, .2f, 27}, {0, 180, 0}, {actorScale_, actorScale_, actorScale_}});
     world_->SetModel(actor_, {operative_});
     AnimationStateMachine graph;
     graph.parameters.push_back({"Mode", AnimationParameterType::Float, 0});
-    for (const char *name : {"Idle", "Walk", "Run", "Aim", "Fire", "Reload", "Jump", "Death"})
+    std::vector<const char *> states{"Idle", "Walk",   "Run",  "Aim",
+                                     "Fire", "Reload", "Jump", "Death"};
+    if (human_)
+        states.insert(states.end(),
+                      {"Sprint", "Fall", "Land", "Hit", "Crouch", "CrouchWalk", "AimWalk", "AimRun",
+                       "AimBack", "AimLeft", "AimRight", "AimForwardLeft", "AimForwardRight",
+                       "AimBackLeft", "AimBackRight"});
+    for (const char *name : states)
     {
         auto found = std::find_if(operative_->animations.begin(), operative_->animations.end(),
                                   [&](const auto &clip) { return clip.name == name; });
@@ -222,13 +245,21 @@ void TPSGame::Start(Engine &e, const EngineConfig &config)
             if (kind == 4)
                 e.Audio().Play(sounds_.back());
         }
-    flash_ = e.Graphics().CreateObject(cube_, materials_[6]);
+    effects_ = std::make_unique<CombatEffects>(e.Graphics());
+    MaterialDesc flashMaterial;
+    flashMaterial.colour = {1, .48f, .08f};
+    flashMaterial.emissive = {18, 7, .6f};
+    materials_.push_back(e.Graphics().CreateMaterial(flashMaterial));
+    flash_ = e.Graphics().CreateObject(cube_, materials_.back());
     e.Graphics().SetVisible(flash_, false);
     e.Graphics().SetCastShadows(flash_, false);
     e.Graphics().SetEnvironment({"PlagCEnvironment.dds", true, true});
     auto settings = e.Graphics().Settings();
     settings.hdr = true;
-    settings.exposure = 1.1f;
+    settings.exposure = 1.05f;
+#ifdef PC_TPS_VISUAL_MAX
+    settings.fogDensity = .0018f;
+#endif
     e.Graphics().SetSettings(settings);
     key_ = e.Events().Subscribe(EventType::KeyPressed, [this, &e](const Event &ev) {
         switch (ev.key)
@@ -257,6 +288,16 @@ void TPSGame::Start(Engine &e, const EngineConfig &config)
         case KeyCode::F4: {
             auto s = e.Graphics().Settings();
             s.wireframe = !s.wireframe;
+            e.Graphics().SetSettings(s);
+            break;
+        }
+        case KeyCode::F6:
+            if (landscape_)
+                landscape_->CycleQuality();
+            break;
+        case KeyCode::F7: {
+            auto s = e.Graphics().Settings();
+            s.bloom = !s.bloom;
             e.Graphics().SetSettings(s);
             break;
         }
@@ -332,9 +373,12 @@ void TPSGame::Shoot(Engine &e)
     if (Length(ray) < .001f)
         return;
     ray = Scale(ray, (Length(ray) + .05f) / Length(ray));
+    effects_->Muzzle(muzzle);
     auto hit = physics_->Raycast(muzzle, ray);
     if (hit)
     {
+        const bool metal = targets_.contains(physics_->EntityFor(hit->body).value);
+        effects_->Impact(hit->position, hit->normal, metal);
         auto target = targets_.find(physics_->EntityFor(hit->body).value);
         if (target != targets_.end() && target->second.Alive())
         {
@@ -350,7 +394,7 @@ void TPSGame::Shoot(Engine &e)
             }
         }
     }
-    e.Graphics().SetTransform(flash_, {muzzle, {}, {.04f, .04f, .12f}});
+    e.Graphics().SetTransform(flash_, {muzzle, {0, heading_, 0}, {.04f, .04f, .12f}});
 }
 void TPSGame::Tick(Engine &e, double dt, const Controls &input)
 {
@@ -358,6 +402,8 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
         throw std::invalid_argument("invalid TPS timestep");
     const double measuredFrameMs = dt * 1000;
     dt = std::min(dt, .1);
+    if (effects_)
+        effects_->Update(dt);
     weapon_.Tick(dt);
     shotTime_ = std::max(0., shotTime_ - dt);
     if (health_.Alive())
@@ -366,7 +412,7 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     Vec3 f{std::cos(yaw), 0, std::sin(yaw)}, right{-f.z, 0, f.x};
     Vec3 move = Add(Scale(f, input.forward), Scale(right, input.right));
     float length = Length(move);
-    float speed = input.aim ? 2.3f : input.sprint ? 7.f : 3.7f;
+    float speed = input.aim ? 2.3f : input.walk ? 1.7f : input.sprint ? 7.f : 3.7f;
     if (length > 1)
         move = Scale(move, 1 / length);
     move = Scale(move, speed);
@@ -375,9 +421,15 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     physics_->SetCharacterInput(character_, move, input.jump && health_.Alive());
     auto phaseStart = std::chrono::steady_clock::now();
     physics_->Advance(dt);
-    e.timings.physicsMs = std::chrono::duration<double, std::milli>(
-        std::chrono::steady_clock::now() - phaseStart).count();
+    e.timings.physicsMs =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - phaseStart)
+            .count();
     auto player = Player();
+    landingTime_ = std::max(0., landingTime_ - dt);
+    hitTime_ = std::max(0., hitTime_ - dt);
+    if (player.grounded && !groundedLast_)
+        landingTime_ = .16;
+    groundedLast_ = player.grounded;
     fallPeak_ = std::max(fallPeak_, player.position.y);
     if (player.grounded)
     {
@@ -403,8 +455,9 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     else if (Length(move) > .1f)
         desired = std::atan2(move.x, move.z) / Rad;
     heading_ += std::remainder(desired - heading_, 360.f) * (1 - std::exp(-float(dt) * 15));
-    world_->SetTransform(
-        actor_, {Add(player.position, {0, -.9f, 0}), {0, heading_, 0}, {.82f, .82f, .82f}});
+    world_->SetTransform(actor_, {Add(player.position, {0, -.9f, 0}),
+                                  {0, heading_, 0},
+                                  {actorScale_, actorScale_, actorScale_}});
     view_ = camera_.Update(*physics_, Add(player.position, {0, .65f, 0}), input.aim, dt);
     const bool fire = health_.Alive() && input.fire && weapon_.cooldown <= 0 &&
                       weapon_.reload <= 0 && weapon_.rounds;
@@ -420,13 +473,32 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
                     : velocity > 5       ? 2
                     : velocity > .2f     ? 1
                                          : 0;
+    if (human_ && health_.Alive())
+    {
+        if (!player.grounded)
+            mode = player.velocity.y > .8f ? 6 : 9;
+        else if (hitTime_ > 0)
+            mode = 11;
+        else if (weapon_.reload <= 0 && shotTime_ <= 0 && input.aim && velocity > .2f)
+        {
+            if (input.forward > .25f)
+                mode = input.right < -.25f ? 19 : input.right > .25f ? 20 : 14;
+            else if (input.forward < -.25f)
+                mode = input.right < -.25f ? 21 : input.right > .25f ? 22 : 16;
+            else
+                mode = input.right < 0 ? 17 : 18;
+        }
+        else if (weapon_.reload <= 0 && shotTime_ <= 0 && !input.aim)
+            mode = landingTime_ > 0 ? 10 : velocity > 5 ? 8 : velocity > 2.4f ? 2 : mode;
+    }
     auto animator = world_->Read(actor_).animator.value();
     animator.controller->SetFloat("Mode", float(mode));
     world_->SetAnimator(actor_, animator);
     phaseStart = std::chrono::steady_clock::now();
     assets_->Update(*world_, dt);
-    e.timings.animationMs = std::chrono::duration<double, std::milli>(
-        std::chrono::steady_clock::now() - phaseStart).count();
+    e.timings.animationMs =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - phaseStart)
+            .count();
     animation_ = world_->Read(actor_).animator->controller->Current().name;
     if (fire)
         Shoot(e);
@@ -437,8 +509,11 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
     world_->SetTransform(door_, door);
     phaseStart = std::chrono::steady_clock::now();
     scene_->Sync(*world_, physics_->Presentation());
-    e.timings.syncMs = std::chrono::duration<double, std::milli>(
-        std::chrono::steady_clock::now() - phaseStart).count();
+    e.timings.syncMs =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - phaseStart)
+            .count();
+    if (landscape_)
+        landscape_->Update(view_, dt);
     e.Graphics().SetCamera(view_);
     e.Graphics().SetVisible(flash_, shotTime_ > 0);
     if (e.Audio().Available())
@@ -460,15 +535,20 @@ void TPSGame::Tick(Engine &e, double dt, const Controls &input)
         text << "OUTPOST ZERO\nHP " << int(health_.value) << "  RIFLE " << weapon_.rounds << " / "
              << weapon_.reserve << "  HITS " << hits_ << "\n";
         text << (weapon_.reload > 0 ? "RELOADING" : animation_)
-             << "\nWASD MOVE  SHIFT SPRINT  SPACE JUMP\nRMB AIM  LMB FIRE  R RELOAD\nE DOOR / "
+             << "\nWASD JOG  ALT WALK  SHIFT SPRINT  SPACE JUMP\nRMB AIM  LMB FIRE  R RELOAD\nE "
+                "DOOR / "
                 "SUPPLIES  ESC MOUSE  BACKSPACE REDEPLOY";
+        if (landscape_)
+            text << "\nF6 DETAIL " << landscape_->QualityName() << "  F7 BLOOM "
+                 << e.Graphics().Settings().bloom;
         if (!health_.Alive())
             text << "\nDOWN - REDEPLOYING";
         if (stats_)
         {
             const auto render = e.Graphics().Statistics();
-            text << "\nDRAWS " << render.drawCalls << "  TRIANGLES " << render.triangles
-                 << "  RENDER CPU MS " << int(render.cpuMilliseconds);
+            text << "\nDRAWS " << render.drawCalls << "  INSTANCES " << render.instances
+                 << "  TRIANGLES " << render.triangles << "  RENDER CPU MS "
+                 << int(render.cpuMilliseconds);
             text << "\nENTITIES " << world_->Size() << "  FRAME MS " << int(measuredFrameMs)
                  << "  F11 FPS LOCK " << e.IsFPSLocked();
         }
@@ -502,6 +582,7 @@ void TPSGame::Frame(Engine &e, double dt)
         c.forward = float(Input::IsKeyPressed(KeyCode::W)) - float(Input::IsKeyPressed(KeyCode::S));
         c.right = float(Input::IsKeyPressed(KeyCode::D)) - float(Input::IsKeyPressed(KeyCode::A));
         c.sprint = Input::IsKeyPressed(KeyCode::LeftShift);
+        c.walk = Input::IsKeyPressed(KeyCode::LeftAlt);
         c.aim = Input::IsMouseButtonPressed(MouseCode::Right);
         c.fire = Input::IsMouseButtonPressed(MouseCode::Left);
         c.jump = jump_;
@@ -516,6 +597,8 @@ void TPSGame::Stop(Engine &e)
     mouse_ = {};
     Capture(e, false);
     hud_.Clear(e.Graphics());
+    landscape_.reset();
+    effects_.reset();
     assets_.reset();
     scene_.reset();
     physics_.reset();
@@ -539,6 +622,11 @@ void TPSGame::Stop(Engine &e)
     if (fenceWire_)
         e.Graphics().DestroyMesh(fenceWire_);
     fenceWire_ = {};
+    for (auto mesh : exteriorMeshes_)
+        e.Graphics().DestroyMesh(mesh);
+    exteriorMeshes_.clear();
+    boxMeshes_.clear();
+    renderer_ = nullptr;
     if (cube_)
         e.Graphics().DestroyMesh(cube_);
     cube_ = {};

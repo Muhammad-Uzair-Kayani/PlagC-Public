@@ -6,7 +6,7 @@ if [[ ! -f Bin-Int/AssetTests/libOzz.a || ! -f Bin-Int/AssetTests/libOpenAL.so ]
 extra=(-O2)
 output=Bin-Int/PhysicsTests/tps-tests
 if [[ "${TPS_SANITIZE:-0}" == 1 ]]; then extra=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer); output=Bin-Int/PhysicsTests/tps-tests-asan; fi
-game_sources=(Game/src/TPSGame.cpp Game/src/Facility.cpp Game/src/GameHud.cpp)
+game_sources=(Game/src/TPSGame.cpp Game/src/Facility.cpp Game/src/Settlement.cpp Game/src/Landscape.cpp Game/src/CombatEffects.cpp Game/src/GameHud.cpp)
 if [[ "${TPS_VISUAL_MAX:-0}" == 1 ]]; then
     game_sources=(Game/src/*.cpp)
     extra+=(-DPC_TPS_VISUAL_MAX)

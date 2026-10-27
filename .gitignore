@@ -23,3 +23,9 @@
 /Assets/Textures/*_1k.jpg
 /Assets/Textures/SliceDiffuse.jpg
 **/__pycache__/
+
+# Reproducible landscape sources and cooked human
+/Assets/Source/Landscape/
+/Assets/Cooked/TPS/Human.plasset
+/Assets/Cooked/TPS/Landscape/
+/Assets/Textures/Landscape_Grass_*.jpg

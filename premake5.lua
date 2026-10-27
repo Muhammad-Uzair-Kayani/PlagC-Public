@@ -111,7 +111,7 @@ project "Sandbox"
         links { "pthread", "dl", "m" }
     filter "system:macosx"
         links { "Cocoa.framework", "IOKit.framework", "CoreFoundation.framework" }
-    filter "files:Game/src/TPSGame.cpp"
+    filter "files:Game/src/**.cpp"
         defines { "PC_TPS_VISUAL_MAX" }
     filter {}
 

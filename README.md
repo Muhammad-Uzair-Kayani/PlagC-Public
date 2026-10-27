@@ -139,3 +139,5 @@ superseded by TPS.md. Automated fixtures remain under `Scripts/Tests/Legacy`.
 
 Keep the generated OpenAL32.dll beside the EXE on Windows. Use Release or Dist
 for performance measurements.
+
+See [the valley expansion](Docs/ValleyScene.md) for the new human pipeline, landscape, controls, assets and VFX.

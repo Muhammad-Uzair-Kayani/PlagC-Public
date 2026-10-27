@@ -7,7 +7,32 @@ Entity TPSGame::Box(const std::string &name, Vec3 p, Vec3 size, unsigned materia
 {
     auto e = world_->Create(name);
     world_->SetTransform(e, {p, {}, size});
-    world_->SetRenderable(e, {cube_, materials_.at(material)});
+    auto &mesh = boxMeshes_[{size.x, size.y, size.z}];
+    if (!mesh)
+    {
+        auto data = MakePrimitive(Primitive::Cube);
+        for (auto &vertex : data.vertices)
+        {
+            if (std::abs(vertex.normal.y) > .5f)
+            {
+                vertex.u *= size.x * .25f;
+                vertex.v *= size.z * .25f;
+            }
+            else if (std::abs(vertex.normal.x) > .5f)
+            {
+                vertex.u *= size.z * .25f;
+                vertex.v *= size.y * .25f;
+            }
+            else
+            {
+                vertex.u *= size.x * .25f;
+                vertex.v *= size.y * .25f;
+            }
+        }
+        mesh = renderer_->CreateMesh(data);
+        exteriorMeshes_.push_back(mesh);
+    }
+    world_->SetRenderable(e, {mesh, materials_.at(material)});
     if (collision)
     {
         PhysicsComponent c;
@@ -98,7 +123,8 @@ void TPSGame::BuildFacility(Engine &)
     Box("Courtyard", {0, -.5f, 3}, {84, 1, 74}, 0);
     Box("West perimeter", {-42, 2, 3}, {1, 5, 74}, 1);
     Box("East perimeter", {42, 2, 3}, {1, 5, 74}, 1);
-    Box("South perimeter", {0, 2, 40}, {84, 5, 1}, 1);
+    Box("South perimeter west", {-24, 2, 40}, {36, 5, 1}, 1);
+    Box("South perimeter east", {24, 2, 40}, {36, 5, 1}, 1);
     for (float x : {-36.f, -18.f, 0.f, 18.f, 36.f})
     {
         Box("Courtyard bollard", {x, .75f, 32}, {.35f, 1.5f, .35f}, 2);

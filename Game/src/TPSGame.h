@@ -5,13 +5,16 @@
 #include <PlagC/Camera/ThirdPersonCameraController.h>
 #include "Combat.h"
 #include "GameHud.h"
+#include "Landscape.h"
+#include "CombatEffects.h"
 #include <unordered_map>
+#include <map>
 namespace Game
 {
 struct Controls
 {
     float forward = 0, right = 0, mouseX = 0, mouseY = 0;
-    bool sprint = false, aim = false, fire = false, jump = false;
+    bool sprint = false, aim = false, fire = false, jump = false, walk = false;
 };
 class TPSGame
 {
@@ -24,6 +27,8 @@ class TPSGame
     void Damage(float n)
     {
         health_.Damage(n);
+        if (n > 0)
+            hitTime_ = .22;
     }
     PlagC::CharacterState Player() const
     {
@@ -68,20 +73,28 @@ class TPSGame
     PlagC::CameraDesc view_;
     PlagC::MeshHandle cube_, fenceWire_;
     std::vector<PlagC::MaterialHandle> materials_;
+    std::vector<PlagC::MeshHandle> exteriorMeshes_;
+    std::map<std::array<float, 3>, PlagC::MeshHandle> boxMeshes_;
+    PlagC::Renderer *renderer_ = nullptr;
     std::vector<PlagC::TextureHandle> textures_;
     std::vector<PlagC::AudioSource> sounds_;
     std::unordered_map<std::uint64_t, Health> targets_;
     PlagC::EventBus::Connection key_, focus_, mouse_;
     GameHud hud_;
+    std::unique_ptr<Landscape> landscape_;
+    std::unique_ptr<CombatEffects> effects_;
+    void BuildSettlement(PlagC::Engine &);
     Health health_;
     Weapon weapon_;
     unsigned hits_ = 0;
     bool captured_ = false, jump_ = false, restart_ = false, doorOpen_ = false, stats_ = false;
+    float actorScale_ = .82f;
+    bool human_ = false, groundedLast_ = false;
+    double landingTime_ = 0, hitTime_ = 0;
     float heading_ = 180, doorSlide_ = 0, fallPeak_ = 0;
     double deadTime_ = 0, shotTime_ = 0, hudTime_ = 0, footTime_ = 0;
     std::string animation_ = "Idle";
     PlagC::ObjectHandle flash_;
-    PlagC::LightHandle muzzleLight_;
     void Capture(PlagC::Engine &, bool);
     void InstallVisualMaxMaterials(PlagC::Engine &);
     void LoadAAAWorldAssets(PlagC::Engine &);

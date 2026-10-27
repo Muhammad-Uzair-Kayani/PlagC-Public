@@ -10,6 +10,13 @@ fragment_program PlagC/TonePS glsl
     {
         param_named sceneTexture int 0
         param_named exposure float 1
+        param_named bloomTexture int 1
+        param_named bloomStrength float .18
+        param_named depthTexture int 2
+        param_named cameraNear float .1
+        param_named cameraFar float 1000
+        param_named fogDensity float 0
+        param_named fogColour float3 .38 .42 .40
     }
 }
 material PlagC/ToneMap
@@ -23,6 +30,148 @@ material PlagC/ToneMap
             cull_hardware none
             vertex_program_ref PlagC/ToneVS {}
             fragment_program_ref PlagC/TonePS {}
+            texture_unit { filtering bilinear }
+            texture_unit { filtering bilinear }
+            texture_unit { filtering none }
+        }
+    }
+}
+
+fragment_program PlagC/BloomExtractPS glsl
+{
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named sourceTexture int 0
+        param_named lowTexture int 1
+        param_named mode int 0
+        param_named threshold float 1.1
+    }
+}
+material PlagC/BloomExtract
+{
+    technique
+    {
+        pass
+        {
+            depth_check off
+            depth_write off
+            cull_hardware none
+            vertex_program_ref PlagC/ToneVS {}
+            fragment_program_ref PlagC/BloomExtractPS {}
+            texture_unit { filtering bilinear }
+            texture_unit { filtering bilinear }
+        }
+    }
+}
+
+fragment_program PlagC/BloomDownsamplePS glsl
+{
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named sourceTexture int 0
+        param_named lowTexture int 1
+        param_named mode int 1
+        param_named threshold float 1.1
+    }
+}
+material PlagC/BloomDownsample
+{
+    technique
+    {
+        pass
+        {
+            depth_check off
+            depth_write off
+            cull_hardware none
+            vertex_program_ref PlagC/ToneVS {}
+            fragment_program_ref PlagC/BloomDownsamplePS {}
+            texture_unit { filtering bilinear }
+            texture_unit { filtering bilinear }
+        }
+    }
+}
+
+fragment_program PlagC/BloomBlurHPS glsl
+{
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named sourceTexture int 0
+        param_named lowTexture int 1
+        param_named mode int 2
+        param_named threshold float 1.1
+    }
+}
+material PlagC/BloomBlurH
+{
+    technique
+    {
+        pass
+        {
+            depth_check off
+            depth_write off
+            cull_hardware none
+            vertex_program_ref PlagC/ToneVS {}
+            fragment_program_ref PlagC/BloomBlurHPS {}
+            texture_unit { filtering bilinear }
+            texture_unit { filtering bilinear }
+        }
+    }
+}
+
+fragment_program PlagC/BloomBlurVPS glsl
+{
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named sourceTexture int 0
+        param_named lowTexture int 1
+        param_named mode int 3
+        param_named threshold float 1.1
+    }
+}
+material PlagC/BloomBlurV
+{
+    technique
+    {
+        pass
+        {
+            depth_check off
+            depth_write off
+            cull_hardware none
+            vertex_program_ref PlagC/ToneVS {}
+            fragment_program_ref PlagC/BloomBlurVPS {}
+            texture_unit { filtering bilinear }
+            texture_unit { filtering bilinear }
+        }
+    }
+}
+
+fragment_program PlagC/BloomUpsamplePS glsl
+{
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named sourceTexture int 0
+        param_named lowTexture int 1
+        param_named mode int 4
+        param_named threshold float 1.1
+    }
+}
+material PlagC/BloomUpsample
+{
+    technique
+    {
+        pass
+        {
+            depth_check off
+            depth_write off
+            cull_hardware none
+            vertex_program_ref PlagC/ToneVS {}
+            fragment_program_ref PlagC/BloomUpsamplePS {}
+            texture_unit { filtering bilinear }
             texture_unit { filtering bilinear }
         }
     }
