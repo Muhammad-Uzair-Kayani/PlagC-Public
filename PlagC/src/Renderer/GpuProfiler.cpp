@@ -29,18 +29,18 @@ GpuPass Classify(const Ogre::CompositorPassDef*def)
     if(def->getType()==Ogre::PASS_SCENE)
     {
         const auto*s=static_cast<const Ogre::CompositorPassSceneDef*>(def);
-        return s->mFirstRQ>=199?GpuPass::Overlay:GpuPass::MainScene;
+        return s->mFirstRQ>=static_cast<Ogre::uint8>(199u)?GpuPass::Overlay:GpuPass::MainScene;
     }
     if(def->getType()!=Ogre::PASS_QUAD)return GpuPass::Count;
     const auto*q=static_cast<const Ogre::CompositorPassQuadDef*>(def);
-    const auto name=q->mMaterialName.getFriendlyText();
+    const std::string& name=q->mMaterialName;
     if(name=="PlagC/BloomExtract")return GpuPass::BloomExtract;
     if(name=="PlagC/BloomDownsample")return GpuPass::BloomDownsample;
     if(name=="PlagC/BloomBlurH")return GpuPass::BloomBlurH;
     if(name=="PlagC/BloomBlurV")return GpuPass::BloomBlurV;
     if(name=="PlagC/BloomUpsample")return GpuPass::BloomUpsample;
     if(name=="PlagC/ToneMap")return GpuPass::ToneMap;
-    if(name.starts_with("PlagC/Sky"))return GpuPass::Sky;
+    if(name.rfind("PlagC/Sky",0)==0)return GpuPass::Sky;
     return GpuPass::Count;
 }
 class WorkspaceGpuListener final:public Ogre::CompositorWorkspaceListener
@@ -59,7 +59,7 @@ public:
     void passPosExecute(Ogre::CompositorPass*pass) override
     {
         const auto p=Classify(pass?pass->getDefinition():nullptr);if(p==GpuPass::Count)return;
-        if(p==GpuPass::MainScene){if(shadow_){GpuProfiler::EndPass(GpuPass::Shadows);shadow_=false;}if(shadowEnded_)GpuProfiler::EndPass(GpuPass::MainScene);else{GpuProfiler::EndPass(GpuPass::MainScene);}scene_=shadowEnded_=false;return;}
+        if(p==GpuPass::MainScene){if(shadow_){GpuProfiler::EndPass(GpuPass::Shadows);shadow_=false;}GpuProfiler::EndPass(GpuPass::MainScene);scene_=shadowEnded_=false;return;}
         GpuProfiler::EndPass(p);
     }
 private:bool scene_=false,shadow_=false,shadowEnded_=false;
