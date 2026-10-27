@@ -39,6 +39,8 @@ class CityStreetWorld final : public IGameWorld
 
     unsigned requestedClip_ = 0;
     unsigned activeClip_ = ~0u;
+    PlagC::Vec3 playerPosition_{0.0f, 0.0f, 4.0f};
+    float playerYaw_ = 180.0f;
     float cameraYaw_ = 0.0f;
     float cameraPitch_ = 18.0f;
     bool cursorCaptured_ = true;
