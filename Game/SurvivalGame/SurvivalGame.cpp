@@ -14,28 +14,84 @@ void SurvivalGame::Start(PlagC::Engine &engine, const PlagC::EngineConfig &confi
         throw std::invalid_argument("SurvivalGame does not provide world: " + std::string(world));
 
     activeWorld_ = std::string(world);
-
     const std::filesystem::path assetRoot = config.gameAssetRoot.empty()
                                                 ? std::filesystem::path("GameAssets/SurvivalGame/Runtime")
                                                 : std::filesystem::path(config.gameAssetRoot);
-    if (!engine.Assets().HasMount("Game"))
-        engine.Assets().Mount("Game", assetRoot);
+    const std::filesystem::path manifestPath =
+        std::filesystem::path("Game/SurvivalGame/Config") / (activeWorld_ + ".assets.json");
+
+    if (!std::filesystem::is_directory(assetRoot))
+        throw std::runtime_error("SurvivalGame asset root is missing: " + assetRoot.string());
 
     engine.Logger().Write(PlagC::Severity::Info, "GAME",
                           "Starting SurvivalGame world: " + activeWorld_);
-    engine.Logger().Write(PlagC::Severity::Info, "ASSETS",
-                          "Mounted Game:// at " + engine.Assets().MountedRoot("Game").generic_string());
-    engine.Logger().Write(PlagC::Severity::Info, "ASSETS",
-                          "World manifest: Game/SurvivalGame/Config/" + activeWorld_ + ".assets.json");
+    engine.Logger().Write(PlagC::Severity::Info, "ASSET",
+                          "Mounting SurvivalGame assets: " + assetRoot.string());
+
+    try
+    {
+        engine.Assets().Mount("Game", assetRoot);
+        gameAssetsMounted_ = true;
+
+        manifest_ = WorldAssetManifest::Load(manifestPath);
+        if (manifest_->World() != activeWorld_)
+            throw std::runtime_error("manifest world mismatch: expected " + activeWorld_ +
+                                     ", got " + manifest_->World());
+
+        manifest_->LoadAll(engine.Assets());
+        engine.Logger().Write(PlagC::Severity::Info, "ASSET",
+                              "Loaded " + std::to_string(manifest_->Assets().size()) +
+                                  " assets for world " + activeWorld_);
+    }
+    catch (...)
+    {
+        if (manifest_)
+        {
+            try
+            {
+                manifest_->UnloadAll(engine.Assets());
+            }
+            catch (...)
+            {
+            }
+            manifest_.reset();
+        }
+        if (gameAssetsMounted_)
+        {
+            try
+            {
+                engine.Assets().Unmount("Game");
+            }
+            catch (...)
+            {
+            }
+            gameAssetsMounted_ = false;
+        }
+        activeWorld_.clear();
+        throw;
+    }
 }
 
 void SurvivalGame::Frame(PlagC::Engine &, double)
 {
-    // Asset manifest parsing/loading and concrete world creation are the next layer.
+    // The selected world's assets are now guaranteed ready before gameplay starts.
+    // World/entity creation is the next layer.
 }
 
 void SurvivalGame::Stop(PlagC::Engine &engine)
 {
+    if (manifest_)
+    {
+        manifest_->UnloadAll(engine.Assets());
+        manifest_.reset();
+    }
+
+    if (gameAssetsMounted_)
+    {
+        engine.Assets().Unmount("Game");
+        gameAssetsMounted_ = false;
+    }
+
     if (!activeWorld_.empty())
         engine.Logger().Write(PlagC::Severity::Info, "GAME",
                               "Stopping SurvivalGame world: " + activeWorld_);
