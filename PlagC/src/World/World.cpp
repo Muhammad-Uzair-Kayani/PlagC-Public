@@ -303,20 +303,22 @@ void World::SetAnimator(Entity e, const AnimatorComponent &c)
 {
     auto raw = impl_->Get(e);
     auto *model = impl_->registry.try_get<ModelComponent>(raw);
-    if (!model || model->asset->animations.empty() ||
-        c.state.clip >= model->asset->animations.size() || !std::isfinite(c.state.time) ||
+    const ModelAsset *clips = c.animationSource ? c.animationSource.Shared().get() :
+                                                 (model ? model->asset.Shared().get() : nullptr);
+    if (!model || !clips || clips->animations.empty() ||
+        c.state.clip >= clips->animations.size() || !std::isfinite(c.state.time) ||
         !std::isfinite(c.state.speed))
         throw std::invalid_argument("invalid animator/model binding");
     if (!std::isfinite(c.fadeElapsed) || c.fadeElapsed < 0 || !std::isfinite(c.fadeDuration) ||
         c.fadeDuration < 0)
         throw std::invalid_argument("invalid animation fade");
-    if (c.fadeDuration > 0 && (c.previous.clip >= model->asset->animations.size() ||
+    if (c.fadeDuration > 0 && (c.previous.clip >= clips->animations.size() ||
                                !std::isfinite(c.previous.time) || !std::isfinite(c.previous.speed)))
         throw std::invalid_argument("invalid previous animation state");
     if (c.upperBody)
     {
         const auto &layer = *c.upperBody;
-        if (layer.pose.clip >= model->asset->animations.size() || !std::isfinite(layer.pose.time) ||
+        if (layer.pose.clip >= clips->animations.size() || !std::isfinite(layer.pose.time) ||
             !std::isfinite(layer.pose.speed) || !std::isfinite(layer.weight) || layer.weight < 0 ||
             layer.weight > 1 || !std::isfinite(layer.recoilRadians) ||
             std::none_of(model->asset->skeleton.joints.begin(), model->asset->skeleton.joints.end(),
@@ -324,7 +326,7 @@ void World::SetAnimator(Entity e, const AnimatorComponent &c)
             throw std::invalid_argument("invalid upper body animation binding");
     }
     if (c.controller)
-        c.controller->Graph().Validate(unsigned(model->asset->animations.size()));
+        c.controller->Graph().Validate(unsigned(clips->animations.size()));
     impl_->registry.emplace_or_replace<AnimatorComponent>(raw, c);
 }
 void World::RemoveAnimator(Entity e)
