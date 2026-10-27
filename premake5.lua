@@ -58,7 +58,9 @@ project "RuntimeAssets"
     filter "files:Scripts/StageRuntimeAssets.py"
         buildmessage "Verifying and staging runtime assets"
         buildcommands { 'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root .. '" --output "%{cfg.targetdir}" --sentinel "%{cfg.objdir}/runtime-assets.always"' }
-        -- The staging script touches this only after verification succeeds.
+        -- The utility target performs the normal dependency-stage pass. Sandbox also
+        -- executes the same incremental staging script as a pre-build step so newly
+        -- added gitignored GameAssets are detected even when this sentinel is current.
         buildoutputs { "%{cfg.objdir}/runtime-assets.always" }
     filter {}
 project "PlagC"
@@ -115,6 +117,12 @@ project "Sandbox"
     ogreSystemLinks()
     debugdir "%{cfg.targetdir}"
     dependson { "RuntimeAssets" }
+    -- Always run the incremental staging pass before Sandbox builds. This is
+    -- intentionally separate from RuntimeAssets' sentinel because GameAssets is
+    -- local/gitignored content and can appear without changing any tracked input.
+    prebuildcommands {
+        'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root .. '" --output "%{cfg.targetdir}"'
+    }
     filter "system:windows"
         links { "gdi32", "user32", "shell32", "psapi" }
     filter { "system:windows", "configurations:Dist" }
