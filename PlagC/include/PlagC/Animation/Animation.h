@@ -10,6 +10,7 @@ struct AnimationState
     float speed = 1;
     bool playing = true, loop = true;
 };
+// Optional masked weapon pose. Root and descendants only; locomotion keeps its clock.
 struct AnimationUpperBody
 {
     AnimationState pose;
@@ -26,15 +27,7 @@ struct AnimatorComponent
     double fadeElapsed = 0, fadeDuration = 0;
     bool controllerStarted = false;
 };
-struct AnimatorTimings
-{
-    double stateMachineMs = 0;
-    double samplingMs = 0;
-    double localToModelMs = 0;
-    double blendingMs = 0;
-    double upperBodyMs = 0;
-    double skinningMs = 0;
-};
+// Ozz runtime state is private; one Animator per independently animated instance.
 class Animator
 {
   public:
@@ -45,8 +38,8 @@ class Animator
     void Update(AnimationState &, double dt);
     void Update(AnimatorComponent &, double dt);
     std::span<const Matrix4> Pose() const;
-    MeshData Deform(unsigned mesh) const;
-    AnimatorTimings ConsumeTimings();
+    MeshData Deform(
+        unsigned mesh) const; // CPU skinning baseline; GPU skinning can replace this adapter.
   private:
     void ApplyUpperBody(AnimatorComponent &, double dt);
     struct Impl;
