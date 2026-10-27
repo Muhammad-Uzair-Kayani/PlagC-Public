@@ -101,6 +101,7 @@ project "Sandbox"
     enginePch("Sandbox/src/pgcpch.cpp")
     includedirs {
         "PlagC/include",
+        "Vendor/rapidjson/include",
         "Game/src",
         "Game/Framework",
         "Game/Default",
