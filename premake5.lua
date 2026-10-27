@@ -107,6 +107,11 @@ project "Sandbox"
     filter { "system:windows", "configurations:Dist" }
         kind "WindowedApp"
         entrypoint "mainCRTStartup"
+        -- Dist is the distributable package. All engine/vendor code is linked
+        -- into Sandbox.exe; keep runtime data but remove linker/debug artifacts.
+        postbuildcommands {
+            'python "' .. root .. '/Scripts/PruneDistOutput.py" --output "%{cfg.targetdir}"'
+        }
     filter "system:linux"
         links { "pthread", "dl", "m" }
     filter "system:macosx"
