@@ -20,10 +20,6 @@ struct AnimationUpperBody
 };
 struct AnimatorComponent
 {
-    // Empty means animation clips come from the ModelComponent asset. When set, the
-    // animator retargets clips from this compatible skeleton onto the rendered model
-    // by joint name while preserving the rendered model's bind proportions.
-    AssetHandle<ModelAsset> animationSource;
     AnimationState state;
     std::optional<AnimationController> controller;
     std::optional<AnimationUpperBody> upperBody;
@@ -36,7 +32,6 @@ class Animator
 {
   public:
     explicit Animator(AssetHandle<ModelAsset>);
-    Animator(AssetHandle<ModelAsset> model, AssetHandle<ModelAsset> animationSource);
     ~Animator();
     Animator(const Animator &) = delete;
     Animator &operator=(const Animator &) = delete;
