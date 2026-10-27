@@ -58,14 +58,40 @@ Vec3 TransformPoint(const Matrix4 &m, Vec3 p)
             m.m[2] * p.x + m.m[6] * p.y + m.m[10] * p.z + m.m[14]};
 }
 Vec3 TransformNormal(const Matrix4 &m, Vec3 p)
-{ // inverse transpose, including nonuniform scales
-    float a = m.m[0], b = m.m[4], c = m.m[8], d = m.m[1], e = m.m[5], f = m.m[9], g = m.m[2],
-          h = m.m[6], i = m.m[10];
-    float det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
-    Require(std::abs(det) > 1e-12f, "singular normal transform");
-    Vec3 n{((e * i - f * h) * p.x + (f * g - d * i) * p.y + (d * h - e * g) * p.z) / det,
-           ((c * h - b * i) * p.x + (a * i - c * g) * p.y + (b * g - a * h) * p.z) / det,
-           ((b * f - c * e) * p.x + (c * d - a * f) * p.y + (a * e - b * d) * p.z) / det};
+{
+    // Inverse-transpose, including non-uniform scale. Use a scale-relative
+    // singularity test rather than an absolute determinant epsilon: a perfectly
+    // valid tiny uniform scale (for example 0.001 on an authored weapon joint)
+    // has a very small determinant but is not singular.
+    double a = m.m[0], b = m.m[4], c = m.m[8];
+    double d = m.m[1], e = m.m[5], f = m.m[9];
+    double g = m.m[2], h = m.m[6], i = m.m[10];
+
+    const double magnitude = std::max({std::abs(a), std::abs(b), std::abs(c),
+                                       std::abs(d), std::abs(e), std::abs(f),
+                                       std::abs(g), std::abs(h), std::abs(i)});
+    Require(magnitude > 0.0 && std::isfinite(magnitude), "singular normal transform");
+
+    const double na = a / magnitude, nb = b / magnitude, nc = c / magnitude;
+    const double nd = d / magnitude, ne = e / magnitude, nf = f / magnitude;
+    const double ng = g / magnitude, nh = h / magnitude, ni = i / magnitude;
+    const double relativeDet =
+        na * (ne * ni - nf * nh) - nb * (nd * ni - nf * ng) + nc * (nd * nh - ne * ng);
+    Require(std::abs(relativeDet) > 1e-10 && std::isfinite(relativeDet),
+            "singular normal transform");
+
+    const double det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+    Require(det != 0.0 && std::isfinite(det), "singular normal transform");
+
+    Vec3 n{float(((e * i - f * h) * p.x + (f * g - d * i) * p.y +
+                  (d * h - e * g) * p.z) /
+                 det),
+           float(((c * h - b * i) * p.x + (a * i - c * g) * p.y +
+                  (b * g - a * h) * p.z) /
+                 det),
+           float(((b * f - c * e) * p.x + (c * d - a * f) * p.y +
+                  (a * e - b * d) * p.z) /
+                 det)};
     float length = std::sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
     if (length > 1e-8f)
     {
