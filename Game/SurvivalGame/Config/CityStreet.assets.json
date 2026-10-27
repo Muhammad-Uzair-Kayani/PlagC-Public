@@ -1,0 +1,12 @@
+{
+  "world": "CityStreet",
+  "assets": [
+    "Game://Characters/Player/Joel/Joel.plasset",
+    "Game://Weapons/Pistol/Pistol.plasset",
+    "Game://Animations/UAL/UAL1_Standard.plasset",
+    "Game://Environment/CityStreet/CityStreet.plasset",
+    "Game://Environment/Props/Jeep/Jeep.plasset",
+    "Game://Environment/Vegetation/GrassPatches/GrassPatches.plasset",
+    "Game://Environment/Vegetation/GroundVegetation/GroundVegetation.plasset"
+  ]
+}
