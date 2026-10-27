@@ -26,14 +26,12 @@ unsigned Clip(const PlagC::ModelAsset &asset, std::string_view name)
 void JoelRigValidationWorld::Start(PlagC::Engine &engine)
 {
     auto joel = engine.Assets().Get<PlagC::ModelAsset>(
-        "Game://Characters/Validation/JoelRigV2/JoelRigV2.plasset");
+        "Game://Characters/Validation/JoelRigV3/JoelRigV3.plasset");
     auto ual = engine.Assets().Get<PlagC::ModelAsset>(
         "Game://Animations/UAL/UAL1_Standard.plasset");
     if (!joel || !ual)
         throw std::runtime_error("JoelRigValidation assets are not ready");
 
-    // The replacement rig is already fitted to the UAL hierarchy. Preserve Joel's
-    // fitted bind translations and apply UAL local rotation deltas only.
     PlagC::AnimationRetargetConfig config;
     config.rootTranslation = false;
     config.pelvisTranslation = false;
@@ -49,7 +47,7 @@ void JoelRigValidationWorld::Start(PlagC::Engine &engine)
     sceneRenderer_->SetProfiling(true);
 #endif
 
-    player_ = world_->Create("Joel Rig V2");
+    player_ = world_->Create("Joel Rig V3");
     world_->SetTransform(player_, {{0, 0, 0}, {0, 180, 0}, {1, 1, 1}});
     world_->SetModel(player_, {playerAsset_, true});
     PlagC::AnimatorComponent animator;
@@ -129,7 +127,7 @@ void JoelRigValidationWorld::Start(PlagC::Engine &engine)
 
     if (auto *window = engine.MainWindow())
     {
-        window->SetTitle("PlagC | Joel Rig V2 Validation");
+        window->SetTitle("PlagC | Joel Rig V3 Validation");
         window->SetCursorCaptured(true);
     }
     engine.SetFPSLocked(false);
@@ -140,7 +138,7 @@ void JoelRigValidationWorld::Start(PlagC::Engine &engine)
 
     engine.Logger().Write(
         PlagC::Severity::Info, "RIG",
-        "Joel Rig V2 ready: 1 T-pose, 2 idle, 3 walk, 4 jog, 5 crouch idle, 6 crouch walk, 7 pistol aim, 8 reload");
+        "Joel Rig V3 ready: repaired arm/hand weights, rigid fingers; 1 T-pose, 2 idle, 3 walk, 4 jog, 5 crouch idle, 6 crouch walk, 7 pistol aim, 8 reload");
 }
 
 void JoelRigValidationWorld::Frame(PlagC::Engine &engine, double dt)
@@ -165,7 +163,7 @@ void JoelRigValidationWorld::Frame(PlagC::Engine &engine, double dt)
         world_->SetAnimator(player_, animator);
         activeClip_ = requestedClip_;
         engine.Logger().Write(PlagC::Severity::Info, "RIG",
-                              "Playing Joel Rig V2 clip: " + playerAsset_->animations[activeClip_].name);
+                              "Playing Joel Rig V3 clip: " + playerAsset_->animations[activeClip_].name);
     }
 
     const float yaw = cameraYaw_ * Rad;
