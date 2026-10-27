@@ -1,3 +1,4 @@
+#include "pgcpch.h"
 #include "GameRegistry.h"
 #include <stdexcept>
 
