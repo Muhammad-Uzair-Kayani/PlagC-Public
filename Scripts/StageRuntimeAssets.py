@@ -60,6 +60,19 @@ def sync_tree(source: Path, destination: Path) -> None:
                 pass
 
 
+def sync_optional_tree(source: Path, destination: Path) -> bool:
+    """Synchronize a local-only runtime tree when present.
+
+    Missing optional sources are not an error because Default game builds do not
+    require external GameAssets. If present, the tree is staged beside Sandbox.exe
+    so game mounts resolve consistently from Visual Studio's output working directory.
+    """
+    if not source.is_dir():
+        return False
+    sync_tree(source, destination)
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", required=True, type=Path)
@@ -90,6 +103,21 @@ def main() -> int:
     for directory in ["Hlms", "models"]:
         sync_tree(root / media / directory, output / media / directory)
     verify(output, args.profile, args.asset)
+
+    # Game definitions are tracked source and must always be staged because the
+    # runtime host loads world manifests relative to the executable working directory.
+    sync_tree(
+        root / "Game" / "SurvivalGame" / "Config",
+        output / "Game" / "SurvivalGame" / "Config",
+    )
+
+    # GameAssets is intentionally gitignored. Developers may place cooked game
+    # content here; when present it is staged beside the binary without ever being
+    # added to the repository.
+    sync_optional_tree(
+        root / "GameAssets" / "SurvivalGame" / "Runtime",
+        output / "GameAssets" / "SurvivalGame" / "Runtime",
+    )
 
     # Visual Studio's custom-build rule declares this file as its output. Create
     # it only after staging and verification succeed, so MSBuild never reports a
