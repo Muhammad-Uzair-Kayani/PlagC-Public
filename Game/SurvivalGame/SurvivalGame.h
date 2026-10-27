@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Framework/Game.h"
+#include "../Framework/GameWorld.h"
 #include "../Framework/WorldAssetManifest.h"
 #include <optional>
 
@@ -22,6 +23,7 @@ class SurvivalGame final : public IGame
   private:
     std::string activeWorld_;
     std::optional<WorldAssetManifest> manifest_;
+    std::unique_ptr<IGameWorld> world_;
     bool gameAssetsMounted_ = false;
 };
 } // namespace PlagCGame
