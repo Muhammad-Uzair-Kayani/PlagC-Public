@@ -11,10 +11,12 @@ namespace PlagCGame
 namespace
 {
 constexpr float Rad = 3.14159265358979323846f / 180.0f;
-// World origin intersects authored CityStreet building geometry. Use the same
-// open-street Z position that was visible during the earlier character calibration.
-constexpr PlagC::Vec3 PlayerPosition{0.0f, 0.0f, 4.0f};
-constexpr PlagC::Vec3 CameraTarget{0.0f, 1.0f, 4.0f};
+constexpr PlagC::Vec3 InitialPlayerPosition{0.0f, 0.0f, 4.0f};
+
+float LengthXZ(PlagC::Vec3 v)
+{
+    return std::sqrt(v.x * v.x + v.z * v.z);
+}
 
 PlagC::Entity ModelEntity(PlagC::World &world, std::string name,
                           PlagC::AssetHandle<PlagC::ModelAsset> asset,
@@ -46,6 +48,8 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     playerAsset_ = joker;
     requestedClip_ = 0;
     activeClip_ = ~0u;
+    playerPosition_ = InitialPlayerPosition;
+    playerYaw_ = 180.0f;
 
     world_ = std::make_unique<PlagC::World>();
     assetScene_ = std::make_unique<PlagC::AssetScene>(engine.Graphics());
@@ -58,7 +62,7 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
                                {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}});
 
     player_ = ModelEntity(*world_, "Joker", playerAsset_,
-                          {PlayerPosition, {0, 180.0f, 0}, {1, 1, 1}});
+                          {playerPosition_, {0, playerYaw_, 0}, {1, 1, 1}});
     PlagC::AnimatorComponent animator;
     animator.state = {requestedClip_, 0, 1, true, true};
     world_->SetAnimator(player_, animator);
@@ -78,7 +82,7 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     camera_ = world_->Create("Gameplay Camera");
     world_->SetTransform(camera_, {{0.0f, 1.45f, 8.0f}, {}, {1, 1, 1}});
     PlagC::CameraComponent camera;
-    camera.target = CameraTarget;
+    camera.target = {playerPosition_.x, playerPosition_.y + 1.0f, playerPosition_.z};
     camera.fov = 55.0f;
     camera.nearClip = 0.05f;
     camera.farClip = 350.0f;
@@ -152,7 +156,7 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
         clips += std::to_string(i + 1) + "=" + playerAsset_->animations[i].name;
     }
     engine.Logger().Write(PlagC::Severity::Info, "WORLD",
-                          "CityStreet Joker native-rig test ready at open-street spawn: " + clips);
+                          "CityStreet Joker test ready: WASD move, Shift faster, mouse orbit, " + clips);
 }
 
 void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
@@ -180,17 +184,56 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
                               "Joker native clip: " + playerAsset_->animations[activeClip_].name);
     }
 
+    // Temporary collision-free navigation for finding the useful street area.
+    // Movement is camera-relative on the XZ plane.
     const float yaw = cameraYaw_ * Rad;
+    PlagC::Vec3 forward{std::sin(yaw), 0.0f, -std::cos(yaw)};
+    PlagC::Vec3 right{std::cos(yaw), 0.0f, std::sin(yaw)};
+
+    float f = 0.0f;
+    float r = 0.0f;
+    if (PlagC::Input::IsKeyPressed(PlagC::KeyCode::W)) f += 1.0f;
+    if (PlagC::Input::IsKeyPressed(PlagC::KeyCode::S)) f -= 1.0f;
+    if (PlagC::Input::IsKeyPressed(PlagC::KeyCode::D)) r += 1.0f;
+    if (PlagC::Input::IsKeyPressed(PlagC::KeyCode::A)) r -= 1.0f;
+
+    PlagC::Vec3 move{forward.x * f + right.x * r, 0.0f,
+                     forward.z * f + right.z * r};
+    const float moveLength = LengthXZ(move);
+    if (moveLength > 1.0f)
+    {
+        move.x /= moveLength;
+        move.z /= moveLength;
+    }
+
+    if (moveLength > 0.001f)
+    {
+        const bool fast = PlagC::Input::IsKeyPressed(PlagC::KeyCode::LeftShift) ||
+                          PlagC::Input::IsKeyPressed(PlagC::KeyCode::RightShift);
+        const float speed = fast ? 7.0f : 3.0f;
+        playerPosition_.x += move.x * speed * float(dt);
+        playerPosition_.z += move.z * speed * float(dt);
+
+        // Face the direction of travel. This is only calibration movement; if the
+        // source model's forward axis is reversed we can add a constant offset later.
+        const float desiredYaw = std::atan2(move.x, move.z) / Rad;
+        playerYaw_ += std::remainder(desiredYaw - playerYaw_, 360.0f) *
+                      (1.0f - std::exp(-float(dt) * 12.0f));
+    }
+
+    world_->SetTransform(player_, {playerPosition_, {0, playerYaw_, 0}, {1, 1, 1}});
+
     const float pitch = cameraPitch_ * Rad;
     const float cp = std::cos(pitch);
-    const PlagC::Vec3 direction{std::sin(yaw) * cp, std::sin(pitch), -std::cos(yaw) * cp};
+    const PlagC::Vec3 lookDirection{std::sin(yaw) * cp, std::sin(pitch), -std::cos(yaw) * cp};
+    const PlagC::Vec3 target{playerPosition_.x, playerPosition_.y + 1.0f, playerPosition_.z};
     const float distance = 4.0f;
-    const PlagC::Vec3 cameraPosition{CameraTarget.x - direction.x * distance,
-                                     CameraTarget.y - direction.y * distance,
-                                     CameraTarget.z - direction.z * distance};
+    const PlagC::Vec3 cameraPosition{target.x - lookDirection.x * distance,
+                                     target.y - lookDirection.y * distance,
+                                     target.z - lookDirection.z * distance};
     world_->SetTransform(camera_, {cameraPosition, {}, {1, 1, 1}});
     auto camera = world_->Read(camera_).camera.value();
-    camera.target = CameraTarget;
+    camera.target = target;
     world_->SetCamera(camera_, camera);
 
     assetScene_->Update(*world_, dt);
