@@ -2,6 +2,7 @@
 #include "WorldAssetManifest.h"
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -28,12 +29,14 @@ WorldAssetManifest WorldAssetManifest::Load(const std::filesystem::path &file)
 
     std::ostringstream buffer;
     buffer << input.rdbuf();
+    const std::string text = buffer.str();
 
     rapidjson::Document doc;
-    const auto result = doc.Parse(buffer.str().c_str());
-    if (!result)
+    doc.Parse(text.c_str());
+    if (doc.HasParseError())
         throw std::runtime_error("invalid world asset manifest " + file.string() + ": " +
-                                 rapidjson::GetParseError_En(result.Code()));
+                                 rapidjson::GetParseError_En(doc.GetParseError()) +
+                                 " at offset " + std::to_string(doc.GetErrorOffset()));
 
     if (!doc.IsObject() || !doc.HasMember("world") || !doc["world"].IsString() ||
         !doc.HasMember("assets") || !doc["assets"].IsArray())
