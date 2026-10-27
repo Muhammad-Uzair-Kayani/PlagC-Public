@@ -72,8 +72,7 @@ int main(int argc, char **argv)
             else
                 throw std::invalid_argument("Unknown option " + arg + ". See Docs/TPS.md.");
         }
-        if (unsigned(config.headless) + unsigned(config.nullPlatform) + unsigned(config.offscreen) >
-            1)
+        if (unsigned(config.headless) + unsigned(config.nullPlatform) + unsigned(config.offscreen) > 1)
             throw std::invalid_argument("choose one rendering mode");
         if (config.physicsWorkers > 64 || config.workers > 32 || !std::isfinite(config.physicsHz) ||
             config.physicsHz < 1 || config.physicsHz > 240)
@@ -84,11 +83,9 @@ int main(int argc, char **argv)
             throw std::invalid_argument("physics scheduler must be native or plagc");
         const unsigned hardware = std::max(1u, std::thread::hardware_concurrency());
         if (!physicsWorkersExplicit)
-            config.physicsWorkers =
-                std::min(config.physicsWorkers, hardware > 2 ? hardware - 2 : 0u);
+            config.physicsWorkers = std::min(config.physicsWorkers, hardware > 2 ? hardware - 2 : 0u);
         if (!config.workers)
-            config.workers =
-                config.physicsScheduler == "plagc" ? std::min(32u, std::max(1u, hardware - 1)) : 1u;
+            config.workers = config.physicsScheduler == "plagc" ? std::min(32u, std::max(1u, hardware - 1)) : 1u;
         if (!std::isfinite(config.performanceSeconds) || config.performanceSeconds <= 0 ||
             config.performanceSeconds > 3600)
             throw std::invalid_argument("performance duration must be in (0, 3600] seconds");
@@ -97,14 +94,10 @@ int main(int argc, char **argv)
         auto application = PlagC::CreateApplication(config);
         if (!application)
             throw std::runtime_error("CreateApplication returned null");
-        // Drain before destroying client state, including during exceptions.
         struct Drain
         {
             PlagC::JobSystem &jobs;
-            ~Drain()
-            {
-                jobs.Shutdown();
-            }
+            ~Drain() { jobs.Shutdown(); }
         } drain{engine.Jobs()};
         PlagC::PerformanceCapture capture(config.performanceCSV, config.performanceWarmup,
                                          config.performanceSeconds);
@@ -118,6 +111,7 @@ int main(int argc, char **argv)
         auto previous = std::chrono::steady_clock::now();
         auto lastMeasurementEnd = previous;
         unsigned frames = 0;
+        auto ms = [](auto duration) { return std::chrono::duration<double, std::milli>(duration).count(); };
         while (engine.Running())
         {
             const auto frameStart = std::chrono::steady_clock::now();
@@ -125,23 +119,64 @@ int main(int argc, char **argv)
             if (window)
                 window->Poll();
             engine.Events().Pump();
+            const auto pollEnd = std::chrono::steady_clock::now();
             if (window && window->ShouldClose())
                 break;
             const auto now = std::chrono::steady_clock::now();
             engine.Assets().Pump();
+            const auto assetEnd = std::chrono::steady_clock::now();
             engine.timings = {};
             const auto updateStart = std::chrono::steady_clock::now();
             application->OnFrame(engine, std::chrono::duration<double>(now - previous).count());
             const auto updateEnd = std::chrono::steady_clock::now();
             engine.Graphics().Render(std::chrono::duration<double>(now - previous).count());
+            const auto renderEnd = std::chrono::steady_clock::now();
             previous = now;
             engine.PaceFrame(frameStart);
             const auto frameEnd = std::chrono::steady_clock::now();
-            auto ms = [](auto duration) {
-                return std::chrono::duration<double, std::milli>(duration).count();
-            };
-            const bool done = capture.Frame(ms(frameEnd - lastMeasurementEnd),
-                ms(updateEnd - updateStart), engine.Graphics().Statistics(),
+            const auto renderStats = engine.Graphics().Statistics();
+            const double updateMs = ms(updateEnd - updateStart);
+            const double knownGameMs = engine.timings.physicsMs + engine.timings.animationMs +
+                                       engine.timings.syncMs + engine.timings.landscapeMs +
+                                       engine.timings.audioMs + engine.timings.hudMs;
+            PlagC::FrameProfile profile;
+            profile.frameMs = ms(frameEnd - frameStart);
+            profile.pollEventsMs = ms(pollEnd - frameStart);
+            profile.assetPumpMs = ms(assetEnd - pollEnd);
+            profile.gameUpdateMs = updateMs;
+            profile.physicsMs = engine.timings.physicsMs;
+            profile.animationMs = engine.timings.animationMs;
+            profile.sceneSyncMs = engine.timings.syncMs;
+            profile.landscapeMs = engine.timings.landscapeMs;
+            profile.audioMs = engine.timings.audioMs;
+            profile.hudMs = engine.timings.hudMs;
+            profile.gameOtherMs = std::max(0.0, updateMs - knownGameMs);
+            profile.renderSubmitMs = ms(renderEnd - updateEnd);
+            profile.rendererCpuMs = renderStats.cpuMilliseconds;
+            profile.pacingMs = ms(frameEnd - renderEnd);
+            profile.unaccountedMs = std::max(0.0, profile.frameMs - profile.pollEventsMs -
+                profile.assetPumpMs - profile.gameUpdateMs - profile.renderSubmitMs - profile.pacingMs);
+            profile.render = renderStats;
+            engine.Profile().Submit(profile);
+            if (engine.Profile().ConsumePublished())
+            {
+                const auto &p = engine.Profile().Latest();
+                std::ostringstream out;
+                out << std::fixed << std::setprecision(2)
+                    << "FPS " << p.fps << " | Frame " << p.frameMs << " ms"
+                    << " | Events " << p.pollEventsMs << " | Assets " << p.assetPumpMs
+                    << " | Game " << p.gameUpdateMs << " [Physics " << p.physicsMs
+                    << " Anim " << p.animationMs << " Sync " << p.sceneSyncMs
+                    << " Landscape " << p.landscapeMs << " Audio " << p.audioMs
+                    << " HUD " << p.hudMs << " Other " << p.gameOtherMs << "]"
+                    << " | Render " << p.renderSubmitMs << " ms (Ogre CPU " << p.rendererCpuMs << ")"
+                    << " | Pace " << p.pacingMs << " | OtherFrame " << p.unaccountedMs
+                    << " | Draws " << p.render.drawCalls << " Tri " << p.render.triangles
+                    << " Inst " << p.render.instances << " Obj " << p.render.objects
+                    << " Lights " << p.render.lights;
+                engine.Logger().Write(PlagC::Severity::Info, "PROFILER", out.str());
+            }
+            const bool done = capture.Frame(ms(frameEnd - lastMeasurementEnd), updateMs, renderStats,
                 engine.timings.physicsMs, engine.timings.animationMs, engine.timings.syncMs,
                 engine.IsFPSLocked(), engine.Graphics().Settings().vsync,
                 window ? window->Width() : 0, window ? window->Height() : 0,
@@ -152,8 +187,7 @@ int main(int argc, char **argv)
         }
         capture.Finish();
         if (!config.performanceCSV.empty())
-            engine.Logger().Write(PlagC::Severity::Info, "PERF",
-                                  "Performance capture saved: " + config.performanceCSV);
+            engine.Logger().Write(PlagC::Severity::Info, "PERF", "Performance capture saved: " + config.performanceCSV);
         engine.Jobs().Shutdown();
         application->OnStop(engine);
         return 0;
