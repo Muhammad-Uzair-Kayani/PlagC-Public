@@ -13,6 +13,9 @@
 /Docs/test-*.log
 /Docs/build-*.log
 
+# Local per-game runtime/source content. Game code/manifests are tracked; binary content is not.
+/GameAssets/
+
 # Ogre generated shader diagnostics
 /[0-9]*Shader_*.glsl
 
