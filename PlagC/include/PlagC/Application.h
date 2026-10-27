@@ -20,7 +20,10 @@ struct EngineConfig
     bool headless = false, nullPlatform = false, offscreen = false;
     bool audioEnabled = true, assetDemo = true;
     unsigned workers = 0, frameLimit = 0, physicsWorkers = 2;
-    double physicsHz = 60;
+    // Character input is sampled every render frame but consumed by the fixed
+    // simulation. 120 Hz bounds the normal fixed-step wait to ~8.33 ms while
+    // preserving Jolt as the authoritative simulation (60 Hz was ~16.67 ms).
+    double physicsHz = 120;
     std::string physicsScheduler = "native";
     unsigned stressEntities = 1000, stressSeed = 42, stressWarmup = 120;
     double stressSeconds = 600;
@@ -78,8 +81,7 @@ class Application
   public:
     virtual ~Application() = default;
     virtual void OnStart(Engine &) = 0;
-    virtual void OnFrame(Engine &, double deltaSeconds) = 0;
-    virtual void OnStop(Engine &){}
+    virtual void OnFrame(Engine &, double) = 0;
+    virtual void OnStop(Engine &) {}
 };
-std::unique_ptr<Application> CreateApplication(const EngineConfig &);
 } // namespace PlagC
