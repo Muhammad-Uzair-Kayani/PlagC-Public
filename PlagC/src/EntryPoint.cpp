@@ -1,6 +1,7 @@
 #include "pgcpch.h"
 #include <PlagC/Application.h>
 #include <PlagC/GpuProfiler.h>
+#include <PlagC/Input/InputProfiler.h>
 #include <PlagC/Thread.h>
 #include <PlagC/PerformanceCapture.h>
 int main(int argc, char **argv)
@@ -49,6 +50,7 @@ int main(int argc, char **argv)
         {
             const auto frameStart=std::chrono::steady_clock::now();auto*window=engine.MainWindow();if(window)window->Poll();engine.Events().Pump();const auto pollEnd=std::chrono::steady_clock::now();if(window&&window->ShouldClose())break;
             const auto now=std::chrono::steady_clock::now();engine.Assets().Pump();const auto assetEnd=std::chrono::steady_clock::now();engine.timings={};PlagC::DetailedTimings()={};
+            PlagC::InputProfiler::OnGameConsumePoint();
             const auto updateStart=std::chrono::steady_clock::now();application->OnFrame(engine,std::chrono::duration<double>(now-previous).count());const auto updateEnd=std::chrono::steady_clock::now();
             gpuProfiler.BeginFrame();engine.Graphics().Render(std::chrono::duration<double>(now-previous).count());gpuProfiler.EndFrame();const auto renderEnd=std::chrono::steady_clock::now();previous=now;engine.PaceFrame(frameStart);const auto frameEnd=std::chrono::steady_clock::now();
             const auto renderStats=engine.Graphics().Statistics();const auto gpu=gpuProfiler.Latest();const double updateMs=ms(updateEnd-updateStart);const double knownGameMs=engine.timings.physicsMs+engine.timings.animationMs+engine.timings.syncMs+engine.timings.landscapeMs+engine.timings.audioMs+engine.timings.hudMs;
@@ -57,8 +59,15 @@ int main(int argc, char **argv)
             engine.Profile().Submit(profile);
             if(engine.Profile().ConsumePublished())
             {
+                const auto input=PlagC::InputProfiler::ConsumeOneSecond();
                 const auto&p=engine.Profile().Latest();std::ostringstream out;out<<std::fixed<<std::setprecision(2)
                     <<"\nFRAME "<<p.frameMs<<" ms | "<<p.fps<<" FPS | P95 "<<p.frameP95Ms<<" | P99 "<<p.frameP99Ms<<" | Max "<<p.frameMaxMs<<" ms | Hitches >16.7 "<<p.hitch16Count<<" >33.3 "<<p.hitch33Count<<"\n"
+                    <<"INPUT\n"
+                    <<"|- GLFW Poll              "<<input.pollMs<<" ms | P99 "<<input.pollP99Ms<<" | Max "<<input.pollMaxMs<<"\n"
+                    <<"|- Callback -> Game       "<<input.callbackToGameAvgMs<<" ms | P99 "<<input.callbackToGameP99Ms<<" | Max "<<input.callbackToGameMaxMs<<"\n"
+                    <<"|- RELEASE -> Game        "<<input.releaseToGameAvgMs<<" ms | P99 "<<input.releaseToGameP99Ms<<" | Max "<<input.releaseToGameMaxMs<<"\n"
+                    <<"|- Transitions            "<<input.transitions<<" | Press "<<input.presses<<" | Release "<<input.releases<<" | Mouse moves "<<input.mouseMoves<<"\n"
+                    <<"`- Oldest pending         "<<input.oldestTransitionAgeMs<<" ms\n"
                     <<"CPU\n"
                     <<"|- Events                 "<<p.pollEventsMs<<" ms | P99 "<<p.eventsP99Ms<<" | Max "<<p.eventsMaxMs<<"\n"
                     <<"|- Assets                 "<<p.assetPumpMs<<" ms\n"
@@ -80,7 +89,7 @@ int main(int argc, char **argv)
                 if(p.gpuSupported&&p.gpuValid)out<<"GPU\n`- Frame                  "<<p.gpuTotalMs<<" ms | P99 "<<p.gpuP99Ms<<" | Max "<<p.gpuMaxMs<<" | Samples "<<p.gpuSamples<<" | Query latency "<<p.gpuLatencyFrames<<" frames\n";
                 else if(p.gpuSupported)out<<"GPU\n`- Frame                  waiting for asynchronous timestamp results\n";
                 else out<<"GPU\n`- Frame                  unsupported by active backend\n";
-                out<<"NOTE: GPU Frame uses asynchronous hardware timestamps and never waits for query completion.\n"
+                out<<"NOTE: INPUT callback timings begin inside the GLFW callback and end immediately before game OnFrame. GPU timestamps never wait for query completion.\n"
                     <<"RENDER STATS | Draws "<<p.render.drawCalls<<" | Tri "<<p.render.triangles<<" | Inst "<<p.render.instances<<" | Obj "<<p.render.objects<<" | Lights "<<p.render.lights;
                 engine.Logger().Write(PlagC::Severity::Info,"PROFILER",out.str());
             }
