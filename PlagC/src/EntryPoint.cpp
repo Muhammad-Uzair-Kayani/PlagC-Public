@@ -56,11 +56,11 @@ int main(int argc, char **argv)
             if(engine.Profile().ConsumePublished())
             {
                 const auto&p=engine.Profile().Latest();std::ostringstream out;out<<std::fixed<<std::setprecision(2)
-                    <<"\nFRAME "<<p.frameMs<<" ms | "<<p.fps<<" FPS\n"
+                    <<"\nFRAME "<<p.frameMs<<" ms | "<<p.fps<<" FPS | P95 "<<p.frameP95Ms<<" | P99 "<<p.frameP99Ms<<" | Max "<<p.frameMaxMs<<" ms | Hitches >16.7 "<<p.hitch16Count<<" >33.3 "<<p.hitch33Count<<"\n"
                     <<"CPU\n"
-                    <<"|- Events                 "<<p.pollEventsMs<<" ms\n"
+                    <<"|- Events                 "<<p.pollEventsMs<<" ms | P99 "<<p.eventsP99Ms<<" | Max "<<p.eventsMaxMs<<"\n"
                     <<"|- Assets                 "<<p.assetPumpMs<<" ms\n"
-                    <<"|- Game                   "<<p.gameUpdateMs<<" ms\n"
+                    <<"|- Game                   "<<p.gameUpdateMs<<" ms | P99 "<<p.gameP99Ms<<" | Max "<<p.gameMaxMs<<"\n"
                     <<"|  |- Physics             "<<p.physicsMs<<" ms\n"
                     <<"|  |- Animation           "<<p.animationMs<<" ms\n"
                     <<"|  |  |- Pose/Ozz         "<<p.animation.poseMs<<" ms\n"
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
                     <<"|  |- Audio               "<<p.audioMs<<" ms\n"
                     <<"|  |- HUD                 "<<p.hudMs<<" ms\n"
                     <<"|  `- Other               "<<p.gameOtherMs<<" ms\n"
-                    <<"`- Renderer               "<<p.renderSubmitMs<<" ms\n"
+                    <<"`- Renderer               "<<p.renderSubmitMs<<" ms | P99 "<<p.renderP99Ms<<" | Max "<<p.renderMaxMs<<"\n"
                     <<"   |- Ogre renderOneFrame "<<p.renderer.renderFrameMs<<" ms\n"
                     <<"   `- Wrapper/Other       "<<p.renderer.otherMs<<" ms\n"
                     <<"NOTE: Ogre renderOneFrame is CPU wall time and may include driver/GPU wait; it is not a GPU timestamp.\n"
