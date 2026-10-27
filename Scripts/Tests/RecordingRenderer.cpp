@@ -37,8 +37,14 @@ struct Renderer::Impl
     EnvironmentDesc environment;
     std::uint64_t frames = 0;
 };
-Renderer::Renderer(Window *, const RendererConfig &) : impl_(std::make_unique<Impl>())
+RendererBackendCapabilities Renderer::BackendCapabilities()
 {
+    return {true, false, true}; // Recording test double models the native build's choices.
+}
+Renderer::Renderer(Window *, const RendererConfig &config) : impl_(std::make_unique<Impl>())
+{
+    backend_ = ResolveRendererBackend(config.backend, BackendCapabilities(), config.nullBackend,
+                                      config.offscreen);
 }
 Renderer::~Renderer() = default;
 MeshHandle Renderer::CreateMesh(const MeshData &d, bool dynamic)

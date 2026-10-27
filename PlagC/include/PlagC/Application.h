@@ -12,6 +12,7 @@ namespace PlagC
 {
 struct EngineConfig
 {
+    RendererBackend rendererBackend = RendererBackend::Auto;
     std::string performanceCSV;
     unsigned performanceWarmup = 120;
     double performanceSeconds = 60;

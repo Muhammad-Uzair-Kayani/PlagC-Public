@@ -326,29 +326,51 @@ struct Renderer::Impl
             t.workspace = cm->addWorkspace(scene, t.value, camera, workspaceName, !nullBackend);
     }
 };
+RendererBackendCapabilities Renderer::BackendCapabilities()
+{
+#ifdef PC_OGRE_NULL_ONLY
+    return {false, false, true};
+#else
+    return {true, false, true};
+#endif
+}
 Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::make_unique<Impl>())
 {
     Thread::RequireMain();
     auto &p = *impl_;
-    p.nullBackend = config.nullBackend;
+    backend_ = ResolveRendererBackend(config.backend, BackendCapabilities(), config.nullBackend,
+                                      config.offscreen);
+    p.nullBackend = backend_ == RendererBackend::Null;
     p.offscreen = config.offscreen;
-    Require(config.nullBackend || config.offscreen || (window && window->NativeHandle().value),
+    Require(p.nullBackend || config.offscreen || (window && window->NativeHandle().value),
             "native renderer needs a native window");
     Require(std::filesystem::is_directory(config.mediaRoot + "/Hlms"),
             "Ogre media missing; initialize submodules and run from project root");
     p.root = std::make_unique<Ogre::Root>(nullptr, "", "", "Logs/Ogre.log", "PlagC");
-    if (config.nullBackend)
+    std::string systemName;
+    switch (backend_)
+    {
+    case RendererBackend::Null:
         p.plugin = std::make_unique<Ogre::NULLPlugin>();
+        systemName = "NULL Rendering Subsystem";
+        break;
 #ifndef PC_OGRE_NULL_ONLY
-    else
+    case RendererBackend::OpenGL:
         p.plugin = std::make_unique<Ogre::GL3PlusPlugin>();
-#else
-    else
-        throw std::runtime_error("native renderer excluded by --null-platform build");
+        systemName = "OpenGL 3+ Rendering Subsystem";
+        break;
 #endif
+    default:
+        throw std::runtime_error("selected backend has no Ogre adapter");
+    }
     static_cast<Ogre::DefaultWorkQueueBase *>(p.root->getWorkQueue())->setWorkerThreadCount(2);
     p.root->installPlugin(p.plugin.get(), nullptr);
-    p.root->setRenderSystem(p.root->getAvailableRenderers().front());
+    Ogre::RenderSystem *selected = nullptr;
+    for (auto *system : p.root->getAvailableRenderers())
+        if (system->getName() == systemName)
+            selected = system;
+    Require(selected != nullptr, "requested Ogre render system was not registered");
+    p.root->setRenderSystem(selected);
     if (config.offscreen)
     {
 #if defined(__linux__) && !defined(PC_OGRE_NULL_ONLY)
@@ -361,7 +383,7 @@ Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::ma
     p.root->getRenderSystem()->setMetricsRecordingEnabled(true);
     Ogre::NameValuePairList options;
     options["vsync"] = "true";
-    if (!config.nullBackend && !config.offscreen)
+    if (!p.nullBackend && !config.offscreen)
     {
         options["externalWindowHandle"] = std::to_string(window->NativeHandle().value);
 #ifdef __APPLE__
@@ -379,7 +401,7 @@ Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::ma
 
                             config.mediaRoot + "/models"})
         resources.addResourceLocation(dir, "FileSystem", "General");
-    if (!config.nullBackend)
+    if (!p.nullBackend)
         resources.addResourceLocation(config.assetsRoot + "/Shaders", "FileSystem", "General");
     resources.initialiseAllResourceGroups(true);
     p.scene = p.root->createSceneManager(Ogre::ST_GENERIC, 1, "PlagCScene");

@@ -20,6 +20,9 @@ Engine::Engine(const EngineConfig &config)
 #else
     logger_.Write(Severity::Info, "CORE", "Platform: Linux");
 #endif
+    const auto backend =
+        ResolveRendererBackend(config.rendererBackend, Renderer::BackendCapabilities(),
+                               config.headless || config.nullPlatform, config.offscreen);
     jobs_ = std::make_unique<JobSystem>(config.workers);
     logger_.Write(Severity::Info, "JOB", "Workers: " + std::to_string(jobs_->WorkerCount()));
     if (!config.headless && !config.offscreen)
@@ -29,9 +32,12 @@ Engine::Engine(const EngineConfig &config)
         window_ = std::make_unique<Window>(events_, wc);
     }
     RendererConfig rc;
-    rc.nullBackend = config.headless || config.nullPlatform;
+    rc.backend = backend;
+    rc.nullBackend = backend == RendererBackend::Null;
     rc.offscreen = config.offscreen;
     renderer_ = std::make_unique<Renderer>(window_.get(), rc);
+    logger_.Write(Severity::Info, "RENDER",
+                  std::string("Backend: ") + BackendName(renderer_->Backend()));
     assets_ = std::make_unique<AssetManager>(*jobs_);
     audio_ = std::make_unique<AudioSystem>(AudioConfig{
         config.audioEnabled && !config.headless && !config.nullPlatform && !config.offscreen, false,

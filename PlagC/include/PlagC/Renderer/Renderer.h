@@ -1,4 +1,5 @@
 #pragma once
+#include <PlagC/Renderer/Backend.h>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -118,6 +119,7 @@ struct RendererConfig
 {
     bool nullBackend = false, offscreen = false;
     std::string mediaRoot = "Vendor/ogre-next/Samples/Media", assetsRoot = "Assets";
+    RendererBackend backend = RendererBackend::Auto;
 };
 // Owner-thread API. Handles are instance-specific and never reused.
 class Renderer
@@ -125,6 +127,11 @@ class Renderer
   public:
     Renderer(Window *, const RendererConfig &);
     ~Renderer();
+    static RendererBackendCapabilities BackendCapabilities();
+    RendererBackend Backend() const
+    {
+        return backend_;
+    }
     Renderer(const Renderer &) = delete;
     Renderer &operator=(const Renderer &) = delete;
     MeshHandle CreateMesh(const MeshData &, bool dynamic = false);
@@ -167,6 +174,7 @@ class Renderer
     RenderStats Statistics() const;
 
   private:
+    RendererBackend backend_ = RendererBackend::Auto;
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };
