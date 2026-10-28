@@ -1,17 +1,14 @@
 -- Pipeline WSI presentation and acquisition across game frames.
---
--- The pinned Ogre 3.0 backend performs vkQueuePresentKHR synchronously on the game/render
--- thread and then acquires the next image in the same renderOneFrame. On the target AMD iGPU
--- vkQueuePresentKHR itself can spend ~4 ms in the Windows presentation stack. PlagC moves that
--- host wait to a dedicated presentation worker and only joins it immediately before the next
--- swapchain acquire. The paired VulkanQueuePerformance patch externally synchronizes submit
--- and present when both operations share the same VkQueue.
+-- Keep replacements fail-closed, but anchor them to Vulkan statements rather than cosmetic
+-- continuation-line whitespace in the pinned Ogre source.
 return function(source)
     source = source:gsub("\r\n", "\n")
+
     local function replace(old, new)
         local first, last = source:find(old, 1, true)
         assert(first, 'Pinned Ogre VulkanWindow changed: ' .. old)
-        assert(not source:find(old, last + 1, true), 'Ambiguous VulkanWindow performance patch: ' .. old)
+        assert(not source:find(old, last + 1, true),
+               'Ambiguous VulkanWindow performance patch: ' .. old)
         source = source:sub(1, first - 1) .. new .. source:sub(last + 1)
     end
 
@@ -82,9 +79,7 @@ return function(source)
     replace([[        uint32 minImageCount =
             std::max<uint32>( surfaceCaps.minImageCount, vaoManager->getDynamicBufferMultiplier() ) + 1;
         if( surfaceCaps.maxImageCount != 0u )
-            minImageCount = std::min<uint32>( minImageCount, surfaceCaps.maxImageCount );]], [[        // Keep Ogre's safe default (frame slots + one image) but expose a bounded runtime
-        // override for repeatable WSI experiments. The requested count is never allowed below
-        // the dynamic-buffer frame count or the surface minimum.
+            minImageCount = std::min<uint32>( minImageCount, surfaceCaps.maxImageCount );]], [[        // Keep Ogre's safe default, with a bounded runtime override for WSI experiments.
         uint32 requestedImageCount = 0u;
         if( const char *requestedImages = std::getenv( "PC_VULKAN_SWAPCHAIN_IMAGES" ) )
         {
@@ -105,34 +100,33 @@ return function(source)
         if( surfaceCaps.maxImageCount != 0u )
             minImageCount = std::min<uint32>( minImageCount, surfaceCaps.maxImageCount );]])
 
-    replace([[        result = vkGetSwapchainImagesKHR( mDevice->mDevice, mSwapchain, &numSwapchainImages,
-                                           mSwapchainImages.begin() );
-        checkVkResult( result, "vkGetSwapchainImagesKHR" );]], [[        result = vkGetSwapchainImagesKHR( mDevice->mDevice, mSwapchain, &numSwapchainImages,
-                                           mSwapchainImages.begin() );
-        checkVkResult( result, "vkGetSwapchainImagesKHR" );
+    -- Anchor on the second result check plus acquire. This deliberately ignores the indentation
+    -- of mSwapchainImages.begin(), which is cosmetic and caused the previous generation failure.
+    replace([[        checkVkResult( result, "vkGetSwapchainImagesKHR" );
+
+        acquireNextSwapchain();]], [[        checkVkResult( result, "vkGetSwapchainImagesKHR" );
         LogManager::getSingleton().logMessage(
             "[PlagC Vulkan WSI] swapchain images=" + StringConverter::toString( numSwapchainImages ) +
             " requested=" + StringConverter::toString( requestedImageCount ) +
             " frames-in-flight=" +
             StringConverter::toString( vaoManager->getDynamicBufferMultiplier() ) +
             " surface-min=" + StringConverter::toString( surfaceCaps.minImageCount ) +
-            " surface-max=" + StringConverter::toString( surfaceCaps.maxImageCount ) );]])
+            " surface-max=" + StringConverter::toString( surfaceCaps.maxImageCount ) );
+
+        acquireNextSwapchain();]])
 
     replace([[    void VulkanWindowSwapChainBased::destroySwapchain()
     {
         mDevice->mRenderSystem->notifySwapchainDestroyed( this );]], [[    void VulkanWindowSwapChainBased::destroySwapchain()
     {
-        // A worker may still be inside vkQueuePresentKHR. The swapchain cannot be destroyed until
-        // that host call has returned. This is normally a no-op because acquire consumes it first.
+        // Never destroy a swapchain while the presentation worker is still using it.
         if( mSwapchain )
             (void)plagcConsumePresentResult( mSwapchain );
         mDevice->mRenderSystem->notifySwapchainDestroyed( this );]])
 
     replace([[        VulkanVaoManager *vaoManager = mDevice->mVaoManager;
 
-        mSwapchainSemaphore = vaoManager->getAvailableSemaphore();]], [[        // Presentation runs on a worker while gameplay executes. Join only at the point where
-        // Vulkan requires us to interact with this swapchain again. The measured main-wait time
-        // is the residual presentation cost that was not hidden by game/physics/animation work.
+        mSwapchainSemaphore = vaoManager->getAvailableSemaphore();]], [[        // Join the previous async present only when this swapchain is needed again.
         if( mSwapchain )
             mSuboptimal = plagcConsumePresentResult( mSwapchain ) || mSuboptimal;
 
@@ -170,9 +164,7 @@ return function(source)
     {
         OGRE_ASSERT_LOW( mSwapchainStatus != SwapchainReleased );]], [[    VkSemaphore VulkanWindowSwapChainBased::getImageAcquiredSemaphore()
     {
-        // PlagC: acquire on demand. The previous frame queued presentation before returning
-        // to gameplay, so by the time rendering reaches this point presentation has had useful
-        // CPU time to progress on its worker.
+        // PlagC: acquire on demand after gameplay had time to overlap presentation.
         if( mSwapchainStatus == SwapchainReleased )
             acquireNextSwapchain();
         OGRE_ASSERT_LOW( mSwapchainStatus != SwapchainReleased );]])
@@ -182,8 +174,7 @@ return function(source)
             // Ogre never rendered to this window. There's nothing to present.]], [[        if( mSwapchainStatus == SwapchainReleased || mSwapchainStatus == SwapchainAcquired ||
             mSwapchainStatus == SwapchainPendingSwap )
         {
-            // Ogre never rendered to this window. With lazy acquisition, Released is also a
-            // valid idle/minimized state and there is deliberately nothing to present.]])
+            // Released is a valid idle state with lazy acquisition; there is nothing to present.]])
 
     replace('    void VulkanWindowSwapChainBased::_swapBuffers( VkSemaphore queueFinishSemaphore )',
             '    uint32 VulkanWindowSwapChainBased::_swapBuffers( VkSemaphore queueFinishSemaphore )')
@@ -212,9 +203,7 @@ return function(source)
         if( result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR )
             mSuboptimal = true;
 
-        mSwapchainStatus = SwapchainReleased;]], [[        // vkQueuePresentKHR can spend several milliseconds inside the Windows/AMD WSI host
-        // path even with IMMEDIATE_KHR. Queue it on the presentation worker so gameplay can run
-        // while that host wait is in progress. The next acquire consumes the VkResult.
+        mSwapchainStatus = SwapchainReleased;]], [[        // vkQueuePresentKHR may block in Windows/AMD WSI. Run that host wait on the worker.
         const auto plagcEnqueueStart = std::chrono::steady_clock::now();
         const bool serializeWithGraphicsQueue =
             mDevice->mPresentQueue == mDevice->mGraphicsQueue.mQueue;
