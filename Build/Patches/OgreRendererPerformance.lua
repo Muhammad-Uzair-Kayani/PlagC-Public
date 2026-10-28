@@ -10,7 +10,8 @@ return function(source)
     end
 
     replace('#include <PlagC/Renderer/Renderer.h>', [[#include <PlagC/Renderer/Renderer.h>
-#include <PlagC/GpuProfiler.h>]])
+#include <PlagC/GpuProfiler.h>
+#include <cstdlib>]])
 
     replace('    Ogre::MaterialPtr skyMaterial;\n    RenderStats stats;', [[    Ogre::MaterialPtr skyMaterial;
     // Asset textures are allowed to stream together on Vulkan and are synchronized once
@@ -39,12 +40,17 @@ return function(source)
         p.root->createRenderWindow("PlagC", window ? unsigned(window->Width()) : 640,
                                    window ? unsigned(window->Height()) : 360, false, &options);]], [[    if (backend_ == RendererBackend::Vulkan)
     {
-        // Ogre's persistent dynamic buffers rotate through this many backing regions and
-        // waitForTailFrameToFinish() before each map. Three regions were enough on average
-        // but produced 16-20 ms tail waits when the Radeon iGPU/present queue briefly fell
-        // behind. Four regions also gives the Vulkan swapchain one additional image, keeping
-        // vkAcquireNextImageKHR from becoming the same CPU-side bubble.
-        options["VaoManager::mDynamicBufferMultiplier"] = "4";
+        // Four frame slots is the measured stable default on the Radeon iGPU, but keep the
+        // value tunable so 2/3/4 frame-in-flight WSI experiments do not require recompiling.
+        unsigned long framesInFlight = 4ul;
+        if (const char *framesEnv = std::getenv("PC_VULKAN_FRAMES_IN_FLIGHT"))
+        {
+            char *parseEnd = nullptr;
+            const unsigned long parsed = std::strtoul(framesEnv, &parseEnd, 10);
+            if (parseEnd != framesEnv && *parseEnd == '\0' && parsed >= 2ul && parsed <= 4ul)
+                framesInFlight = parsed;
+        }
+        options["VaoManager::mDynamicBufferMultiplier"] = std::to_string(framesInFlight);
     }
     p.output =
         p.root->createRenderWindow("PlagC", window ? unsigned(window->Width()) : 640,

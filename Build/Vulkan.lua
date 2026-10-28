@@ -102,8 +102,16 @@ function vulkanLibraries()
     local patchExtensions = dofile(root .. '/Build/Patches/VulkanDeviceExtensions.lua')
     write(generated .. '/OgreVulkanRenderSystem.cpp', patchExtensions(read(renderSystem)))
 
-    -- Pipeline WSI across game frames instead of presenting and immediately blocking on the
-    -- next vkAcquireNextImageKHR inside the same renderOneFrame call.
+    -- The present scheduler is compiled into OgreRenderVulkan so patched Ogre translation units
+    -- can use it without introducing a static-library dependency back into PlagC.
+    local presentSchedulerHeader = root .. '/Build/Patches/PlagCVulkanPresentScheduler.h'
+    local presentSchedulerSource = root .. '/Build/Patches/PlagCVulkanPresentScheduler.cpp'
+    write(generatedVkInclude .. '/PlagCVulkanPresentScheduler.h', read(presentSchedulerHeader))
+    write(generated .. '/PlagCVulkanPresentScheduler.cpp', read(presentSchedulerSource))
+
+    -- Pipeline WSI across game frames. Presentation is queued to a worker and swapchain acquire is
+    -- deferred until first use next frame. Queue submit/present are explicitly serialized when the
+    -- driver exposes only one VkQueue, which is the case on the target Radeon iGPU.
     local queue = vk .. '/src/OgreVulkanQueue.cpp'
     local window = vk .. '/src/OgreVulkanWindow.cpp'
     local device = vk .. '/src/OgreVulkanDevice.cpp'
@@ -122,7 +130,7 @@ function vulkanLibraries()
         includedirs { compiler, generated, vk .. '/src' }
         files { vk .. '/src/*.cpp', vk .. '/src/Vao/*.cpp', vk .. '/src/SPIRV-Reflect/*.c' }
         removefiles { original, allocator, renderSystem, queue, window, device }
-        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanRenderSystem.cpp', generated .. '/OgreVulkanQueue.cpp', generated .. '/OgreVulkanWindow.cpp', generated .. '/OgreVulkanDevice.cpp', generatedVkInclude .. '/Vao/OgreVulkanVaoManager.h', generatedVkInclude .. '/OgreVulkanWindow.h' }
+        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanRenderSystem.cpp', generated .. '/OgreVulkanQueue.cpp', generated .. '/OgreVulkanWindow.cpp', generated .. '/OgreVulkanDevice.cpp', generated .. '/PlagCVulkanPresentScheduler.cpp', generatedVkInclude .. '/PlagCVulkanPresentScheduler.h', generatedVkInclude .. '/Vao/OgreVulkanVaoManager.h', generatedVkInclude .. '/OgreVulkanWindow.h' }
         filter 'system:windows'; files { vk .. '/src/Windowing/win32/*.cpp' }
         filter 'system:linux'
             files { vk .. '/src/Windowing/X11/*.cpp', generated .. '/OgreVulkanXcbSupport.cpp' }

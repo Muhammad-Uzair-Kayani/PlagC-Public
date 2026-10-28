@@ -41,13 +41,16 @@ with tempfile.TemporaryDirectory() as tmp:
         ROOT / 'PlagC/src/Renderer/OgreRenderer.cpp',
         'renderer')
     assert '#include <PlagC/GpuProfiler.h>' in renderer
+    assert '#include <cstdlib>' in renderer
     assert 'Ogre::BT_DYNAMIC_PERSISTENT_COHERENT' in renderer
     assert 'buffer->map(0, vertices.size())' in renderer
     assert 'buffer->unmap(Ogre::UO_KEEP_PERSISTENT)' in renderer
     assert 'pendingTextureUploads' in renderer
     assert 'setStagingTextureMaxBudgetBytes' in renderer
     assert 'VulkanStagingBudget = 512ull * 1024ull * 1024ull' in renderer
-    assert 'options["VaoManager::mDynamicBufferMultiplier"] = "4"' in renderer
+    assert 'PC_VULKAN_FRAMES_IN_FLIGHT' in renderer
+    assert 'parsed >= 2ul && parsed <= 4ul' in renderer
+    assert 'options["VaoManager::mDynamicBufferMultiplier"] = std::to_string(framesInFlight)' in renderer
     assert 'GpuProfiler::AttachWorkspace(workspace)' in renderer
     assert 'GpuProfiler::AttachWorkspace(t.workspace)' in renderer
     assert 'dynamic ? Ogre::BT_DEFAULT : Ogre::BT_IMMUTABLE' not in renderer
@@ -117,7 +120,12 @@ with tempfile.TemporaryDirectory() as tmp:
         ROOT / 'Build/Patches/VulkanQueuePerformance.lua',
         ogre / 'OgreVulkanQueue.cpp',
         'queue')
-    assert 'do not acquire the next image immediately after presenting' in queue
+    assert 'PlagCVulkanPresentScheduler.h' in queue
+    assert 'sharedGraphicsPresentMutex' in queue
+    assert 'queue-submit avg=' in queue
+    assert '[PlagC Vulkan CPU] submit-tail avg=' in queue
+    assert '[PlagC Vulkan CPU] new-command-buffer tail-wait avg=' in queue
+    assert '[PlagC Vulkan CPU] end-command-buffer avg=' in queue
     assert 'mWindowsPendingSwap[windowIdx]->acquireNextSwapchain();' not in queue
     assert 'notifyPresentationWaitSemaphoreSubmitted' in queue
 
@@ -126,14 +134,32 @@ with tempfile.TemporaryDirectory() as tmp:
         ROOT / 'Build/Patches/VulkanWindowPerformance.lua',
         ogre / 'OgreVulkanWindow.cpp',
         'window')
+    assert 'PlagCVulkanPresentScheduler.h' in window
+    assert 'PlagCVulkanPresentScheduler::get().enqueue' in window
+    assert 'plagcConsumePresentResult' in window
+    assert 'serializeWithGraphicsQueue' in window
     assert 'if( mSwapchainStatus == SwapchainReleased )' in window
     assert 'acquireNextSwapchain();' in window
-    assert 'acquire on demand' in window
     assert '[PlagC Vulkan WSI] acquire avg=' in window
     assert '[PlagC Vulkan WSI] present avg=' in window
+    assert 'main-wait avg=' in window
+    assert '[PlagC Vulkan CPU] present-enqueue avg=' in window
+    assert 'PC_VULKAN_SWAPCHAIN_IMAGES' in window
+    assert '[PlagC Vulkan WSI] swapchain images=' in window
     assert 'notifySwapchainIndexAcquired' in window
     assert 'uint32 VulkanWindowSwapChainBased::_swapBuffers' in window
     assert 'return currentSwapchainIdx;' in window
+    # The blocking present call belongs only to the scheduler after generation.
+    assert 'VkResult result = vkQueuePresentKHR( mDevice->mPresentQueue, &present );' not in window
+
+    scheduler_h = (ROOT / 'Build/Patches/PlagCVulkanPresentScheduler.h').read_text()
+    scheduler_cpp = (ROOT / 'Build/Patches/PlagCVulkanPresentScheduler.cpp').read_text()
+    assert 'PlagCVulkanPresentCompletion' in scheduler_h
+    assert 'sharedGraphicsPresentMutex' in scheduler_h
+    assert 'std::thread mWorker' in scheduler_h
+    assert 'vkQueuePresentKHR( request.queue, &presentInfo )' in scheduler_cpp
+    assert 'mOutstanding' in scheduler_cpp
+    assert 'mCompletionCv.wait' in scheduler_cpp
 
     device = apply(
         work,
@@ -144,5 +170,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'usedQueueCount[graphicsFamily]++' in device
     assert 'Dedicated present queue enabled' in device
     assert 'Dedicated present queue unavailable' in device
+
+    build_vulkan = (ROOT / 'Build/Vulkan.lua').read_text()
+    assert 'PlagCVulkanPresentScheduler.cpp' in build_vulkan
+    assert 'PlagCVulkanPresentScheduler.h' in build_vulkan
 
 print('Vulkan performance generation patches passed.')
