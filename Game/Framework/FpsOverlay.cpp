@@ -35,8 +35,11 @@ std::array<unsigned char, 7> Glyph(char c)
 
 bool OverlayEnabled()
 {
-    const char *value = std::getenv("PC_FPS_OVERLAY");
-    return !value || std::string_view(value) != "0";
+    static const bool enabled = [] {
+        const char *value = std::getenv("PC_FPS_OVERLAY");
+        return !value || std::string_view(value) != "0";
+    }();
+    return enabled;
 }
 
 PlagC::Vec3 Add(PlagC::Vec3 a, PlagC::Vec3 b)
@@ -149,15 +152,18 @@ void FpsOverlay::Place(PlagC::Renderer &renderer, const PlagC::CameraDesc &camer
                          right.x * forward.y - right.y * forward.x};
 
     constexpr float pi = 3.14159265358979323846f;
+    constexpr float pixel = .012f;
     const float yaw = std::atan2(forward.z, forward.x) * 180.0f / pi;
     const float pitch = std::asin(std::clamp(forward.y, -1.0f, 1.0f)) * 180.0f / pi;
     const float halfHeight = 2.0f * std::tan(camera.fov * pi / 360.0f);
-    const float left = -.94f * halfHeight * aspect;
+    const float scale = std::min(.70f, aspect / 2.4f) * halfHeight;
+    const float textWidth = static_cast<float>(std::max<std::size_t>(1u, text_.size())) * 6.0f *
+                            pixel * scale;
+    const float horizontal = .94f * halfHeight * aspect - textWidth;
     const float top = .90f * halfHeight;
     auto position = Add(camera.position, Scale(forward, 2.0f));
-    position = Add(position, Scale(right, left));
+    position = Add(position, Scale(right, horizontal));
     position = Add(position, Scale(up, top));
-    const float scale = std::min(.70f, aspect / 2.4f) * halfHeight;
     renderer.SetTransform(object_, {position, {pitch, -yaw - 90.0f, 0}, {scale, scale, scale}});
 }
 
