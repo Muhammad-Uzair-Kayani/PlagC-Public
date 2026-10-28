@@ -19,9 +19,9 @@ class RigValidationWorld final : public IGameWorld
     std::unique_ptr<PlagC::World> world_;
     std::unique_ptr<PlagC::AssetScene> assetScene_;
     std::unique_ptr<PlagC::SceneRenderer> sceneRenderer_;
-    PlagC::AssetHandle<PlagC::ModelAsset> astronautAsset_;
+    PlagC::AssetHandle<PlagC::ModelAsset> jokerAsset_;
 
-    PlagC::Entity astronaut_;
+    PlagC::Entity joker_;
     PlagC::Entity camera_;
     PlagC::Entity sun_;
 
@@ -29,8 +29,8 @@ class RigValidationWorld final : public IGameWorld
     PlagC::EventBus::Connection focus_;
     PlagC::EventBus::Connection mouse_;
 
-    unsigned requestedClip_ = 0;
-    unsigned activeClip_ = ~0u;
+    int requestedMode_ = 0; // 0 = rest/A-pose, 1..6 = native Joker clips
+    int activeMode_ = -1;
     float cameraYaw_ = 0.0f;
     float cameraPitch_ = 5.0f;
     bool cursorCaptured_ = true;
