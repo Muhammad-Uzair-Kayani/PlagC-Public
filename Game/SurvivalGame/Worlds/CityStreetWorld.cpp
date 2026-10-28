@@ -47,6 +47,15 @@ unsigned Clip(const PlagC::ModelAsset &asset, std::string_view name)
     return unsigned(it - asset.animations.begin());
 }
 
+std::string ThreeDigits(unsigned value)
+{
+    if (value < 10)
+        return "00" + std::to_string(value);
+    if (value < 100)
+        return "0" + std::to_string(value);
+    return std::to_string(value);
+}
+
 std::unordered_map<std::string, std::string> JokerToUAL()
 {
     std::unordered_map<std::string, std::string> map = {
@@ -99,7 +108,7 @@ std::unordered_map<std::string, std::string> JokerToUAL()
                 else if (segment == 2)
                     target += '2';
                 target += '_';
-                target += std::to_string(base + finger * 3 + segment);
+                target += ThreeDigits(base + finger * 3 + segment);
 
                 std::string source = fingers[finger].ual;
                 source += "_0" + std::to_string(segment + 1) + "_" + ualSide;
@@ -133,13 +142,10 @@ PlagC::AnimationStateMachine LocomotionGraph(const PlagC::ModelAsset &asset)
         t.from = from;
         t.to = to;
         t.crossfade = fade;
-        t.syncNormalizedPhase = from != 0 && to != 0;
         t.conditions.assign(conditions.begin(), conditions.end());
         graph.transitions.push_back(std::move(t));
     };
 
-    // Declaration order is priority. Direct jumps avoid taking several frames to
-    // traverse Walk->Jog->Sprint when the desired speed changes abruptly.
     transition(0, 3, .20f, {{"Speed", C::Greater, 4.8f}});
     transition(0, 2, .18f, {{"Speed", C::Greater, 2.2f}});
     transition(0, 1, .16f, {{"Speed", C::Greater, .12f}});
@@ -197,7 +203,6 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     retarget.jointMap = JokerToUAL();
     playerAsset_ = PlagC::RetargetAnimations(joker, ual, retarget);
 
-    // Fail immediately if any gameplay clips we depend on are missing.
     for (auto name : {"Idle_Loop", "Walk_Loop", "Jog_Fwd_Loop", "Sprint_Loop",
                       "Pistol_Aim_Neutral", "Pistol_Reload", "Pistol_Shoot"})
         (void)Clip(*playerAsset_, name);
@@ -387,8 +392,6 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
                       (1.0f - std::exp(-float(dt) * 12.0f));
     }
 
-    // Smooth the feature sent to the animation matcher so rapid key taps do not
-    // thrash locomotion states, while world displacement remains responsive.
     const float speedResponse = desiredSpeed > locomotionSpeed_ ? 10.0f : 14.0f;
     locomotionSpeed_ += (desiredSpeed - locomotionSpeed_) *
                         (1.0f - std::exp(-float(dt) * speedResponse));
@@ -453,7 +456,14 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
         upperClip = shootClip;
         upperTime = shootDuration - fireTimer_;
         upperLoop = false;
-        recoil = 0.04f * float(std::sin(std::clamp(upperTime / std::max(.001, shootDuration), 0.0, 1.0) * 3.141592653589793));
+        recoil = 0.04f * float(std::sin(
+            std::clamp(upperTime / std::max(.001, shootDuration), 0.0, 1.0) *
+            3.141592653589793));
+    }
+    else if (aiming && animator.upperBody && animator.upperBody->pose.clip == aimClip)
+    {
+        const double duration = playerAsset_->animations[aimClip].duration;
+        upperTime = std::fmod(animator.upperBody->pose.time + dt, duration);
     }
 
     PlagC::AnimationUpperBody upper;
