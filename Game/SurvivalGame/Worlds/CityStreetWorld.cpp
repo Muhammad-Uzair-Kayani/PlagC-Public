@@ -1,10 +1,13 @@
 #include "pgcpch.h"
 #include "CityStreetWorld.h"
+#include <PlagC/Animation/Animation.h>
+#include <PlagC/Animation/AnimationRetarget.h>
 #include <PlagC/Assets/AssetManager.h>
 #include <PlagC/Input/Input.h>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <unordered_map>
 
 namespace PlagCGame
 {
@@ -14,6 +17,7 @@ constexpr float Rad = 3.14159265358979323846f / 180.0f;
 constexpr float PlayerVisualScale = 100.0f;
 constexpr float TerrainHalfExtent = 29.0f;
 constexpr PlagC::Vec3 InitialPlayerPosition{0.0f, 0.0f, 0.0f};
+constexpr std::string_view UpperBodyRoot = "Bip001 Spine1_012";
 
 float LengthXZ(PlagC::Vec3 v)
 {
@@ -32,6 +36,127 @@ float TerrainHeight(float x, float z)
                        0.22f * std::cos(z * 0.21f) +
                        0.12f * std::sin((x + z) * 0.11f);
     return t * wave;
+}
+
+unsigned Clip(const PlagC::ModelAsset &asset, std::string_view name)
+{
+    auto it = std::find_if(asset.animations.begin(), asset.animations.end(),
+                           [&](const auto &clip) { return clip.name == name; });
+    if (it == asset.animations.end())
+        throw std::runtime_error("required animation clip missing: " + std::string(name));
+    return unsigned(it - asset.animations.begin());
+}
+
+std::unordered_map<std::string, std::string> JokerToUAL()
+{
+    std::unordered_map<std::string, std::string> map = {
+        {"Bip001_01", "root"},
+        {"Bip001 Pelvis_02", "pelvis"},
+        {"Bip001 Spine_03", "spine_01"},
+        {"Bip001 Spine1_012", "spine_02"},
+        {"Bip001 Neck_013", "neck_01"},
+        {"Bip001 Head_00", "Head"},
+        {"Bip001 L Clavicle_015", "clavicle_l"},
+        {"Bip001 L UpperArm_016", "upperarm_l"},
+        {"Bip001 L Forearm_017", "lowerarm_l"},
+        {"Bip001 L Hand_018", "hand_l"},
+        {"Bip001 R Clavicle_035", "clavicle_r"},
+        {"Bip001 R UpperArm_036", "upperarm_r"},
+        {"Bip001 R Forearm_037", "lowerarm_r"},
+        {"Bip001 R Hand_038", "hand_r"},
+        {"Bip001 L Thigh_04", "thigh_l"},
+        {"Bip001 L Calf_05", "calf_l"},
+        {"Bip001 L Foot_06", "foot_l"},
+        {"Bip001 L Toe0_07", "ball_l"},
+        {"Bip001 R Thigh_08", "thigh_r"},
+        {"Bip001 R Calf_09", "calf_r"},
+        {"Bip001 R Foot_010", "foot_r"},
+        {"Bip001 R Toe0_011", "ball_r"},
+    };
+
+    struct FingerMap
+    {
+        const char *biped;
+        const char *ual;
+    } fingers[] = {
+        {"Finger0", "thumb"}, {"Finger1", "index"}, {"Finger2", "middle"},
+        {"Finger3", "ring"}, {"Finger4", "pinky"},
+    };
+
+    for (const char side : {'L', 'R'})
+    {
+        const char *ualSide = side == 'L' ? "l" : "r";
+        const unsigned base = side == 'L' ? 19u : 39u;
+        for (unsigned finger = 0; finger < 5; ++finger)
+            for (unsigned segment = 0; segment < 3; ++segment)
+            {
+                std::string target = "Bip001 ";
+                target += side;
+                target += ' ';
+                target += fingers[finger].biped;
+                if (segment == 1)
+                    target += '1';
+                else if (segment == 2)
+                    target += '2';
+                target += '_';
+                target += std::to_string(base + finger * 3 + segment);
+
+                std::string source = fingers[finger].ual;
+                source += "_0" + std::to_string(segment + 1) + "_" + ualSide;
+                map.emplace(std::move(target), std::move(source));
+            }
+    }
+    return map;
+}
+
+PlagC::AnimationStateMachine LocomotionGraph(const PlagC::ModelAsset &asset)
+{
+    const unsigned idle = Clip(asset, "Idle_Loop");
+    const unsigned walk = Clip(asset, "Walk_Loop");
+    const unsigned jog = Clip(asset, "Jog_Fwd_Loop");
+    const unsigned sprint = Clip(asset, "Sprint_Loop");
+
+    using PT = PlagC::AnimationParameterType;
+    using C = PlagC::AnimationCompare;
+
+    PlagC::AnimationStateMachine graph;
+    graph.parameters = {{"Speed", PT::Float, 0.0f}};
+    graph.states = {{"Idle", idle, true, 1.0f},
+                    {"Walk", walk, true, 1.0f},
+                    {"Jog", jog, true, 1.0f},
+                    {"Sprint", sprint, true, 1.0f}};
+    graph.entry = 0;
+
+    auto transition = [&](unsigned from, unsigned to, float fade,
+                          std::initializer_list<PlagC::AnimationCondition> conditions) {
+        PlagC::AnimationTransition t;
+        t.from = from;
+        t.to = to;
+        t.crossfade = fade;
+        t.syncNormalizedPhase = from != 0 && to != 0;
+        t.conditions.assign(conditions.begin(), conditions.end());
+        graph.transitions.push_back(std::move(t));
+    };
+
+    // Declaration order is priority. Direct jumps avoid taking several frames to
+    // traverse Walk->Jog->Sprint when the desired speed changes abruptly.
+    transition(0, 3, .20f, {{"Speed", C::Greater, 4.8f}});
+    transition(0, 2, .18f, {{"Speed", C::Greater, 2.2f}});
+    transition(0, 1, .16f, {{"Speed", C::Greater, .12f}});
+
+    transition(1, 3, .18f, {{"Speed", C::Greater, 4.8f}});
+    transition(1, 2, .16f, {{"Speed", C::Greater, 2.2f}});
+    transition(1, 0, .18f, {{"Speed", C::Less, .12f}});
+
+    transition(2, 3, .14f, {{"Speed", C::Greater, 4.8f}});
+    transition(2, 1, .16f, {{"Speed", C::Greater, .12f}, {"Speed", C::Less, 2.2f}});
+    transition(2, 0, .18f, {{"Speed", C::Less, .12f}});
+
+    transition(3, 2, .16f, {{"Speed", C::Greater, 2.2f}, {"Speed", C::Less, 4.8f}});
+    transition(3, 1, .18f, {{"Speed", C::Greater, .12f}, {"Speed", C::Less, 2.2f}});
+    transition(3, 0, .20f, {{"Speed", C::Less, .12f}});
+
+    return graph;
 }
 
 PlagC::Entity ModelEntity(PlagC::World &world, std::string name,
@@ -53,6 +178,8 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
         "Game://Environment/Terrain/OpenTerrain/OpenTerrain.plasset");
     auto joker = engine.Assets().Get<PlagC::ModelAsset>(
         "Game://Characters/Player/Joker/Joker.plasset");
+    auto ual = engine.Assets().Get<PlagC::ModelAsset>(
+        "Game://Animations/UAL/UAL1_Standard.plasset");
     auto grass = engine.Assets().Get<PlagC::ModelAsset>(
         "Game://Environment/Vegetation/GrassPatches/GrassPatches.plasset");
     auto vegetation = engine.Assets().Get<PlagC::ModelAsset>(
@@ -60,16 +187,29 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     auto jeep = engine.Assets().Get<PlagC::ModelAsset>(
         "Game://Environment/Props/Jeep/Jeep.plasset");
 
-    if (!terrain || !joker || !grass || !vegetation || !jeep)
-        throw std::runtime_error("OpenTerrain test required assets are not ready");
-    if (joker->animations.empty())
-        throw std::runtime_error("Joker reference character contains no native animations");
+    if (!terrain || !joker || !ual || !grass || !vegetation || !jeep)
+        throw std::runtime_error("OpenTerrain animation test required assets are not ready");
 
-    playerAsset_ = joker;
-    requestedClip_ = 0;
-    activeClip_ = ~0u;
+    PlagC::AnimationRetargetConfig retarget;
+    retarget.rootTranslation = false;
+    retarget.pelvisTranslation = false;
+    retarget.translationScale = 1.0f;
+    retarget.jointMap = JokerToUAL();
+    playerAsset_ = PlagC::RetargetAnimations(joker, ual, retarget);
+
+    // Fail immediately if any gameplay clips we depend on are missing.
+    for (auto name : {"Idle_Loop", "Walk_Loop", "Jog_Fwd_Loop", "Sprint_Loop",
+                      "Pistol_Aim_Neutral", "Pistol_Reload", "Pistol_Shoot"})
+        (void)Clip(*playerAsset_, name);
+
     playerPosition_ = InitialPlayerPosition;
     playerYaw_ = 180.0f;
+    locomotionSpeed_ = 0.0f;
+    upperBodyWeight_ = 0.0f;
+    reloadQueued_ = false;
+    fireQueued_ = false;
+    reloadTimer_ = 0.0;
+    fireTimer_ = 0.0;
 
     world_ = std::make_unique<PlagC::World>();
     assetScene_ = std::make_unique<PlagC::AssetScene>(engine.Graphics());
@@ -84,12 +224,13 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     player_ = ModelEntity(*world_, "Joker", playerAsset_,
                           {playerPosition_, {0, playerYaw_, 0},
                            {PlayerVisualScale, PlayerVisualScale, PlayerVisualScale}});
+
     PlagC::AnimatorComponent animator;
-    animator.state = {requestedClip_, 0, 1, true, true};
+    auto graph = LocomotionGraph(*playerAsset_);
+    animator.controller.emplace(graph, unsigned(playerAsset_->animations.size()));
+    animator.state = {Clip(*playerAsset_, "Idle_Loop"), 0, 1, true, true};
     world_->SetAnimator(player_, animator);
 
-    // Keep the middle 24x24m completely clear. Vegetation is intentionally placed
-    // around the outer ring so spawn/movement testing always starts unobstructed.
     const PlagC::Vec3 vegetationSpots[] = {
         {-18.0f, 0.0f, -18.0f}, {-8.0f, 0.0f, -20.0f}, {8.0f, 0.0f, -20.0f},
         {18.0f, 0.0f, -18.0f}, {-20.0f, 0.0f, -7.0f}, {20.0f, 0.0f, -6.0f},
@@ -132,16 +273,8 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
 
     key_ = engine.Events().Subscribe(PlagC::EventType::KeyPressed,
                                      [this, &engine](const PlagC::Event &event) {
-        auto select = [&](unsigned clip) {
-            if (playerAsset_ && clip < playerAsset_->animations.size())
-                requestedClip_ = clip;
-        };
-        if (event.key == PlagC::KeyCode::D1) select(0);
-        else if (event.key == PlagC::KeyCode::D2) select(1);
-        else if (event.key == PlagC::KeyCode::D3) select(2);
-        else if (event.key == PlagC::KeyCode::D4) select(3);
-        else if (event.key == PlagC::KeyCode::D5) select(4);
-        else if (event.key == PlagC::KeyCode::D6) select(5);
+        if (event.key == PlagC::KeyCode::R)
+            reloadQueued_ = true;
         else if (event.key == PlagC::KeyCode::Escape)
         {
             cursorCaptured_ = !cursorCaptured_;
@@ -162,11 +295,16 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
 
     mouse_ = engine.Events().Subscribe(PlagC::EventType::MousePressed,
                                        [this, &engine](const PlagC::Event &event) {
-        if (event.button == PlagC::MouseCode::Left && !cursorCaptured_)
+        if (event.button == PlagC::MouseCode::Left)
         {
-            cursorCaptured_ = true;
-            if (auto *window = engine.MainWindow())
-                window->SetCursorCaptured(true);
+            if (!cursorCaptured_)
+            {
+                cursorCaptured_ = true;
+                if (auto *window = engine.MainWindow())
+                    window->SetCursorCaptured(true);
+            }
+            else
+                fireQueued_ = true;
         }
     });
 
@@ -182,16 +320,16 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     engine.SetFPSLocked(false);
     if (auto *window = engine.MainWindow())
     {
-        window->SetTitle("PlagC | Survival Game | Open Terrain Test");
+        window->SetTitle("PlagC | Survival Game | Blended Animation Test");
         window->SetCursorCaptured(true);
     }
 
     assetScene_->Update(*world_, 0.0);
     sceneRenderer_->Sync(*world_);
-    activeClip_ = requestedClip_;
 
-    engine.Logger().Write(PlagC::Severity::Info, "WORLD",
-                          "OpenTerrain ready: 60x60m terrain, 24x24m clear spawn zone, WASD movement");
+    engine.Logger().Write(
+        PlagC::Severity::Info, "ANIMATION",
+        "Joker gameplay animation ready: Ctrl+WASD walk, WASD jog, Shift+WASD sprint, RMB aim, LMB fire, R reload; lower-body crossfades + masked upper-body layer");
 }
 
 void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
@@ -209,14 +347,6 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
         cameraPitch_ = std::clamp(cameraPitch_ - float(mouse.y) * 0.10f, -25.0f, 55.0f);
     }
 
-    if (requestedClip_ != activeClip_)
-    {
-        auto animator = world_->Read(player_).animator.value();
-        animator.state = {requestedClip_, 0, 1, true, true};
-        world_->SetAnimator(player_, animator);
-        activeClip_ = requestedClip_;
-    }
-
     const float yaw = cameraYaw_ * Rad;
     const PlagC::Vec3 forward{std::sin(yaw), 0.0f, -std::cos(yaw)};
     const PlagC::Vec3 right{std::cos(yaw), 0.0f, std::sin(yaw)};
@@ -230,21 +360,26 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
 
     PlagC::Vec3 move{forward.x * f + right.x * r, 0.0f,
                      forward.z * f + right.z * r};
-    const float moveLength = LengthXZ(move);
+    float moveLength = LengthXZ(move);
     if (moveLength > 1.0f)
     {
         move.x /= moveLength;
         move.z /= moveLength;
+        moveLength = 1.0f;
     }
 
+    float desiredSpeed = 0.0f;
     if (moveLength > 0.001f)
     {
-        const bool fast = PlagC::Input::IsKeyPressed(PlagC::KeyCode::LeftShift) ||
-                          PlagC::Input::IsKeyPressed(PlagC::KeyCode::RightShift);
-        const float speed = fast ? 7.0f : 3.0f;
-        playerPosition_.x = std::clamp(playerPosition_.x + move.x * speed * float(dt),
+        const bool walk = PlagC::Input::IsKeyPressed(PlagC::KeyCode::LeftControl) ||
+                          PlagC::Input::IsKeyPressed(PlagC::KeyCode::RightControl);
+        const bool sprint = PlagC::Input::IsKeyPressed(PlagC::KeyCode::LeftShift) ||
+                            PlagC::Input::IsKeyPressed(PlagC::KeyCode::RightShift);
+        desiredSpeed = sprint ? 6.2f : (walk ? 1.6f : 3.2f);
+
+        playerPosition_.x = std::clamp(playerPosition_.x + move.x * desiredSpeed * float(dt),
                                        -TerrainHalfExtent, TerrainHalfExtent);
-        playerPosition_.z = std::clamp(playerPosition_.z + move.z * speed * float(dt),
+        playerPosition_.z = std::clamp(playerPosition_.z + move.z * desiredSpeed * float(dt),
                                        -TerrainHalfExtent, TerrainHalfExtent);
 
         const float desiredYaw = std::atan2(move.x, move.z) / Rad;
@@ -252,10 +387,82 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
                       (1.0f - std::exp(-float(dt) * 12.0f));
     }
 
+    // Smooth the feature sent to the animation matcher so rapid key taps do not
+    // thrash locomotion states, while world displacement remains responsive.
+    const float speedResponse = desiredSpeed > locomotionSpeed_ ? 10.0f : 14.0f;
+    locomotionSpeed_ += (desiredSpeed - locomotionSpeed_) *
+                        (1.0f - std::exp(-float(dt) * speedResponse));
+    if (std::abs(locomotionSpeed_) < .01f)
+        locomotionSpeed_ = 0.0f;
+
     playerPosition_.y = TerrainHeight(playerPosition_.x, playerPosition_.z);
     world_->SetTransform(player_,
                          {playerPosition_, {0, playerYaw_, 0},
                           {PlayerVisualScale, PlayerVisualScale, PlayerVisualScale}});
+
+    auto animator = world_->Read(player_).animator.value();
+    if (!animator.controller)
+        throw std::logic_error("Joker locomotion controller missing");
+    animator.controller->SetFloat("Speed", locomotionSpeed_);
+
+    const unsigned aimClip = Clip(*playerAsset_, "Pistol_Aim_Neutral");
+    const unsigned reloadClip = Clip(*playerAsset_, "Pistol_Reload");
+    const unsigned shootClip = Clip(*playerAsset_, "Pistol_Shoot");
+
+    const double reloadDuration = playerAsset_->animations[reloadClip].duration;
+    const double shootDuration = playerAsset_->animations[shootClip].duration;
+
+    if (reloadQueued_ && reloadTimer_ <= 0.0)
+    {
+        reloadTimer_ = reloadDuration;
+        fireTimer_ = 0.0;
+    }
+    reloadQueued_ = false;
+
+    if (fireQueued_ && reloadTimer_ <= 0.0)
+        fireTimer_ = shootDuration;
+    fireQueued_ = false;
+
+    if (reloadTimer_ > 0.0)
+        reloadTimer_ = std::max(0.0, reloadTimer_ - dt);
+    if (fireTimer_ > 0.0)
+        fireTimer_ = std::max(0.0, fireTimer_ - dt);
+
+    const bool aiming = PlagC::Input::IsMouseButtonPressed(PlagC::MouseCode::Right);
+    const bool reloading = reloadTimer_ > 0.0;
+    const bool firing = fireTimer_ > 0.0;
+    const float targetUpperWeight = (aiming || reloading || firing) ? 1.0f : 0.0f;
+    upperBodyWeight_ += (targetUpperWeight - upperBodyWeight_) *
+                        (1.0f - std::exp(-float(dt) * 14.0f));
+    if (upperBodyWeight_ < .001f)
+        upperBodyWeight_ = 0.0f;
+
+    unsigned upperClip = aimClip;
+    double upperTime = 0.0;
+    bool upperLoop = true;
+    float recoil = 0.0f;
+
+    if (reloading)
+    {
+        upperClip = reloadClip;
+        upperTime = reloadDuration - reloadTimer_;
+        upperLoop = false;
+    }
+    else if (firing)
+    {
+        upperClip = shootClip;
+        upperTime = shootDuration - fireTimer_;
+        upperLoop = false;
+        recoil = 0.04f * float(std::sin(std::clamp(upperTime / std::max(.001, shootDuration), 0.0, 1.0) * 3.141592653589793));
+    }
+
+    PlagC::AnimationUpperBody upper;
+    upper.pose = {upperClip, upperTime, 1.0f, true, upperLoop};
+    upper.root = std::string(UpperBodyRoot);
+    upper.weight = upperBodyWeight_;
+    upper.recoilRadians = recoil;
+    animator.upperBody = std::move(upper);
+    world_->SetAnimator(player_, animator);
 
     const float pitch = cameraPitch_ * Rad;
     const float cp = std::cos(pitch);
@@ -314,6 +521,6 @@ void CityStreetWorld::Stop(PlagC::Engine &engine)
     camera_ = {};
     sun_ = {};
 
-    engine.Logger().Write(PlagC::Severity::Info, "WORLD", "OpenTerrain test stopped");
+    engine.Logger().Write(PlagC::Severity::Info, "WORLD", "CityStreetWorld stopped");
 }
 } // namespace PlagCGame
