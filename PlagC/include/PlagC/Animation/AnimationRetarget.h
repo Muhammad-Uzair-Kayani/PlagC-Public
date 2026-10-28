@@ -20,6 +20,11 @@ struct AnimationRetargetConfig
     // from this clip instead of from the source skeleton's raw bind transforms.
     // The target reference is always the target model's own authored skeleton pose.
     std::string sourceReferenceClip;
+
+    // Keep target-native clips before appending retargeted source clips. This lets a
+    // character use its own authored idle while borrowing locomotion/actions from a
+    // shared animation library on the same runtime skeleton.
+    bool preserveTargetAnimations = false;
 };
 
 // Retargets source animation deltas onto the target model's own authored reference pose.
