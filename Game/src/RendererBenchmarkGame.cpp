@@ -75,13 +75,13 @@ void RendererBenchmarkGame::Start(PlagC::Engine &engine, const PlagC::EngineConf
         const float largestHalfExtent = std::max(halfWidth, halfHeight);
         const float cameraDistance = std::max(55.0f, largestHalfExtent * 2.20f);
 
-        PlagC::CameraDesc camera{};
-        camera.position = {0.0f, 0.0f, cameraDistance};
-        camera.target = {0.0f, 0.0f, 0.0f};
-        camera.fov = 60.0f;
-        camera.nearClip = 0.1f;
-        camera.farClip = cameraDistance + 120.0f;
-        renderer.SetCamera(camera);
+        camera_ = {};
+        camera_.position = {0.0f, 0.0f, cameraDistance};
+        camera_.target = {0.0f, 0.0f, 0.0f};
+        camera_.fov = 60.0f;
+        camera_.nearClip = 0.1f;
+        camera_.farClip = cameraDistance + 120.0f;
+        renderer.SetCamera(camera_);
 
         PlagC::LightDesc light{};
         light.type = PlagC::LightType::Directional;
@@ -140,7 +140,8 @@ void RendererBenchmarkGame::Start(PlagC::Engine &engine, const PlagC::EngineConf
                 std::to_string(objectCount) + " uniqueMeshes=" + std::to_string(meshes_.size()) +
                 " materials=" + std::to_string(materials_.size()) +
                 " | fixed camera, FPS unlocked, VSync/shadows/HDR/bloom/environment disabled. "
-                "Compare Renderer submit + Ogre renderOneFrame at equal RENDER STATS.");
+                "Live FPS overlay enabled unless PC_FPS_OVERLAY=0. Compare Renderer submit + "
+                "Ogre renderOneFrame at equal RENDER STATS.");
     }
     catch (...)
     {
@@ -149,9 +150,15 @@ void RendererBenchmarkGame::Start(PlagC::Engine &engine, const PlagC::EngineConf
     }
 }
 
-void RendererBenchmarkGame::Frame(PlagC::Engine &, double)
+void RendererBenchmarkGame::Frame(PlagC::Engine &engine, double dt)
 {
-    // Intentionally static. A backend comparison must not contain gameplay/animation CPU noise.
+    // Keep gameplay/animation CPU absent. The only per-frame game work is the optional tiny
+    // FPS overlay; its text buffer changes at most four times per second.
+    float aspect = 16.0f / 9.0f;
+    if (auto *window = engine.MainWindow())
+        if (window->Height())
+            aspect = static_cast<float>(window->Width()) / static_cast<float>(window->Height());
+    fpsOverlay_.Frame(engine.Graphics(), camera_, dt, aspect);
 }
 
 void RendererBenchmarkGame::Stop(PlagC::Engine &engine)
@@ -160,6 +167,8 @@ void RendererBenchmarkGame::Stop(PlagC::Engine &engine)
         return;
 
     auto &renderer = engine.Graphics();
+    fpsOverlay_.Clear(renderer);
+
     for (auto it = objects_.rbegin(); it != objects_.rend(); ++it)
         if (*it)
             renderer.DestroyObject(*it);
