@@ -78,17 +78,18 @@ function vulkanLibraries()
     local patchMemory = dofile(root .. '/Build/Patches/VulkanMemory.lua')
     write(generated .. '/OgreVulkanVaoManager.cpp', patchMemory(read(allocator)))
 
-    local device = vk .. '/src/OgreVulkanDevice.cpp'
-    local patchDevice = dofile(root .. '/Build/Patches/VulkanDeviceExtensions.lua')
-    write(generated .. '/OgreVulkanDevice.cpp', patchDevice(read(device)))
+    -- Ogre 3.0 chooses optional device extensions in the render system rather than VulkanDevice.
+    local renderSystem = vk .. '/src/OgreVulkanRenderSystem.cpp'
+    local patchExtensions = dofile(root .. '/Build/Patches/VulkanDeviceExtensions.lua')
+    write(generated .. '/OgreVulkanRenderSystem.cpp', patchExtensions(read(renderSystem)))
 
     project 'OgreRenderVulkan'
         kind 'StaticLib'; language 'C++'; cppdialect 'C++17'; warnings 'Off'; common(); ogreIncludes()
         defines { 'ENABLE_OPT=0' }
         includedirs { compiler, generated, vk .. '/src' }
         files { vk .. '/src/*.cpp', vk .. '/src/Vao/*.cpp', vk .. '/src/SPIRV-Reflect/*.c' }
-        removefiles { original, allocator, device }
-        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanDevice.cpp' }
+        removefiles { original, allocator, renderSystem }
+        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanRenderSystem.cpp' }
         filter 'system:windows'; files { vk .. '/src/Windowing/win32/*.cpp' }
         filter 'system:linux'
             files { vk .. '/src/Windowing/X11/*.cpp', generated .. '/OgreVulkanXcbSupport.cpp' }
