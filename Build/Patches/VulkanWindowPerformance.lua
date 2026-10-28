@@ -11,6 +11,53 @@ return function(source)
         source = source:sub(1, first - 1) .. new .. source:sub(last + 1)
     end
 
+    replace('#include "vulkan/vulkan_core.h"', [[#include "vulkan/vulkan_core.h"
+#include <chrono>]])
+
+    replace([[        uint32 swapchainIdx = 0u;
+        VkResult result = vkAcquireNextImageKHR( mDevice->mDevice, mSwapchain, UINT64_MAX,
+                                                 mSwapchainSemaphore, VK_NULL_HANDLE, &swapchainIdx );]], [[        uint32 swapchainIdx = 0u;
+        const auto plagcAcquireStart = std::chrono::steady_clock::now();
+        VkResult result = vkAcquireNextImageKHR( mDevice->mDevice, mSwapchain, UINT64_MAX,
+                                                 mSwapchainSemaphore, VK_NULL_HANDLE, &swapchainIdx );
+        const double plagcAcquireMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - plagcAcquireStart ).count();
+        static double plagcAcquireTotalMs = 0.0;
+        static double plagcAcquireMaxMs = 0.0;
+        static uint32 plagcAcquireSamples = 0u;
+        plagcAcquireTotalMs += plagcAcquireMs;
+        plagcAcquireMaxMs = std::max( plagcAcquireMaxMs, plagcAcquireMs );
+        if( ++plagcAcquireSamples == 240u )
+        {
+            LogManager::getSingleton().logMessage(
+                "[PlagC Vulkan WSI] acquire avg=" +
+                StringConverter::toString( plagcAcquireTotalMs / double( plagcAcquireSamples ) ) +
+                " ms max=" + StringConverter::toString( plagcAcquireMaxMs ) + " ms" );
+            plagcAcquireSamples = 0u;
+            plagcAcquireTotalMs = 0.0;
+            plagcAcquireMaxMs = 0.0;
+        }]])
+
+    replace([[        VkResult result = vkQueuePresentKHR( mDevice->mPresentQueue, &present );]], [[        const auto plagcPresentStart = std::chrono::steady_clock::now();
+        VkResult result = vkQueuePresentKHR( mDevice->mPresentQueue, &present );
+        const double plagcPresentMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - plagcPresentStart ).count();
+        static double plagcPresentTotalMs = 0.0;
+        static double plagcPresentMaxMs = 0.0;
+        static uint32 plagcPresentSamples = 0u;
+        plagcPresentTotalMs += plagcPresentMs;
+        plagcPresentMaxMs = std::max( plagcPresentMaxMs, plagcPresentMs );
+        if( ++plagcPresentSamples == 240u )
+        {
+            LogManager::getSingleton().logMessage(
+                "[PlagC Vulkan WSI] present avg=" +
+                StringConverter::toString( plagcPresentTotalMs / double( plagcPresentSamples ) ) +
+                " ms max=" + StringConverter::toString( plagcPresentMaxMs ) + " ms" );
+            plagcPresentSamples = 0u;
+            plagcPresentTotalMs = 0.0;
+            plagcPresentMaxMs = 0.0;
+        }]])
+
     replace([[    VkSemaphore VulkanWindowSwapChainBased::getImageAcquiredSemaphore()
     {
         OGRE_ASSERT_LOW( mSwapchainStatus != SwapchainReleased );]], [[    VkSemaphore VulkanWindowSwapChainBased::getImageAcquiredSemaphore()
