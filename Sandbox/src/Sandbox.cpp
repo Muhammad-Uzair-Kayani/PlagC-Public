@@ -3,6 +3,7 @@
 #include "../../Game/Framework/GameRegistry.h"
 #include "../../Game/Default/DefaultGame.h"
 #include "../../Game/SurvivalGame/SurvivalGame.h"
+#include "RendererBenchmarkGame.h"
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -23,6 +24,8 @@ class Sandbox final : public PlagC::Application
                            [] { return std::make_unique<PlagCGame::DefaultGame>(); });
         registry_.Register("SurvivalGame", "Survival Game",
                            [] { return std::make_unique<PlagCGame::SurvivalGame>(); });
+        registry_.Register("RendererBenchmark", "Renderer Backend Benchmark",
+                           [] { return std::make_unique<PlagCGame::RendererBenchmarkGame>(); });
     }
 
     static bool NonInteractive(const PlagC::EngineConfig &c)

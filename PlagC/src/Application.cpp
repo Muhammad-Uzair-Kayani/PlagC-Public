@@ -1,6 +1,8 @@
 #include "pgcpch.h"
 #include <PlagC/Application.h>
+#include <PlagC/Renderer/BackendSelection.h>
 #include <PlagC/Thread.h>
+#include <iostream>
 namespace PlagC
 {
 Engine::Engine(const EngineConfig &config)
@@ -20,8 +22,20 @@ Engine::Engine(const EngineConfig &config)
 #else
     logger_.Write(Severity::Info, "CORE", "Platform: Linux");
 #endif
+    const auto availableBackends = Renderer::BackendCapabilities();
+    RendererBackend requestedBackend = config.rendererBackend;
+    bool interactiveRendererSelection =
+        config.rendererSelectionPrompt && requestedBackend == RendererBackend::Auto &&
+        !config.headless && !config.nullPlatform && !config.offscreen;
+#ifdef PC_DIST
+    // Dist is a WindowedApp on Windows and must never depend on an attached console.
+    interactiveRendererSelection = false;
+#endif
+    if (interactiveRendererSelection)
+        requestedBackend = PromptRendererBackend(availableBackends, std::cin, std::cout);
+
     const auto backend =
-        ResolveRendererBackend(config.rendererBackend, Renderer::BackendCapabilities(),
+        ResolveRendererBackend(requestedBackend, availableBackends,
                                config.headless || config.nullPlatform, config.offscreen);
     jobs_ = std::make_unique<JobSystem>(config.workers);
     logger_.Write(Severity::Info, "JOB", "Workers: " + std::to_string(jobs_->WorkerCount()));

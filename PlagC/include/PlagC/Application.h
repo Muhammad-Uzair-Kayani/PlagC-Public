@@ -14,6 +14,9 @@ namespace PlagC
 struct EngineConfig
 {
     RendererBackend rendererBackend = RendererBackend::Auto;
+    // Startup console selection is a frontend over the shared renderer catalog. Launchers,
+    // tests and a future settings/restart flow can disable it and provide an explicit backend.
+    bool rendererSelectionPrompt = true;
     std::string game;
     std::string world;
     std::string gameAssetRoot;
