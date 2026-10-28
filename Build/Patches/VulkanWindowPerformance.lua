@@ -12,6 +12,8 @@ return function(source)
     end
 
     replace('#include "vulkan/vulkan_core.h"', [[#include "vulkan/vulkan_core.h"
+#include "OgreStringConverter.h"
+#include <algorithm>
 #include <chrono>]])
 
     replace([[        uint32 swapchainIdx = 0u;
