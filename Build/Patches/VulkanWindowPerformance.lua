@@ -72,5 +72,13 @@ return function(source)
             acquireNextSwapchain();
         OGRE_ASSERT_LOW( mSwapchainStatus != SwapchainReleased );]])
 
+    replace([[        if( mSwapchainStatus == SwapchainAcquired || mSwapchainStatus == SwapchainPendingSwap )
+        {
+            // Ogre never rendered to this window. There's nothing to present.]], [[        if( mSwapchainStatus == SwapchainReleased || mSwapchainStatus == SwapchainAcquired ||
+            mSwapchainStatus == SwapchainPendingSwap )
+        {
+            // Ogre never rendered to this window. With lazy acquisition, Released is also a
+            // valid idle/minimized state and there is deliberately nothing to present.]])
+
     return source
 end
