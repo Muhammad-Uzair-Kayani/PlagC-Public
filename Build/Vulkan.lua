@@ -32,16 +32,22 @@ function vulkanIncludes()
         filter {}
     end
 end
--- Keep the normal OpenGL-only engine source byte-for-byte unchanged. Vulkan builds use a
--- generated translation unit with the small hot-path changes required for explicit APIs.
+-- Keep the normal OpenGL-only engine source byte-for-byte unchanged. Vulkan builds use
+-- generated translation units for explicit-API hot paths and low-overhead profiling.
 function vulkanEngineSources()
     if not PLAGC_VULKAN then return end
     local original = root .. '/PlagC/src/Renderer/OgreRenderer.cpp'
     local patchRenderer = dofile(root .. '/Build/Patches/OgreRendererPerformance.lua')
     local output = generated .. '/PlagCOgreRenderer.cpp'
     write(output, patchRenderer(read(original)))
-    removefiles { original }
-    files { output }
+
+    local profilerOriginal = root .. '/PlagC/src/Renderer/GpuProfiler.cpp'
+    local patchProfiler = dofile(root .. '/Build/Patches/GpuProfilerPerformance.lua')
+    local profilerOutput = generated .. '/PlagCGpuProfiler.cpp'
+    write(profilerOutput, patchProfiler(read(profilerOriginal)))
+
+    removefiles { original, profilerOriginal }
+    files { output, profilerOutput }
 end
 function vulkanLibraries()
     if not PLAGC_VULKAN then return end
