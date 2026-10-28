@@ -1,6 +1,8 @@
 -- Applied to the pinned Ogre source at project generation; Vendor stays immutable.
 -- Keep this pure Lua so the regression harness can exercise the exact generated code.
 return function(source)
+    -- Binary reads preserve Windows checkout CRLFs; Lua long strings use LF.
+    source = source:gsub("\r\n", "\n")
     local function replace(old, new)
         local first, last = source:find(old, 1, true)
         assert(first, 'Pinned Ogre Vulkan allocator changed: ' .. old)

@@ -20,9 +20,11 @@ source = a.ogre / 'RenderSystems/Vulkan/src/Vao/OgreVulkanVaoManager.cpp'
 with tempfile.TemporaryDirectory() as directory:
     work = Path(directory)
     runner = work / 'patch.lua'
-    runner.write_text('''local patch = dofile(arg[1])
+    runner.write_text(r'''local patch = dofile(arg[1])
 local f = assert(io.open(arg[2], "rb")); local original = f:read("*a"); f:close()
+original = original:gsub("\r\n", "\n")
 local result = patch(original)
+assert(result == patch(original:gsub("\n", "\r\n")), "CRLF checkout must produce identical source")
 assert(result == patch(original), "generation must be deterministic")
 assert(not pcall(patch, result), "changed upstream source must fail closed")
 f = assert(io.open(arg[3], "wb")); f:write(result); f:close()
