@@ -12,6 +12,20 @@ return function(source)
         source = source:sub(1, first - 1) .. new .. source:sub(last + 1)
     end
 
+    replace([[            for( size_t windowIdx = 0u; windowIdx < numWindowsPendingSwap; ++windowIdx )
+            {
+                VkSemaphore semaphore = mGpuSignalSemaphForCurrCmdBuff[windowsSemaphStart + windowIdx];
+                mWindowsPendingSwap[windowIdx]->_swapBuffers( semaphore );
+                mVaoManager->notifyWaitSemaphoreSubmitted( semaphore );
+            }]], [[            for( size_t windowIdx = 0u; windowIdx < numWindowsPendingSwap; ++windowIdx )
+            {
+                VkSemaphore semaphore = mGpuSignalSemaphForCurrCmdBuff[windowsSemaphStart + windowIdx];
+                const uint32 swapchainIdx = mWindowsPendingSwap[windowIdx]->_swapBuffers( semaphore );
+                // Presentation is external to the graphics frame fence. Recycle this semaphore
+                // only when vkAcquireNextImageKHR proves that this swapchain image was released.
+                mVaoManager->notifyPresentationWaitSemaphoreSubmitted( semaphore, swapchainIdx );
+            }]])
+
     replace([[        if( submissionType >= SubmissionType::EndFrameAndSwap )
         {
             // acquireNextSwapchain must be called after newCommandBuffer()
