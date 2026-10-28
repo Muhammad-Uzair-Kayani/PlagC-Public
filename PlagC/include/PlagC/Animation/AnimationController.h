@@ -45,9 +45,6 @@ struct AnimationTransition
 {
     unsigned from = 0, to = 0;
     float crossfade = .2f;
-    // Locomotion transitions can preserve normalized gait phase so changing
-    // Walk/Jog/Sprint does not restart the destination clip at heel-strike.
-    bool syncNormalizedPhase = false;
     std::vector<AnimationCondition> conditions;
 };
 struct AnimationStateMachine
