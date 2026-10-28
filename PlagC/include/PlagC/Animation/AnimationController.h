@@ -45,6 +45,9 @@ struct AnimationTransition
 {
     unsigned from = 0, to = 0;
     float crossfade = .2f;
+    // Locomotion transitions can preserve normalized gait phase so changing
+    // Walk/Jog/Sprint does not restart the destination clip at heel-strike.
+    bool syncNormalizedPhase = false;
     std::vector<AnimationCondition> conditions;
 };
 struct AnimationStateMachine
@@ -80,8 +83,6 @@ struct AnimationStateMachine
         }
     }
 };
-// Independent per-entity parameters/clocks; graph is copied on construction so a
-// caller cannot mutate a published controller through an aliased graph pointer.
 class AnimationController
 {
     std::shared_ptr<const AnimationStateMachine> graph_;
@@ -134,8 +135,6 @@ class AnimationController
     {
         return *graph_;
     }
-    // Declaration order defines priority. Triggers are consumed only by the
-    // selected transition. The animator can interrupt a fade from its current blended pose.
     std::optional<AnimationTransition> Evaluate()
     {
         for (const auto &t : graph_->transitions)
