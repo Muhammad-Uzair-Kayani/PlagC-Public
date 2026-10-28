@@ -4,7 +4,7 @@
 using namespace PlagC;
 namespace
 {
-// Five columns, seven rows. Geometry is rebuilt only when the HUD text changes.
+// Five columns, seven rows. Geometry is updated only when the HUD text changes.
 std::array<unsigned char, 7> Glyph(char c)
 {
     switch (c)
@@ -51,6 +51,12 @@ std::array<unsigned char, 7> Glyph(char c)
 } // namespace
 void GameHud::Update(Renderer &r, const std::string &text)
 {
+    // The TPS refreshes the HUD at 6.7 Hz. Recreating Ogre/Vulkan meshes and objects at that
+    // cadence forces allocator/deferred-destruction/fence work into the game thread. Keep one
+    // dynamic mesh alive and touch it only when the visible text actually changes.
+    if (object_ && text == text_)
+        return;
+
     MeshData mesh;
     unsigned x = 0, y = 0;
     constexpr float pixel = .009f;
@@ -68,17 +74,13 @@ void GameHud::Update(Renderer &r, const std::string &text)
                 if (glyph[row] & (1u << (4 - col)))
                 {
                     float px = float(x + col) * pixel, py = -float(y + row) * pixel;
-                    auto base = std::uint32_t(mesh.vertices.size());
                     for (auto uv : {std::pair{0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}})
                         mesh.vertices.push_back(
                             {{px + uv.first * pixel, py + uv.second * pixel, 0}, {0, 0, 1}, 0, 0});
-                    mesh.indices.insert(mesh.indices.end(),
-                                        {base, base + 1, base + 2, base, base + 2, base + 3});
                 }
         x += 6;
     }
-    if (mesh.indices.empty())
-        return;
+
     if (!material_)
     {
         MaterialDesc d;
@@ -105,16 +107,48 @@ void GameHud::Update(Renderer &r, const std::string &text)
         r.SetCastShadows(cross_, false);
         r.SetRenderQueue(cross_, 199);
     }
-    auto next = r.CreateMesh(mesh);
-    auto object = r.CreateObject(next, material_);
-    r.SetCastShadows(object, false);
-    r.SetRenderQueue(object, 199);
-    if (object_)
-        r.DestroyObject(object_);
-    if (mesh_)
-        r.DestroyMesh(mesh_);
-    mesh_ = next;
-    object_ = object;
+
+    const std::size_t quads = mesh.vertices.size() / 4u;
+    if (quads == 0)
+    {
+        if (object_)
+            r.SetVisible(object_, false);
+        text_ = text;
+        return;
+    }
+
+    if (!mesh_ || quads > capacityQuads_)
+    {
+        // Leave modest spare capacity so changing a number/glyph does not immediately force another
+        // Vulkan allocation. Unused quads are degenerate and therefore produce no visible pixels.
+        capacityQuads_ = std::max(quads + 64u, quads + quads / 4u);
+        mesh.vertices.resize(capacityQuads_ * 4u);
+        mesh.indices.reserve(capacityQuads_ * 6u);
+        for (std::size_t q = 0; q < capacityQuads_; ++q)
+        {
+            const auto base = static_cast<std::uint32_t>(q * 4u);
+            mesh.indices.insert(mesh.indices.end(),
+                                {base, base + 1u, base + 2u, base, base + 2u, base + 3u});
+        }
+
+        auto next = r.CreateMesh(mesh, true);
+        auto object = r.CreateObject(next, material_);
+        r.SetCastShadows(object, false);
+        r.SetRenderQueue(object, 199);
+        if (object_)
+            r.DestroyObject(object_);
+        if (mesh_)
+            r.DestroyMesh(mesh_);
+        mesh_ = next;
+        object_ = object;
+    }
+    else
+    {
+        mesh.vertices.resize(capacityQuads_ * 4u);
+        r.UpdateMesh(mesh_, mesh.vertices);
+        r.SetVisible(object_, true);
+    }
+    text_ = text;
 }
 void GameHud::Place(Renderer &r, Vec3 position, float yaw, float pitch, float aspect, float fov)
 {
@@ -154,4 +188,6 @@ void GameHud::Clear(Renderer &r)
     object_ = {};
     mesh_ = {};
     material_ = {};
+    text_.clear();
+    capacityQuads_ = 0;
 }
