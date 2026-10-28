@@ -101,12 +101,25 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     };
 
     const AnimationClip *sourceReference = nullptr;
-    if (!config.sourceReferenceClip.empty())
+    std::string sourceReferenceName = config.sourceReferenceClip;
+
+    if (!sourceReferenceName.empty())
     {
-        sourceReference = FindClip(*source, config.sourceReferenceClip);
+        sourceReference = FindClip(*source, sourceReferenceName);
         if (!sourceReference)
             throw std::invalid_argument("source reference animation clip missing: " +
-                                        config.sourceReferenceClip);
+                                        sourceReferenceName);
+    }
+    else if (!config.jointMap.empty())
+    {
+        // UAL and similar humanoid libraries carry an explicit neutral reference clip.
+        // Prefer it for cross-rig retargeting instead of treating the imported source
+        // skeleton node transforms as the animation reference pose.
+        if (auto *neutral = FindClip(*source, "A_TPose"))
+        {
+            sourceReference = neutral;
+            sourceReferenceName = "A_TPose";
+        }
     }
 
     float translationScale = config.translationScale;
@@ -129,8 +142,8 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     if (translationScale <= 0 || !std::isfinite(translationScale))
         translationScale = 1.0f;
 
-    // Important: clone the target exactly. Its authored skeleton pose is the target
-    // retarget reference. Do not replace/reorient the target skeleton from the source.
+    // Clone Joker exactly. The target model's own authored A/T reference pose,
+    // skeleton axes, mesh, weights and inverse-bind matrices remain untouched.
     auto result = std::make_shared<ModelAsset>(*target.Shared());
     result->animations.clear();
     result->animations.reserve(source->animations.size());
@@ -189,10 +202,11 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
             {
                 for (const auto &key : sourceTrack.rotations)
                 {
-                    // Motion is measured relative to the source's explicit neutral pose,
-                    // then composed onto Joker's own authored target reference pose.
+                    // UAL motion delta = inverse(UAL A_TPose) * animated UAL pose.
                     const Quaternion sourceDelta =
                         MultiplyQ(sourceReferenceInverse, Normalize(key.value));
+
+                    // Apply that delta onto Joker's own authored A/T reference pose.
                     const Quaternion retargeted =
                         MultiplyQ(targetJoint.local.rotation, sourceDelta);
                     destination.rotations.push_back({key.time, retargeted});
@@ -203,7 +217,6 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
                 destination.rotations.push_back({0, targetJoint.local.rotation});
             }
 
-            // Proportions and local scale always belong to the target character.
             destination.scales.push_back({0, targetJoint.local.scale});
         }
 
@@ -214,10 +227,10 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     result->metadata.generation = std::max(target->metadata.generation, source->metadata.generation);
     result->warnings.push_back("Animations retargeted at runtime from " + source->metadata.path +
                                " using " + std::to_string(mappedCount) + " mapped joints" +
-                               (config.sourceReferenceClip.empty()
+                               (sourceReferenceName.empty()
                                     ? " with source bind reference"
-                                    : " using source reference clip " + config.sourceReferenceClip) +
-                               "; target authored reference pose preserved");
+                                    : " using source reference clip " + sourceReferenceName) +
+                               "; target authored A/T reference pose preserved");
     Validate(*result);
     return AssetHandle<ModelAsset>(std::move(result));
 }
