@@ -117,11 +117,17 @@ return function(source)
 
     replace('            const size_t usablePoolSize = poolSize;', [[            if( vboFlag == CPU_INACCESSIBLE || vboFlag == TEXTURES_OPTIMAL )
             {
+                // Texture-only memory requirements can force a dedicated VkDeviceMemory block.
+                // Label those separately so diagnostics do not mistake each texture allocation
+                // for a reusable 8/16/24 MiB buffer-pool leak.
+                const String allocationKind = bIsTextureOnly ? "dedicated-texture" : "buffer-pool";
                 LogManager::getSingleton().logMessage(
-                    "[PlagC Vulkan] GPU pool: type=" +
+                    "[PlagC Vulkan] GPU allocation: kind=" + allocationKind + " class=" +
+                    StringConverter::toString( static_cast<uint32>( vboFlag ) ) + " type=" +
                     StringConverter::toString( chosenMemoryTypeIdx ) + " heap=" +
                     StringConverter::toString( memTypes[chosenMemoryTypeIdx].heapIndex ) +
-                    " bytes=" + StringConverter::toString( poolSize ) + " deviceLocal=" +
+                    " requested=" + StringConverter::toString( sizeBytes ) + " reserved=" +
+                    StringConverter::toString( poolSize ) + " deviceLocal=" +
                     StringConverter::toString( ( memTypes[chosenMemoryTypeIdx].propertyFlags &
                                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) != 0u ) );
             }
