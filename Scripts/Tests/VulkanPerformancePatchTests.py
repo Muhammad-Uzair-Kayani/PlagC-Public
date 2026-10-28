@@ -40,12 +40,16 @@ with tempfile.TemporaryDirectory() as tmp:
         ROOT / 'Build/Patches/OgreRendererPerformance.lua',
         ROOT / 'PlagC/src/Renderer/OgreRenderer.cpp',
         'renderer')
+    assert '#include <PlagC/GpuProfiler.h>' in renderer
     assert 'Ogre::BT_DYNAMIC_PERSISTENT_COHERENT' in renderer
     assert 'buffer->map(0, vertices.size())' in renderer
     assert 'buffer->unmap(Ogre::UO_KEEP_PERSISTENT)' in renderer
     assert 'pendingTextureUploads' in renderer
     assert 'setStagingTextureMaxBudgetBytes' in renderer
     assert 'VulkanStagingBudget = 512ull * 1024ull * 1024ull' in renderer
+    assert 'options["VaoManager::mDynamicBufferMultiplier"] = "4"' in renderer
+    assert 'GpuProfiler::AttachWorkspace(workspace)' in renderer
+    assert 'GpuProfiler::AttachWorkspace(t.workspace)' in renderer
     assert 'dynamic ? Ogre::BT_DEFAULT : Ogre::BT_IMMUTABLE' not in renderer
 
     ogre = ROOT / 'Vendor/ogre-next/RenderSystems/Vulkan/src'
@@ -67,5 +71,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert '8u * 1024u * 1024u' in allocator
     assert 'VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT' in allocator
     assert 'sizeBytes <= availableHeapMemory[heapIdx]' in allocator
+    assert 'kind=' in allocator
+    assert 'dedicated-texture' in allocator
+    assert 'buffer-pool' in allocator
+    assert 'requested=' in allocator and 'reserved=' in allocator
 
 print('Vulkan performance generation patches passed.')
