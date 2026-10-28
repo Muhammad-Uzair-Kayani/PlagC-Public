@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Framework/Game.h"
+#include "../Framework/FpsOverlay.h"
 #include "../src/TPSGame.h"
 
 namespace PlagCGame
@@ -20,5 +21,6 @@ class DefaultGame final : public IGame
 
   private:
     Game::TPSGame game_;
+    FpsOverlay fpsOverlay_{};
 };
 } // namespace PlagCGame
