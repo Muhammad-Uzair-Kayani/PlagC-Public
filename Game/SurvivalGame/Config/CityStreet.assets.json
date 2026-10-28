@@ -2,7 +2,9 @@
   "world": "CityStreet",
   "assets": [
     "Game://Characters/Player/Joker/Joker.plasset",
-    "Game://Environment/CityStreet/CityStreet.plasset",
+    "Game://Environment/Terrain/OpenTerrain/OpenTerrain.plasset",
+    "Game://Environment/Vegetation/GrassPatches/GrassPatches.plasset",
+    "Game://Environment/Vegetation/GroundVegetation/GroundVegetation.plasset",
     "Game://Environment/Props/Jeep/Jeep.plasset"
   ]
 }
