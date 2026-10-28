@@ -75,6 +75,7 @@ project "PlagC"
     filter {}
     files { "PlagC/include/**.h", "PlagC/src/**.h", "PlagC/src/**.cpp" }
     removefiles { "PlagC/src/Assets/AssimpImporter.cpp", "PlagC/src/Assets/WaveImporter.cpp" }
+    vulkanEngineSources()
     assetRuntimeIncludes()
     dependson { "Ozz", "OpenAL" }
     enginePch("PlagC/src/pgcpch.cpp")
