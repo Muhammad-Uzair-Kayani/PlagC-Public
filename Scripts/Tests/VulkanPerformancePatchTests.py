@@ -92,5 +92,17 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'if( mSwapchainStatus == SwapchainReleased )' in window
     assert 'acquireNextSwapchain();' in window
     assert 'acquire on demand' in window
+    assert '[PlagC Vulkan WSI] acquire avg=' in window
+    assert '[PlagC Vulkan WSI] present avg=' in window
+
+    device = apply(
+        work,
+        ROOT / 'Build/Patches/VulkanDeviceQueues.lua',
+        ogre / 'OgreVulkanDevice.cpp',
+        'device')
+    assert 'gPlagCPresentQueueFamily' in device
+    assert 'usedQueueCount[graphicsFamily]++' in device
+    assert 'Dedicated present queue enabled' in device
+    assert 'Dedicated present queue unavailable' in device
 
 print('Vulkan performance generation patches passed.')
