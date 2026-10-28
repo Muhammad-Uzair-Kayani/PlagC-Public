@@ -13,6 +13,8 @@ if not exist "%BIN%\Sandbox.exe" (
 
 if not defined PC_RENDER_BENCH_OBJECTS set "PC_RENDER_BENCH_OBJECTS=2500"
 if not defined PC_RENDER_BENCH_MATERIALS set "PC_RENDER_BENCH_MATERIALS=%PC_RENDER_BENCH_OBJECTS%"
+rem Keep official captures free of the extra overlay draw/upload. Manual runs show FPS by default.
+set "PC_FPS_OVERLAY=0"
 
 pushd "%BIN%"
 if not exist Logs mkdir Logs
@@ -21,6 +23,7 @@ echo ============================================================
 echo PlagC renderer benchmark
 echo Objects  : %PC_RENDER_BENCH_OBJECTS%
 echo Materials: %PC_RENDER_BENCH_MATERIALS%
+echo FPS OSD  : disabled for measurement
 echo ============================================================
 
 echo Running OpenGL...
