@@ -37,12 +37,12 @@ class CityStreetWorld final : public IGameWorld
     PlagC::EventBus::Connection focus_;
     PlagC::EventBus::Connection mouse_;
 
-    unsigned activeLocomotionClip_ = ~0u;
     PlagC::Vec3 playerPosition_{0.0f, 0.0f, 0.0f};
     float playerYaw_ = 180.0f;
     float cameraYaw_ = 0.0f;
     float cameraPitch_ = 18.0f;
     float locomotionSpeed_ = 0.0f;
+    float upperBodyWeight_ = 0.0f;
     bool cursorCaptured_ = true;
     bool reloadQueued_ = false;
     bool fireQueued_ = false;
