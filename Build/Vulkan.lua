@@ -83,13 +83,22 @@ function vulkanLibraries()
     local patchExtensions = dofile(root .. '/Build/Patches/VulkanDeviceExtensions.lua')
     write(generated .. '/OgreVulkanRenderSystem.cpp', patchExtensions(read(renderSystem)))
 
+    -- Pipeline WSI across game frames instead of presenting and immediately blocking on the
+    -- next vkAcquireNextImageKHR inside the same renderOneFrame call.
+    local queue = vk .. '/src/OgreVulkanQueue.cpp'
+    local window = vk .. '/src/OgreVulkanWindow.cpp'
+    local patchQueue = dofile(root .. '/Build/Patches/VulkanQueuePerformance.lua')
+    local patchWindow = dofile(root .. '/Build/Patches/VulkanWindowPerformance.lua')
+    write(generated .. '/OgreVulkanQueue.cpp', patchQueue(read(queue)))
+    write(generated .. '/OgreVulkanWindow.cpp', patchWindow(read(window)))
+
     project 'OgreRenderVulkan'
         kind 'StaticLib'; language 'C++'; cppdialect 'C++17'; warnings 'Off'; common(); ogreIncludes()
         defines { 'ENABLE_OPT=0' }
         includedirs { compiler, generated, vk .. '/src' }
         files { vk .. '/src/*.cpp', vk .. '/src/Vao/*.cpp', vk .. '/src/SPIRV-Reflect/*.c' }
-        removefiles { original, allocator, renderSystem }
-        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanRenderSystem.cpp' }
+        removefiles { original, allocator, renderSystem, queue, window }
+        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanRenderSystem.cpp', generated .. '/OgreVulkanQueue.cpp', generated .. '/OgreVulkanWindow.cpp' }
         filter 'system:windows'; files { vk .. '/src/Windowing/win32/*.cpp' }
         filter 'system:linux'
             files { vk .. '/src/Windowing/X11/*.cpp', generated .. '/OgreVulkanXcbSupport.cpp' }
