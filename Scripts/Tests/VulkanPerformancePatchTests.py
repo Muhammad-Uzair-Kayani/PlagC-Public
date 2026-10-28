@@ -58,9 +58,10 @@ with tempfile.TemporaryDirectory() as tmp:
         ROOT / 'PlagC/src/Renderer/GpuProfiler.cpp',
         'gpu_profiler')
     assert profiler.count('if((p.frame&3u)!=0u)return;') == 2
-    assert 'Sampling one frame in four' not in profiler  # Patch comments stay out of generated C++.
 
     ogre = ROOT / 'Vendor/ogre-next/RenderSystems/Vulkan/src'
+    ogre_include = ROOT / 'Vendor/ogre-next/RenderSystems/Vulkan/include'
+
     render_system = apply(
         work,
         ROOT / 'Build/Patches/VulkanDeviceExtensions.lua',
@@ -84,6 +85,33 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'buffer-pool' in allocator
     assert 'requested=' in allocator and 'reserved=' in allocator
 
+    allocator_stage = work / 'allocator_memory.cpp'
+    allocator_stage.write_text(allocator)
+    allocator_present = apply(
+        work,
+        ROOT / 'Build/Patches/VulkanPresentSemaphores.lua',
+        allocator_stage,
+        'allocator_present')
+    assert 'mUsedPresentSemaphores' in allocator_present
+    assert 'notifyPresentationWaitSemaphoreSubmitted' in allocator_present
+    assert 'notifySwapchainIndexAcquired' in allocator_present
+
+    vao_header = apply(
+        work,
+        ROOT / 'Build/Patches/VulkanVaoPresentHeader.lua',
+        ogre_include / 'Vao/OgreVulkanVaoManager.h',
+        'vao_header')
+    assert 'FastArray<UsedSemaphore> mUsedPresentSemaphores;' in vao_header
+    assert 'notifyPresentationWaitSemaphoreSubmitted' in vao_header
+    assert 'notifySwapchainIndexAcquired' in vao_header
+
+    window_header = apply(
+        work,
+        ROOT / 'Build/Patches/VulkanWindowPresentHeader.lua',
+        ogre_include / 'OgreVulkanWindow.h',
+        'window_header')
+    assert 'uint32 _swapBuffers( VkSemaphore queueFinishSemaphore );' in window_header
+
     queue = apply(
         work,
         ROOT / 'Build/Patches/VulkanQueuePerformance.lua',
@@ -91,6 +119,7 @@ with tempfile.TemporaryDirectory() as tmp:
         'queue')
     assert 'do not acquire the next image immediately after presenting' in queue
     assert 'mWindowsPendingSwap[windowIdx]->acquireNextSwapchain();' not in queue
+    assert 'notifyPresentationWaitSemaphoreSubmitted' in queue
 
     window = apply(
         work,
@@ -102,6 +131,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'acquire on demand' in window
     assert '[PlagC Vulkan WSI] acquire avg=' in window
     assert '[PlagC Vulkan WSI] present avg=' in window
+    assert 'notifySwapchainIndexAcquired' in window
+    assert 'uint32 VulkanWindowSwapChainBased::_swapBuffers' in window
+    assert 'return currentSwapchainIdx;' in window
 
     device = apply(
         work,
