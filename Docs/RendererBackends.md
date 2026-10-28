@@ -82,6 +82,43 @@ requires the user's staged GameAssets; it is not included or substituted here.
 Windows presentation and GPU performance must be validated on target hardware;
 Linux software rendering does not establish either.
 
+## Vulkan memory allocation on integrated GPUs
+
+The pinned Ogre allocator originally considered only device-local heaps for ordinary
+GPU buffers. Once that heap filled, it could throw `Out of Memory trying to allocate
+30720 bytes` even with compatible shared memory available. Project generation now
+applies `Build/Patches/VulkanMemory.lua` to a generated allocator translation unit:
+
+- Keep device-local heaps first, then permit supported shared-memory types for
+  GPU-only buffers. Host-mapped buffers retain their visibility/coherency rules.
+- Fix the texture-only fallback's check of an unset pool-size sentinel; check the
+  requested size against remaining heap capacity without unsigned overflow.
+- Accept exact-fit requests and log GPU pool selections plus heap accounting when
+  allocation selection fails. These are Ogre reservations, not live driver budgets.
+
+Vendor files and the OpenGL allocator are unchanged. Regenerate with
+`GenerateProjects.bat --vulkan` and rebuild Sandbox (including OgreRenderVulkan)
+after pulling this fix. Run commands individually when using the interactive
+launcher; a pasted second command can be consumed as a game selection.
+
+The regression harness compiles the actual generated selection code against
+simulated local/shared heaps and confirms the unpatched code fails both buffer
+and texture fallback cases:
+
+```sh
+python Scripts/Tests/VulkanMemoryTests.py
+```
+
+This harness requires Python, a C++17 compiler (`CXX`, default `g++`), and a Lua
+interpreter (`--lua`, default `texlua`; ordinary `lua` works too). It covers
+fallback, exact fits, unsupported types and exhausted heaps without a GPU.
+The patched full allocator translation unit is also compile-checked on Linux.
+Windows/Radeon scene loading must still be confirmed on the target machine.
+
+`Texture memory budget exceeded. Stalling GPU.` describes the separate upload
+staging pool. This fix does not raise that budget or promise to eliminate those
+stalls, and does not make genuinely exhausted device/host memory unlimited.
+
 ## Future: switch within the running executable
 
 This is a planned lifecycle, not a live-switch API implemented today. Changing
