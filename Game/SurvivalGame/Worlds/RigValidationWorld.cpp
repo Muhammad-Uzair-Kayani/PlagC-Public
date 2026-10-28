@@ -117,19 +117,18 @@ int FunctionKeySlot(PlagC::KeyCode key)
 
 void RigValidationWorld::Start(PlagC::Engine &engine)
 {
-    auto jokerNative = engine.Assets().Get<PlagC::ModelAsset>(
-        "Game://Characters/Player/Joker/Joker.plasset");
+    auto jokerBase = engine.Assets().Get<PlagC::ModelAsset>(
+        "Game://Characters/Player/JokerBase/JokerBase.plasset");
     auto ual = engine.Assets().Get<PlagC::ModelAsset>(
         "Game://Animations/UAL/UAL1_Standard.plasset");
 
-    if (!jokerNative || !ual)
-        throw std::runtime_error("RigValidation Joker/UAL assets are not ready");
-    if (jokerNative->animations.size() < 6)
-        throw std::runtime_error("RigValidation requires Joker's six native animations");
+    if (!jokerBase || !ual)
+        throw std::runtime_error("RigValidation JokerBase/UAL assets are not ready");
+    if (!jokerBase->animations.empty())
+        throw std::runtime_error("JokerBase must contain zero native animations");
     if (ual->animations.empty())
         throw std::runtime_error("RigValidation UAL asset contains no animations");
 
-    nativeClipCount_ = unsigned(jokerNative->animations.size());
     ualClipCount_ = unsigned(ual->animations.size());
 
     PlagC::AnimationRetargetConfig retarget;
@@ -138,11 +137,11 @@ void RigValidationWorld::Start(PlagC::Engine &engine)
     retarget.translationScale = 1.0f;
     retarget.jointMap = JokerToUAL();
     retarget.sourceReferenceClip = "A_TPose";
-    retarget.preserveTargetAnimations = true;
-    jokerAsset_ = PlagC::RetargetAnimations(jokerNative, ual, retarget);
+    retarget.preserveTargetAnimations = false;
+    jokerAsset_ = PlagC::RetargetAnimations(jokerBase, ual, retarget);
 
-    if (jokerAsset_->animations.size() != nativeClipCount_ + ualClipCount_)
-        throw std::runtime_error("RigValidation combined Joker/UAL clip count mismatch");
+    if (jokerAsset_->animations.size() != ualClipCount_)
+        throw std::runtime_error("RigValidation UAL-only clip count mismatch");
 
     requestedMode_ = 0;
     activeMode_ = -1;
@@ -155,13 +154,12 @@ void RigValidationWorld::Start(PlagC::Engine &engine)
     sceneRenderer_->SetProfiling(true);
 #endif
 
-    joker_ = world_->Create("Joker Rig + UAL Validation");
+    joker_ = world_->Create("JokerBase UAL Validation");
     world_->SetTransform(joker_,
                          {{0, 0, 0}, {0, 180, 0},
                           {JokerVisualScale, JokerVisualScale, JokerVisualScale}});
     world_->SetModel(joker_, {jokerAsset_, true});
-
-    // No AnimatorComponent here: mode 0 always shows Joker's exact authored rest/A-pose.
+    // No AnimatorComponent: mode 0 displays only the stripped mesh + bind/rest skeleton.
 
     sun_ = world_->Create("Validation Sun");
     world_->SetTransform(sun_, {{0, 8, 0}, {}, {1, 1, 1}});
@@ -200,9 +198,8 @@ void RigValidationWorld::Start(PlagC::Engine &engine)
                 break;
             if (slot)
                 line += ", ";
-            const unsigned combined = nativeClipCount_ + ualIndex;
             line += "F" + std::to_string(slot + 1) + "=" +
-                    jokerAsset_->animations[combined].name;
+                    jokerAsset_->animations[ualIndex].name;
         }
         engine.Logger().Write(PlagC::Severity::Info, "RIG", line);
     };
@@ -211,18 +208,6 @@ void RigValidationWorld::Start(PlagC::Engine &engine)
                                      [this, &engine, logPage](const PlagC::Event &event) mutable {
         if (event.key == PlagC::KeyCode::D0)
             requestedMode_ = 0;
-        else if (event.key == PlagC::KeyCode::D1)
-            requestedMode_ = 1;
-        else if (event.key == PlagC::KeyCode::D2)
-            requestedMode_ = 2;
-        else if (event.key == PlagC::KeyCode::D3)
-            requestedMode_ = 3;
-        else if (event.key == PlagC::KeyCode::D4)
-            requestedMode_ = 4;
-        else if (event.key == PlagC::KeyCode::D5)
-            requestedMode_ = 5;
-        else if (event.key == PlagC::KeyCode::D6)
-            requestedMode_ = 6;
         else if (event.key == PlagC::KeyCode::PageUp)
         {
             const unsigned pages = (ualClipCount_ + UalPageSize - 1) / UalPageSize;
@@ -271,7 +256,7 @@ void RigValidationWorld::Start(PlagC::Engine &engine)
 
     if (auto *window = engine.MainWindow())
     {
-        window->SetTitle("PlagC | Rig Validation | Joker + UAL");
+        window->SetTitle("PlagC | Rig Validation | JokerBase + UAL");
         window->SetCursorCaptured(true);
     }
     engine.SetFPSLocked(false);
@@ -280,18 +265,9 @@ void RigValidationWorld::Start(PlagC::Engine &engine)
     sceneRenderer_->Sync(*world_);
     activeMode_ = 0;
 
-    std::string native;
-    for (unsigned i = 0; i < nativeClipCount_; ++i)
-    {
-        if (!native.empty())
-            native += ", ";
-        native += std::to_string(i + 1) + "=" + jokerAsset_->animations[i].name;
-    }
-
     engine.Logger().Write(
         PlagC::Severity::Info, "RIG",
-        "Joker + UAL validation: 0=A-pose/rest, native " + native +
-            "; F1-F12=UAL clips, PageUp/PageDown=UAL pages, mouse orbit");
+        "JokerBase UAL-only validation: 0=bare mesh+rest skeleton, F1-F12=UAL clips, PageUp/PageDown=UAL pages, mouse orbit");
     logPage();
 }
 
@@ -317,26 +293,17 @@ void RigValidationWorld::Frame(PlagC::Engine &engine, double dt)
         {
             world_->RemoveAnimator(joker_);
             engine.Logger().Write(PlagC::Severity::Info, "RIG",
-                                  "Joker mode: authored A-pose/rest skeleton");
-        }
-        else if (requestedMode_ >= 1 && requestedMode_ <= int(nativeClipCount_))
-        {
-            const unsigned clip = unsigned(requestedMode_ - 1);
-            SetClip(*world_, joker_, clip);
-            engine.Logger().Write(
-                PlagC::Severity::Info, "RIG",
-                "Joker native clip: " + jokerAsset_->animations[clip].name);
+                                  "JokerBase mode: bare rest skeleton (no animation)");
         }
         else if (requestedMode_ >= 100)
         {
             const unsigned ualIndex = unsigned(requestedMode_ - 100);
             if (ualIndex >= ualClipCount_)
                 throw std::out_of_range("UAL clip selection out of range");
-            const unsigned clip = nativeClipCount_ + ualIndex;
-            SetClip(*world_, joker_, clip);
+            SetClip(*world_, joker_, ualIndex);
             engine.Logger().Write(
                 PlagC::Severity::Info, "RIG",
-                "UAL retarget clip: " + jokerAsset_->animations[clip].name);
+                "UAL retarget clip: " + jokerAsset_->animations[ualIndex].name);
         }
         activeMode_ = requestedMode_;
     }
@@ -400,11 +367,7 @@ void RigValidationWorld::Stop(PlagC::Engine &engine)
     camera_ = {};
     sun_ = {};
 
-    nativeClipCount_ = 0;
-    ualClipCount_ = 0;
-    ualPage_ = 0;
-
     engine.Logger().Write(PlagC::Severity::Info, "RIG",
-                          "Joker + UAL RigValidation stopped");
+                          "JokerBase UAL RigValidation stopped");
 }
 } // namespace PlagCGame
