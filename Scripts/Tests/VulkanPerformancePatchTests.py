@@ -52,6 +52,14 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'GpuProfiler::AttachWorkspace(t.workspace)' in renderer
     assert 'dynamic ? Ogre::BT_DEFAULT : Ogre::BT_IMMUTABLE' not in renderer
 
+    profiler = apply(
+        work,
+        ROOT / 'Build/Patches/GpuProfilerPerformance.lua',
+        ROOT / 'PlagC/src/Renderer/GpuProfiler.cpp',
+        'gpu_profiler')
+    assert profiler.count('if((p.frame&3u)!=0u)return;') == 2
+    assert 'Sampling one frame in four' not in profiler  # Patch comments stay out of generated C++.
+
     ogre = ROOT / 'Vendor/ogre-next/RenderSystems/Vulkan/src'
     render_system = apply(
         work,
