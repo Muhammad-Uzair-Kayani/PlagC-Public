@@ -11,16 +11,27 @@ namespace PlagCGame
 namespace
 {
 constexpr float Rad = 3.14159265358979323846f / 180.0f;
-constexpr PlagC::Vec3 InitialPlayerPosition{0.0f, 0.0f, 4.0f};
-// Joker's source FBX was exported through a glTF wrapper with a 0.01 scale.
-// PlagC's current CPU skinning path keeps that wrapper in joint model-space, so
-// the deformed character is ~0.019 m tall instead of ~1.917 m. Compensate only
-// in this validation scene until skinning is canonicalized relative to mesh space.
 constexpr float PlayerVisualScale = 100.0f;
+constexpr float TerrainHalfExtent = 29.0f;
+constexpr PlagC::Vec3 InitialPlayerPosition{0.0f, 0.0f, 0.0f};
 
 float LengthXZ(PlagC::Vec3 v)
 {
     return std::sqrt(v.x * v.x + v.z * v.z);
+}
+
+float TerrainHeight(float x, float z)
+{
+    const float r = std::max(std::abs(x), std::abs(z));
+    if (r <= 12.0f)
+        return 0.0f;
+
+    float t = std::clamp((r - 12.0f) / 12.0f, 0.0f, 1.0f);
+    t = t * t * (3.0f - 2.0f * t);
+    const float wave = 0.30f * std::sin(x * 0.17f) +
+                       0.22f * std::cos(z * 0.21f) +
+                       0.12f * std::sin((x + z) * 0.11f);
+    return t * wave;
 }
 
 PlagC::Entity ModelEntity(PlagC::World &world, std::string name,
@@ -38,15 +49,19 @@ PlagC::Entity ModelEntity(PlagC::World &world, std::string name,
 
 void CityStreetWorld::Start(PlagC::Engine &engine)
 {
-    auto cityStreet = engine.Assets().Get<PlagC::ModelAsset>(
-        "Game://Environment/CityStreet/CityStreet.plasset");
+    auto terrain = engine.Assets().Get<PlagC::ModelAsset>(
+        "Game://Environment/Terrain/OpenTerrain/OpenTerrain.plasset");
     auto joker = engine.Assets().Get<PlagC::ModelAsset>(
         "Game://Characters/Player/Joker/Joker.plasset");
+    auto grass = engine.Assets().Get<PlagC::ModelAsset>(
+        "Game://Environment/Vegetation/GrassPatches/GrassPatches.plasset");
+    auto vegetation = engine.Assets().Get<PlagC::ModelAsset>(
+        "Game://Environment/Vegetation/GroundVegetation/GroundVegetation.plasset");
     auto jeep = engine.Assets().Get<PlagC::ModelAsset>(
         "Game://Environment/Props/Jeep/Jeep.plasset");
 
-    if (!cityStreet || !joker || !jeep)
-        throw std::runtime_error("CityStreetWorld required assets are not ready");
+    if (!terrain || !joker || !grass || !vegetation || !jeep)
+        throw std::runtime_error("OpenTerrain test required assets are not ready");
     if (joker->animations.empty())
         throw std::runtime_error("Joker reference character contains no native animations");
 
@@ -63,7 +78,7 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     sceneRenderer_->SetProfiling(true);
 #endif
 
-    environment_ = ModelEntity(*world_, "CityStreet Environment", cityStreet,
+    environment_ = ModelEntity(*world_, "Open Terrain", terrain,
                                {{0, 0, 0}, {0, 0, 0}, {1, 1, 1}});
 
     player_ = ModelEntity(*world_, "Joker", playerAsset_,
@@ -73,20 +88,40 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     animator.state = {requestedClip_, 0, 1, true, true};
     world_->SetAnimator(player_, animator);
 
+    // Keep the middle 24x24m completely clear. Vegetation is intentionally placed
+    // around the outer ring so spawn/movement testing always starts unobstructed.
+    const PlagC::Vec3 vegetationSpots[] = {
+        {-18.0f, 0.0f, -18.0f}, {-8.0f, 0.0f, -20.0f}, {8.0f, 0.0f, -20.0f},
+        {18.0f, 0.0f, -18.0f}, {-20.0f, 0.0f, -7.0f}, {20.0f, 0.0f, -6.0f},
+        {-20.0f, 0.0f, 8.0f}, {20.0f, 0.0f, 8.0f}, {-17.0f, 0.0f, 18.0f},
+        {-7.0f, 0.0f, 20.0f}, {8.0f, 0.0f, 20.0f}, {18.0f, 0.0f, 17.0f}};
+
+    for (unsigned i = 0; i < std::size(vegetationSpots); ++i)
+    {
+        auto p = vegetationSpots[i];
+        p.y = TerrainHeight(p.x, p.z);
+        const bool useGrass = (i % 2) == 0;
+        auto asset = useGrass ? grass : vegetation;
+        const float scale = useGrass ? 0.22f : 0.85f;
+        ModelEntity(*world_, useGrass ? "Grass Patch" : "Ground Vegetation", asset,
+                    {p, {0, float((i * 37) % 360), 0}, {scale, scale, scale}});
+    }
+
     jeep_ = ModelEntity(*world_, "Jeep", jeep,
-                        {{-4.0f, 0.60f, -3.0f}, {0, 28, 0}, {1, 1, 1}});
+                        {{-15.0f, TerrainHeight(-15.0f, 10.0f) + 0.55f, 10.0f},
+                         {0, 28, 0}, {1, 1, 1}});
 
     sun_ = world_->Create("Sun");
     world_->SetTransform(sun_, {{0, 12, 0}, {}, {1, 1, 1}});
     PlagC::LightDesc sun;
     sun.type = PlagC::LightType::Directional;
     sun.direction = {-0.42f, -0.86f, -0.28f};
-    sun.colour = {1.0f, 0.94f, 0.84f};
-    sun.power = 4.2f;
+    sun.colour = {1.0f, 0.95f, 0.86f};
+    sun.power = 4.4f;
     world_->SetLight(sun_, {sun});
 
     camera_ = world_->Create("Gameplay Camera");
-    world_->SetTransform(camera_, {{0.0f, 1.45f, 8.0f}, {}, {1, 1, 1}});
+    world_->SetTransform(camera_, {{0.0f, 2.2f, 5.0f}, {}, {1, 1, 1}});
     PlagC::CameraComponent camera;
     camera.target = {playerPosition_.x, playerPosition_.y + 1.0f, playerPosition_.z};
     camera.fov = 55.0f;
@@ -139,15 +174,15 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     settings.hdr = true;
     settings.bloom = true;
     settings.exposure = 1.0f;
-    settings.fogDensity = 0.0015f;
-    settings.fogColour = {0.40f, 0.44f, 0.46f};
-    settings.background = {0.08f, 0.10f, 0.12f};
+    settings.fogDensity = 0.0010f;
+    settings.fogColour = {0.32f, 0.37f, 0.40f};
+    settings.background = {0.07f, 0.10f, 0.13f};
     engine.Graphics().SetSettings(settings);
 
     engine.SetFPSLocked(false);
     if (auto *window = engine.MainWindow())
     {
-        window->SetTitle("PlagC | Survival Game | City Street | Joker Rig Test");
+        window->SetTitle("PlagC | Survival Game | Open Terrain Test");
         window->SetCursorCaptured(true);
     }
 
@@ -155,14 +190,8 @@ void CityStreetWorld::Start(PlagC::Engine &engine)
     sceneRenderer_->Sync(*world_);
     activeClip_ = requestedClip_;
 
-    std::string clips;
-    for (unsigned i = 0; i < playerAsset_->animations.size(); ++i)
-    {
-        if (!clips.empty()) clips += ", ";
-        clips += std::to_string(i + 1) + "=" + playerAsset_->animations[i].name;
-    }
     engine.Logger().Write(PlagC::Severity::Info, "WORLD",
-                          "CityStreet Joker test ready: WASD move, Shift faster, mouse orbit, " + clips);
+                          "OpenTerrain ready: 60x60m terrain, 24x24m clear spawn zone, WASD movement");
 }
 
 void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
@@ -186,15 +215,11 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
         animator.state = {requestedClip_, 0, 1, true, true};
         world_->SetAnimator(player_, animator);
         activeClip_ = requestedClip_;
-        engine.Logger().Write(PlagC::Severity::Info, "ANIMATION",
-                              "Joker native clip: " + playerAsset_->animations[activeClip_].name);
     }
 
-    // Temporary collision-free navigation for finding the useful street area.
-    // Movement is camera-relative on the XZ plane.
     const float yaw = cameraYaw_ * Rad;
-    PlagC::Vec3 forward{std::sin(yaw), 0.0f, -std::cos(yaw)};
-    PlagC::Vec3 right{std::cos(yaw), 0.0f, std::sin(yaw)};
+    const PlagC::Vec3 forward{std::sin(yaw), 0.0f, -std::cos(yaw)};
+    const PlagC::Vec3 right{std::cos(yaw), 0.0f, std::sin(yaw)};
 
     float f = 0.0f;
     float r = 0.0f;
@@ -217,16 +242,17 @@ void CityStreetWorld::Frame(PlagC::Engine &engine, double dt)
         const bool fast = PlagC::Input::IsKeyPressed(PlagC::KeyCode::LeftShift) ||
                           PlagC::Input::IsKeyPressed(PlagC::KeyCode::RightShift);
         const float speed = fast ? 7.0f : 3.0f;
-        playerPosition_.x += move.x * speed * float(dt);
-        playerPosition_.z += move.z * speed * float(dt);
+        playerPosition_.x = std::clamp(playerPosition_.x + move.x * speed * float(dt),
+                                       -TerrainHalfExtent, TerrainHalfExtent);
+        playerPosition_.z = std::clamp(playerPosition_.z + move.z * speed * float(dt),
+                                       -TerrainHalfExtent, TerrainHalfExtent);
 
-        // Face the direction of travel. This is only calibration movement; if the
-        // source model's forward axis is reversed we can add a constant offset later.
         const float desiredYaw = std::atan2(move.x, move.z) / Rad;
         playerYaw_ += std::remainder(desiredYaw - playerYaw_, 360.0f) *
                       (1.0f - std::exp(-float(dt) * 12.0f));
     }
 
+    playerPosition_.y = TerrainHeight(playerPosition_.x, playerPosition_.z);
     world_->SetTransform(player_,
                          {playerPosition_, {0, playerYaw_, 0},
                           {PlayerVisualScale, PlayerVisualScale, PlayerVisualScale}});
@@ -288,6 +314,6 @@ void CityStreetWorld::Stop(PlagC::Engine &engine)
     camera_ = {};
     sun_ = {};
 
-    engine.Logger().Write(PlagC::Severity::Info, "WORLD", "CityStreetWorld stopped");
+    engine.Logger().Write(PlagC::Severity::Info, "WORLD", "OpenTerrain test stopped");
 }
 } // namespace PlagCGame
