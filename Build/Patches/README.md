@@ -37,6 +37,14 @@ vertex update through a staging copy on Vulkan. The persistent buffer is mapped,
 copied, and flushed through Ogre's buffered dynamic ring. OpenGL-only generation
 continues to compile the normal renderer source unchanged.
 
+The Vulkan dynamic-buffer multiplier is set to four. Ogre's Vulkan mapped-buffer
+path waits for the tail frame before reusing a dynamic region, and the TPS log
+showed 16-20 ms CPU tail spikes despite low average upload time with the default
+three-region ring. Four backing regions give transient GPU/present delays another
+frame of slack; Ogre's Vulkan swapchain uses the same buffering depth. This trades
+a small amount of dynamic-buffer/swapchain memory and potentially one additional
+queued frame for substantially lower CPU wait probability.
+
 The same renderer patch batches asset texture residency transitions. Vulkan no
 longer calls `waitForStreamingCompletion()` after every individual asset texture;
 pending uploads are drained once before the next rendered frame (and before a
@@ -49,8 +57,9 @@ preference list, retains only host-visible shared memory as a last-resort UMA
 fallback, and caps small shared fallback pools at 8 MiB instead of reserving a
 64 MiB pool for each small spill. When `VK_EXT_memory_budget` is available, the
 allocator combines its tracked reservations with the driver's current heap
-budget/usage before growing another pool. Allocation diagnostics report the
-remaining calculated budget.
+budget/usage before growing another allocation. Diagnostics distinguish reusable
+`buffer-pool` allocations from `dedicated-texture` allocations and print requested
+versus reserved bytes; dedicated texture blocks must not be counted as pool waste.
 
 `VulkanDeviceExtensions.lua` patches the pinned Ogre 3.0 render-system extension
 selection so `VK_EXT_memory_budget` is enabled when the driver advertises it.
@@ -63,5 +72,8 @@ source changes.
 
 Release profiling also uses Vulkan timestamp query pools. Queries are reset and
 written inside compositor command recording and read back later without waiting;
-there is no per-frame `vkDeviceWaitIdle`. The reported Vulkan total covers the
-first-to-last instrumented compositor pass rather than presentation latency.
+there is no per-frame `vkDeviceWaitIdle`. The renderer explicitly attaches the
+profiler listener to every compositor workspace because manager-level listener
+registration in the pinned Ogre build does not deliver the pass callbacks used by
+this profiler. The reported Vulkan total covers the first-to-last instrumented
+compositor pass rather than presentation latency.
