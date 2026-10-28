@@ -36,12 +36,14 @@ float Length(Vec3 v)
 
 bool IsRoot(std::string_view name)
 {
-    return name == "root" || name == "Root" || name == "ROOT";
+    return name == "root" || name == "Root" || name == "ROOT" || name == "_rootJoint" ||
+           name == "Bip001_01";
 }
 
 bool IsPelvis(std::string_view name)
 {
-    return name == "pelvis" || name == "Pelvis" || name == "hips" || name == "Hips";
+    return name == "pelvis" || name == "Pelvis" || name == "hips" || name == "Hips" ||
+           name.find("Pelvis") != std::string_view::npos;
 }
 } // namespace
 
@@ -61,22 +63,32 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     for (unsigned i = 0; i < source->skeleton.joints.size(); ++i)
         sourceJoint.emplace(source->skeleton.joints[i].name, i);
 
+    auto resolveSource = [&](const std::string &targetName) -> std::optional<unsigned> {
+        if (auto alias = config.jointMap.find(targetName); alias != config.jointMap.end())
+        {
+            if (auto found = sourceJoint.find(alias->second); found != sourceJoint.end())
+                return found->second;
+        }
+        if (auto found = sourceJoint.find(targetName); found != sourceJoint.end())
+            return found->second;
+        return std::nullopt;
+    };
+
     float translationScale = config.translationScale;
     if (translationScale <= 0)
     {
-        auto targetPelvis = std::find_if(target->skeleton.joints.begin(), target->skeleton.joints.end(),
-                                         [](const auto &j) { return IsPelvis(j.name); });
-        if (targetPelvis != target->skeleton.joints.end())
-        {
-            auto found = sourceJoint.find(targetPelvis->name);
-            if (found != sourceJoint.end())
+        for (const auto &targetJoint : target->skeleton.joints)
+            if (IsPelvis(targetJoint.name))
             {
-                const float s = Length(source->skeleton.joints[found->second].local.translation);
-                const float t = Length(targetPelvis->local.translation);
-                if (s > 1e-5f && t > 1e-5f)
-                    translationScale = t / s;
+                if (auto found = resolveSource(targetJoint.name))
+                {
+                    const float s = Length(source->skeleton.joints[*found].local.translation);
+                    const float t = Length(targetJoint.local.translation);
+                    if (s > 1e-5f && t > 1e-5f)
+                        translationScale = t / s;
+                }
+                break;
             }
-        }
     }
     if (translationScale <= 0 || !std::isfinite(translationScale))
         translationScale = 1.0f;
@@ -84,6 +96,11 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     auto result = std::make_shared<ModelAsset>(*target.Shared());
     result->animations.clear();
     result->animations.reserve(source->animations.size());
+
+    unsigned mappedCount = 0;
+    for (const auto &targetJoint : target->skeleton.joints)
+        if (resolveSource(targetJoint.name))
+            ++mappedCount;
 
     for (const auto &sourceClip : source->animations)
     {
@@ -96,8 +113,8 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
         {
             const auto &targetJoint = target->skeleton.joints[targetIndex];
             auto &destination = clip.tracks[targetIndex];
-            auto found = sourceJoint.find(targetJoint.name);
-            if (found == sourceJoint.end())
+            auto sourceIndex = resolveSource(targetJoint.name);
+            if (!sourceIndex)
             {
                 destination.translations.push_back({0, targetJoint.local.translation});
                 destination.rotations.push_back({0, targetJoint.local.rotation});
@@ -105,9 +122,8 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
                 continue;
             }
 
-            const unsigned sourceIndex = found->second;
-            const auto &sourceJointNode = source->skeleton.joints[sourceIndex];
-            const auto &sourceTrack = sourceClip.tracks[sourceIndex];
+            const auto &sourceJointNode = source->skeleton.joints[*sourceIndex];
+            const auto &sourceTrack = sourceClip.tracks[*sourceIndex];
             const bool translate = (config.rootTranslation && IsRoot(targetJoint.name)) ||
                                    (config.pelvisTranslation && IsPelvis(targetJoint.name));
 
@@ -130,17 +146,12 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
             const Quaternion sourceBindInverse = Conjugate(Normalize(sourceJointNode.local.rotation));
             for (const auto &key : sourceTrack.rotations)
             {
-                // targetBind * inverse(sourceBind) * sourceAnimated preserves the
-                // target rest orientation while applying the source local rotation delta.
                 const Quaternion retargeted = MultiplyQ(
                     targetJoint.local.rotation,
                     MultiplyQ(sourceBindInverse, Normalize(key.value)));
                 destination.rotations.push_back({key.time, retargeted});
             }
 
-            // Body proportions belong to the target. Animation scale is deliberately
-            // ignored because copying source scale is the most common cause of visual
-            // collapse when retargeting between differently proportioned characters.
             destination.scales.push_back({0, targetJoint.local.scale});
         }
 
@@ -149,7 +160,8 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
 
     result->metadata.path = target->metadata.path + "#retarget:" + source->metadata.path;
     result->metadata.generation = std::max(target->metadata.generation, source->metadata.generation);
-    result->warnings.push_back("Animations retargeted at runtime from " + source->metadata.path);
+    result->warnings.push_back("Animations retargeted at runtime from " + source->metadata.path +
+                               " using " + std::to_string(mappedCount) + " mapped joints");
     Validate(*result);
     return AssetHandle<ModelAsset>(std::move(result));
 }
