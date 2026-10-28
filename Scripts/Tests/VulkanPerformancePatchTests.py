@@ -76,4 +76,21 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'buffer-pool' in allocator
     assert 'requested=' in allocator and 'reserved=' in allocator
 
+    queue = apply(
+        work,
+        ROOT / 'Build/Patches/VulkanQueuePerformance.lua',
+        ogre / 'OgreVulkanQueue.cpp',
+        'queue')
+    assert 'do not acquire the next image immediately after presenting' in queue
+    assert 'mWindowsPendingSwap[windowIdx]->acquireNextSwapchain();' not in queue
+
+    window = apply(
+        work,
+        ROOT / 'Build/Patches/VulkanWindowPerformance.lua',
+        ogre / 'OgreVulkanWindow.cpp',
+        'window')
+    assert 'if( mSwapchainStatus == SwapchainReleased )' in window
+    assert 'acquireNextSwapchain();' in window
+    assert 'acquire on demand' in window
+
 print('Vulkan performance generation patches passed.')
