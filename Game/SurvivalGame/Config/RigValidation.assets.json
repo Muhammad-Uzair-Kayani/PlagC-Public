@@ -1,6 +1,7 @@
 {
   "world": "RigValidation",
   "assets": [
-    "Game://Characters/Player/Joker/Joker.plasset"
+    "Game://Characters/Player/Joker/Joker.plasset",
+    "Game://Animations/UAL/UAL1_Standard.plasset"
   ]
 }
