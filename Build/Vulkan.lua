@@ -5,6 +5,7 @@ local root = path.getabsolute('..')
 local vk = root .. '/Vendor/ogre-next/RenderSystems/Vulkan'
 local compiler = root .. '/Vendor/glslang'
 local generated = root .. '/Bin-Int/Generated'
+local generatedVkInclude = generated .. '/VulkanInclude'
 local sdk = os.getenv('VULKAN_SDK')
 if PLAGC_VULKAN then
     assert(not _OPTIONS['null-platform'], '--vulkan cannot be combined with --null-platform')
@@ -80,9 +81,21 @@ function vulkanLibraries()
     assert(count == 1, 'Pinned Ogre XCB defaults changed')
     write(generated .. '/OgreVulkanXcbSupport.cpp', source)
 
+    -- Backport Ogre's safe presentation-semaphore lifetime API into generated headers. The
+    -- generated include directory is placed before the pinned vendor include directory only for
+    -- OgreRenderVulkan; the submodule itself stays immutable.
+    local vaoHeader = vk .. '/include/Vao/OgreVulkanVaoManager.h'
+    local windowHeader = vk .. '/include/OgreVulkanWindow.h'
+    local patchVaoHeader = dofile(root .. '/Build/Patches/VulkanVaoPresentHeader.lua')
+    local patchWindowHeader = dofile(root .. '/Build/Patches/VulkanWindowPresentHeader.lua')
+    write(generatedVkInclude .. '/Vao/OgreVulkanVaoManager.h', patchVaoHeader(read(vaoHeader)))
+    write(generatedVkInclude .. '/OgreVulkanWindow.h', patchWindowHeader(read(windowHeader)))
+
     local allocator = vk .. '/src/Vao/OgreVulkanVaoManager.cpp'
     local patchMemory = dofile(root .. '/Build/Patches/VulkanMemory.lua')
-    write(generated .. '/OgreVulkanVaoManager.cpp', patchMemory(read(allocator)))
+    local patchPresentSemaphores = dofile(root .. '/Build/Patches/VulkanPresentSemaphores.lua')
+    write(generated .. '/OgreVulkanVaoManager.cpp',
+          patchPresentSemaphores(patchMemory(read(allocator))))
 
     -- Ogre 3.0 chooses optional device extensions in the render system rather than VulkanDevice.
     local renderSystem = vk .. '/src/OgreVulkanRenderSystem.cpp'
@@ -102,12 +115,14 @@ function vulkanLibraries()
     write(generated .. '/OgreVulkanDevice.cpp', patchDeviceQueues(read(device)))
 
     project 'OgreRenderVulkan'
-        kind 'StaticLib'; language 'C++'; cppdialect 'C++17'; warnings 'Off'; common(); ogreIncludes()
+        kind 'StaticLib'; language 'C++'; cppdialect 'C++17'; warnings 'Off'; common()
+        includedirs { generatedVkInclude }
+        ogreIncludes()
         defines { 'ENABLE_OPT=0' }
         includedirs { compiler, generated, vk .. '/src' }
         files { vk .. '/src/*.cpp', vk .. '/src/Vao/*.cpp', vk .. '/src/SPIRV-Reflect/*.c' }
         removefiles { original, allocator, renderSystem, queue, window, device }
-        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanRenderSystem.cpp', generated .. '/OgreVulkanQueue.cpp', generated .. '/OgreVulkanWindow.cpp', generated .. '/OgreVulkanDevice.cpp' }
+        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanRenderSystem.cpp', generated .. '/OgreVulkanQueue.cpp', generated .. '/OgreVulkanWindow.cpp', generated .. '/OgreVulkanDevice.cpp', generatedVkInclude .. '/Vao/OgreVulkanVaoManager.h', generatedVkInclude .. '/OgreVulkanWindow.h' }
         filter 'system:windows'; files { vk .. '/src/Windowing/win32/*.cpp' }
         filter 'system:linux'
             files { vk .. '/src/Windowing/X11/*.cpp', generated .. '/OgreVulkanXcbSupport.cpp' }
