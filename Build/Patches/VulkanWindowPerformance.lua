@@ -38,7 +38,32 @@ return function(source)
             plagcAcquireSamples = 0u;
             plagcAcquireTotalMs = 0.0;
             plagcAcquireMaxMs = 0.0;
-        }]])
+        }
+        if( result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR )
+            vaoManager->notifySwapchainIndexAcquired( swapchainIdx );]])
+
+    replace([[    VkSemaphore VulkanWindowSwapChainBased::getImageAcquiredSemaphore()
+    {
+        OGRE_ASSERT_LOW( mSwapchainStatus != SwapchainReleased );]], [[    VkSemaphore VulkanWindowSwapChainBased::getImageAcquiredSemaphore()
+    {
+        // PlagC: acquire on demand. The previous frame queued presentation before returning
+        // to gameplay, so by the time rendering reaches this point the presentation engine
+        // has had useful CPU time to release an image. This removes an unnecessary immediate
+        // present -> acquire serialization point from the end of every renderOneFrame.
+        if( mSwapchainStatus == SwapchainReleased )
+            acquireNextSwapchain();
+        OGRE_ASSERT_LOW( mSwapchainStatus != SwapchainReleased );]])
+
+    replace([[        if( mSwapchainStatus == SwapchainAcquired || mSwapchainStatus == SwapchainPendingSwap )
+        {
+            // Ogre never rendered to this window. There's nothing to present.]], [[        if( mSwapchainStatus == SwapchainReleased || mSwapchainStatus == SwapchainAcquired ||
+            mSwapchainStatus == SwapchainPendingSwap )
+        {
+            // Ogre never rendered to this window. With lazy acquisition, Released is also a
+            // valid idle/minimized state and there is deliberately nothing to present.]])
+
+    replace('    void VulkanWindowSwapChainBased::_swapBuffers( VkSemaphore queueFinishSemaphore )',
+            '    uint32 VulkanWindowSwapChainBased::_swapBuffers( VkSemaphore queueFinishSemaphore )')
 
     replace([[        VkResult result = vkQueuePresentKHR( mDevice->mPresentQueue, &present );]], [[        const auto plagcPresentStart = std::chrono::steady_clock::now();
         VkResult result = vkQueuePresentKHR( mDevice->mPresentQueue, &present );
@@ -60,25 +85,14 @@ return function(source)
             plagcPresentMaxMs = 0.0;
         }]])
 
-    replace([[    VkSemaphore VulkanWindowSwapChainBased::getImageAcquiredSemaphore()
-    {
-        OGRE_ASSERT_LOW( mSwapchainStatus != SwapchainReleased );]], [[    VkSemaphore VulkanWindowSwapChainBased::getImageAcquiredSemaphore()
-    {
-        // PlagC: acquire on demand. The previous frame queued presentation before returning
-        // to gameplay, so by the time rendering reaches this point the presentation engine
-        // has had useful CPU time to release an image. This removes an unnecessary immediate
-        // present -> acquire serialization point from the end of every renderOneFrame.
-        if( mSwapchainStatus == SwapchainReleased )
-            acquireNextSwapchain();
-        OGRE_ASSERT_LOW( mSwapchainStatus != SwapchainReleased );]])
-
-    replace([[        if( mSwapchainStatus == SwapchainAcquired || mSwapchainStatus == SwapchainPendingSwap )
-        {
-            // Ogre never rendered to this window. There's nothing to present.]], [[        if( mSwapchainStatus == SwapchainReleased || mSwapchainStatus == SwapchainAcquired ||
-            mSwapchainStatus == SwapchainPendingSwap )
-        {
-            // Ogre never rendered to this window. With lazy acquisition, Released is also a
-            // valid idle/minimized state and there is deliberately nothing to present.]])
+    replace([[        mSwapchainStatus = SwapchainReleased;
+    }
+    //-------------------------------------------------------------------------
+    void VulkanWindowSwapChainBased::getCustomAttribute]], [[        mSwapchainStatus = SwapchainReleased;
+        return currentSwapchainIdx;
+    }
+    //-------------------------------------------------------------------------
+    void VulkanWindowSwapChainBased::getCustomAttribute]])
 
     return source
 end
