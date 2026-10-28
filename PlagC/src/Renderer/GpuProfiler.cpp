@@ -12,10 +12,16 @@
 #include <Compositor/Pass/OgreCompositorPassDef.h>
 #include <Compositor/Pass/PassQuad/OgreCompositorPassQuadDef.h>
 #include <Compositor/Pass/PassScene/OgreCompositorPassSceneDef.h>
+#ifdef PC_OGRE_VULKAN
+#include <OgreVulkanDevice.h>
+#include <OgreVulkanQueue.h>
+#include <vulkan/vulkan.h>
+#endif
 #endif
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <vector>
 namespace PlagC
 {
@@ -72,6 +78,9 @@ WorkspaceGpuListener workspaceListener;
 struct GpuProfiler::Impl
 {
     static constexpr std::uint32_t RingSize=8;
+#ifdef PC_OGRE_VULKAN
+    static constexpr std::uint32_t VkQueriesPerSlot=static_cast<std::uint32_t>(GpuPassCount*2u);
+#endif
     struct PassQuery{
 #ifndef PC_OGRE_NULL_ONLY
         GLuint begin=0,end=0;
@@ -82,22 +91,44 @@ struct GpuProfiler::Impl
 #ifndef PC_OGRE_NULL_ONLY
         GLuint begin=0,end=0;GLsync fence=nullptr;
 #endif
-        bool pending=false,started=false;std::uint64_t frame=0;std::array<PassQuery,GpuPassCount> passes{};
+        bool pending=false,started=false,resetIssued=false;std::uint64_t frame=0;std::array<PassQuery,GpuPassCount> passes{};
     };
     RendererBackend backend=RendererBackend::Null;std::array<Slot,RingSize> slots{};std::uint32_t write=0;std::uint64_t frame=0;GpuFrameTiming latest{};std::array<std::vector<double>,GpuPassCount> samples{};
 #ifndef PC_OGRE_NULL_ONLY
     Ogre::CompositorManager2* compositorManager=nullptr;
 #endif
+#ifdef PC_OGRE_VULKAN
+    Ogre::VulkanDevice* vulkanDevice=nullptr;VkQueryPool queryPool=VK_NULL_HANDLE;double timestampPeriodNs=0;
+#endif
 };
 namespace{GpuProfiler*active=nullptr;}
 GpuProfiler::GpuProfiler(RendererBackend backend):impl_(std::make_unique<Impl>()){auto&p=*impl_;p.backend=backend;
 #ifndef PC_OGRE_NULL_ONLY
-if(backend==RendererBackend::OpenGL&&glGenQueries&&glQueryCounter&&glGetQueryObjectiv&&glGetQueryObjectui64v&&glFenceSync&&glClientWaitSync){for(auto&slot:p.slots){glGenQueries(1,&slot.begin);glGenQueries(1,&slot.end);for(auto&q:slot.passes){glGenQueries(1,&q.begin);glGenQueries(1,&q.end);}}p.latest.supported=true;active=this;if(auto*root=Ogre::Root::getSingletonPtr()){p.compositorManager=root->getCompositorManager2();if(p.compositorManager)p.compositorManager->addListener(&workspaceListener);}}
+if(backend==RendererBackend::OpenGL&&glGenQueries&&glQueryCounter&&glGetQueryObjectiv&&glGetQueryObjectui64v&&glFenceSync&&glClientWaitSync){for(auto&slot:p.slots){glGenQueries(1,&slot.begin);glGenQueries(1,&slot.end);for(auto&q:slot.passes){glGenQueries(1,&q.begin);glGenQueries(1,&q.end);}}p.latest.supported=true;}
+#ifdef PC_OGRE_VULKAN
+else if(backend==RendererBackend::Vulkan)
+{
+    if(auto*root=Ogre::Root::getSingletonPtr())if(auto*rs=root->getRenderSystem())
+    {
+        rs->getCustomAttribute("VulkanDevice",&p.vulkanDevice);
+        if(p.vulkanDevice&&p.vulkanDevice->mDevice)
+        {
+            VkQueryPoolCreateInfo ci{};ci.sType=VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;ci.queryType=VK_QUERY_TYPE_TIMESTAMP;ci.queryCount=Impl::RingSize*Impl::VkQueriesPerSlot;
+            if(vkCreateQueryPool(p.vulkanDevice->mDevice,&ci,nullptr,&p.queryPool)==VK_SUCCESS){p.timestampPeriodNs=p.vulkanDevice->mDeviceProperties.limits.timestampPeriod;p.latest.supported=p.timestampPeriodNs>0;}
+        }
+    }
+}
+#endif
+if(p.latest.supported){active=this;if(auto*root=Ogre::Root::getSingletonPtr()){p.compositorManager=root->getCompositorManager2();if(p.compositorManager)p.compositorManager->addListener(&workspaceListener);}}
 #endif
 }
 GpuProfiler::~GpuProfiler(){
 #ifndef PC_OGRE_NULL_ONLY
-if(impl_&&impl_->compositorManager)impl_->compositorManager->removeListener(&workspaceListener);if(active==this)active=nullptr;if(impl_&&impl_->latest.supported&&impl_->backend==RendererBackend::OpenGL)for(auto&slot:impl_->slots){if(slot.fence)glDeleteSync(slot.fence);if(slot.begin)glDeleteQueries(1,&slot.begin);if(slot.end)glDeleteQueries(1,&slot.end);for(auto&q:slot.passes){if(q.begin)glDeleteQueries(1,&q.begin);if(q.end)glDeleteQueries(1,&q.end);}}
+if(impl_&&impl_->compositorManager)impl_->compositorManager->removeListener(&workspaceListener);if(active==this)active=nullptr;
+if(impl_&&impl_->latest.supported&&impl_->backend==RendererBackend::OpenGL)for(auto&slot:impl_->slots){if(slot.fence)glDeleteSync(slot.fence);if(slot.begin)glDeleteQueries(1,&slot.begin);if(slot.end)glDeleteQueries(1,&slot.end);for(auto&q:slot.passes){if(q.begin)glDeleteQueries(1,&q.begin);if(q.end)glDeleteQueries(1,&q.end);}}
+#ifdef PC_OGRE_VULKAN
+if(impl_&&impl_->queryPool&&impl_->vulkanDevice&&impl_->vulkanDevice->mDevice){vkDeviceWaitIdle(impl_->vulkanDevice->mDevice);vkDestroyQueryPool(impl_->vulkanDevice->mDevice,impl_->queryPool,nullptr);impl_->queryPool=VK_NULL_HANDLE;}
+#endif
 #endif
 }
 void GpuProfiler::AttachWorkspace(void*workspace){
@@ -109,24 +140,41 @@ if(workspace)static_cast<Ogre::CompositorWorkspace*>(workspace)->addListener(&wo
 }
 void GpuProfiler::BeginFrame(){auto&p=*impl_;++p.frame;p.latest.valid=false;p.latest.outstandingFrames=0;
 #ifndef PC_OGRE_NULL_ONLY
-if(!p.latest.supported||p.backend!=RendererBackend::OpenGL)return;for(auto&slot:p.slots){if(slot.fence){const GLenum status=glClientWaitSync(slot.fence,0,0);if(status==GL_ALREADY_SIGNALED||status==GL_CONDITION_SATISFIED){glDeleteSync(slot.fence);slot.fence=nullptr;}else ++p.latest.outstandingFrames;}if(!slot.pending)continue;GLint ready=GL_FALSE;glGetQueryObjectiv(slot.end,GL_QUERY_RESULT_AVAILABLE,&ready);if(ready!=GL_TRUE)continue;GLuint64 begin=0,end=0;glGetQueryObjectui64v(slot.begin,GL_QUERY_RESULT,&begin);glGetQueryObjectui64v(slot.end,GL_QUERY_RESULT,&end);if(end>=begin){p.latest.valid=true;p.latest.totalMs=double(end-begin)/1000000.0;p.latest.latencyFrames=static_cast<std::uint32_t>(p.frame-slot.frame);for(std::size_t i=0;i<GpuPassCount;++i){auto&q=slot.passes[i];p.latest.passes[i]={};if(!q.issued)continue;GLuint64 qb=0,qe=0;glGetQueryObjectui64v(q.begin,GL_QUERY_RESULT,&qb);glGetQueryObjectui64v(q.end,GL_QUERY_RESULT,&qe);if(qe>=qb){const double value=double(qe-qb)/1000000.0;p.latest.passes[i]={true,value};p.samples[i].push_back(value);}}}slot.pending=false;slot.started=false;for(auto&q:slot.passes)q.begun=q.issued=false;}auto&slot=p.slots[p.write];if(!slot.pending&&!slot.fence){slot.started=true;for(auto&q:slot.passes)q.begun=q.issued=false;glQueryCounter(slot.begin,GL_TIMESTAMP);slot.frame=p.frame;}
+if(!p.latest.supported)return;
+if(p.backend==RendererBackend::OpenGL){for(auto&slot:p.slots){if(slot.fence){const GLenum status=glClientWaitSync(slot.fence,0,0);if(status==GL_ALREADY_SIGNALED||status==GL_CONDITION_SATISFIED){glDeleteSync(slot.fence);slot.fence=nullptr;}else ++p.latest.outstandingFrames;}if(!slot.pending)continue;GLint ready=GL_FALSE;glGetQueryObjectiv(slot.end,GL_QUERY_RESULT_AVAILABLE,&ready);if(ready!=GL_TRUE)continue;GLuint64 begin=0,end=0;glGetQueryObjectui64v(slot.begin,GL_QUERY_RESULT,&begin);glGetQueryObjectui64v(slot.end,GL_QUERY_RESULT,&end);if(end>=begin){p.latest.valid=true;p.latest.totalMs=double(end-begin)/1000000.0;p.latest.latencyFrames=static_cast<std::uint32_t>(p.frame-slot.frame);for(std::size_t i=0;i<GpuPassCount;++i){auto&q=slot.passes[i];p.latest.passes[i]={};if(!q.issued)continue;GLuint64 qb=0,qe=0;glGetQueryObjectui64v(q.begin,GL_QUERY_RESULT,&qb);glGetQueryObjectui64v(q.end,GL_QUERY_RESULT,&qe);if(qe>=qb){const double value=double(qe-qb)/1000000.0;p.latest.passes[i]={true,value};p.samples[i].push_back(value);}}}slot.pending=false;slot.started=false;for(auto&q:slot.passes)q.begun=q.issued=false;}auto&slot=p.slots[p.write];if(!slot.pending&&!slot.fence){slot.started=true;slot.resetIssued=false;for(auto&q:slot.passes)q.begun=q.issued=false;glQueryCounter(slot.begin,GL_TIMESTAMP);slot.frame=p.frame;}return;}
+#ifdef PC_OGRE_VULKAN
+if(p.backend==RendererBackend::Vulkan&&p.queryPool&&p.vulkanDevice)
+{
+    for(std::uint32_t s=0;s<Impl::RingSize;++s){auto&slot=p.slots[s];if(!slot.pending)continue;++p.latest.outstandingFrames;bool ready=true;std::uint64_t first=std::numeric_limits<std::uint64_t>::max(),last=0;std::array<std::array<std::uint64_t,2>,GpuPassCount> values{};for(std::size_t i=0;i<GpuPassCount;++i){auto&q=slot.passes[i];if(!q.issued)continue;const auto base=s*Impl::VkQueriesPerSlot+static_cast<std::uint32_t>(i)*2u;const VkResult r=vkGetQueryPoolResults(p.vulkanDevice->mDevice,p.queryPool,base,2,sizeof(values[i]),values[i].data(),sizeof(std::uint64_t),VK_QUERY_RESULT_64_BIT);if(r==VK_NOT_READY){ready=false;break;}if(r!=VK_SUCCESS){p.latest.supported=false;ready=false;break;}first=std::min(first,values[i][0]);last=std::max(last,values[i][1]);}if(!ready)continue;if(p.latest.outstandingFrames)--p.latest.outstandingFrames;if(first!=std::numeric_limits<std::uint64_t>::max()&&last>=first){p.latest.valid=true;p.latest.totalMs=double(last-first)*p.timestampPeriodNs/1000000.0;p.latest.latencyFrames=static_cast<std::uint32_t>(p.frame-slot.frame);for(std::size_t i=0;i<GpuPassCount;++i){auto&q=slot.passes[i];p.latest.passes[i]={};if(!q.issued)continue;const auto qb=values[i][0],qe=values[i][1];if(qe>=qb){const double value=double(qe-qb)*p.timestampPeriodNs/1000000.0;p.latest.passes[i]={true,value};p.samples[i].push_back(value);}}}slot.pending=false;slot.started=false;slot.resetIssued=false;for(auto&q:slot.passes)q.begun=q.issued=false;}
+    auto&slot=p.slots[p.write];if(!slot.pending){slot.started=true;slot.resetIssued=false;slot.frame=p.frame;for(auto&q:slot.passes)q.begun=q.issued=false;}return;
+}
+#endif
 #endif
 }
 void GpuProfiler::EndFrame(){auto&p=*impl_;
 #ifndef PC_OGRE_NULL_ONLY
-if(!p.latest.supported||p.backend!=RendererBackend::OpenGL)return;auto&slot=p.slots[p.write];if(slot.pending||slot.fence||!slot.started)return;for(auto&q:slot.passes)if(q.begun&&!q.issued){glQueryCounter(q.end,GL_TIMESTAMP);q.issued=true;q.begun=false;}glQueryCounter(slot.end,GL_TIMESTAMP);slot.fence=glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);slot.pending=true;slot.started=false;p.write=(p.write+1u)%Impl::RingSize;
+if(!p.latest.supported)return;if(p.backend==RendererBackend::OpenGL){auto&slot=p.slots[p.write];if(slot.pending||slot.fence||!slot.started)return;for(auto&q:slot.passes)if(q.begun&&!q.issued){glQueryCounter(q.end,GL_TIMESTAMP);q.issued=true;q.begun=false;}glQueryCounter(slot.end,GL_TIMESTAMP);slot.fence=glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);slot.pending=true;slot.started=false;p.write=(p.write+1u)%Impl::RingSize;return;}
+#ifdef PC_OGRE_VULKAN
+if(p.backend==RendererBackend::Vulkan){auto&slot=p.slots[p.write];if(slot.pending||!slot.started)return;bool issued=false;for(auto&q:slot.passes){q.begun=false;issued|=q.issued;}slot.started=false;if(issued){slot.pending=true;p.write=(p.write+1u)%Impl::RingSize;}return;}
+#endif
 #endif
 }
 void GpuProfiler::BeginPass(GpuPass pass){
 #ifndef PC_OGRE_NULL_ONLY
-if(!active||pass==GpuPass::Count)return;auto&p=*active->impl_;if(p.backend!=RendererBackend::OpenGL||!p.latest.supported)return;auto&slot=p.slots[p.write];if(!slot.started||slot.pending)return;auto&q=slot.passes[static_cast<std::size_t>(pass)];if(q.begun||q.issued)return;glQueryCounter(q.begin,GL_TIMESTAMP);q.begun=true;
+if(!active||pass==GpuPass::Count)return;auto&p=*active->impl_;if(!p.latest.supported)return;auto&slot=p.slots[p.write];if(!slot.started||slot.pending)return;auto&q=slot.passes[static_cast<std::size_t>(pass)];if(q.begun||q.issued)return;if(p.backend==RendererBackend::OpenGL){glQueryCounter(q.begin,GL_TIMESTAMP);q.begun=true;return;}
+#ifdef PC_OGRE_VULKAN
+if(p.backend==RendererBackend::Vulkan&&p.queryPool&&p.vulkanDevice){const VkCommandBuffer cmd=p.vulkanDevice->mGraphicsQueue.mCurrentCmdBuffer;if(!cmd)return;const std::uint32_t base=p.write*Impl::VkQueriesPerSlot;if(!slot.resetIssued){vkCmdResetQueryPool(cmd,p.queryPool,base,Impl::VkQueriesPerSlot);slot.resetIssued=true;}const std::uint32_t query=base+static_cast<std::uint32_t>(pass)*2u;vkCmdWriteTimestamp(cmd,VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,p.queryPool,query);q.begun=true;}
+#endif
 #else
 (void)pass;
 #endif
 }
 void GpuProfiler::EndPass(GpuPass pass){
 #ifndef PC_OGRE_NULL_ONLY
-if(!active||pass==GpuPass::Count)return;auto&p=*active->impl_;if(p.backend!=RendererBackend::OpenGL||!p.latest.supported)return;auto&slot=p.slots[p.write];if(!slot.started||slot.pending)return;auto&q=slot.passes[static_cast<std::size_t>(pass)];if(!q.begun||q.issued)return;glQueryCounter(q.end,GL_TIMESTAMP);q.begun=false;q.issued=true;
+if(!active||pass==GpuPass::Count)return;auto&p=*active->impl_;if(!p.latest.supported)return;auto&slot=p.slots[p.write];if(!slot.started||slot.pending)return;auto&q=slot.passes[static_cast<std::size_t>(pass)];if(!q.begun||q.issued)return;if(p.backend==RendererBackend::OpenGL){glQueryCounter(q.end,GL_TIMESTAMP);q.begun=false;q.issued=true;return;}
+#ifdef PC_OGRE_VULKAN
+if(p.backend==RendererBackend::Vulkan&&p.queryPool&&p.vulkanDevice){const VkCommandBuffer cmd=p.vulkanDevice->mGraphicsQueue.mCurrentCmdBuffer;if(!cmd)return;const std::uint32_t query=p.write*Impl::VkQueriesPerSlot+static_cast<std::uint32_t>(pass)*2u+1u;vkCmdWriteTimestamp(cmd,VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,p.queryPool,query);q.begun=false;q.issued=true;}
+#endif
 #else
 (void)pass;
 #endif
