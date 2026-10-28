@@ -4,6 +4,7 @@
 #include <cmath>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 namespace PlagC
 {
@@ -30,6 +31,36 @@ Quaternion MultiplyQ(Quaternion a, Quaternion b)
                       a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z});
 }
 
+Quaternion Slerp(Quaternion a, Quaternion b, float t)
+{
+    a = Normalize(a);
+    b = Normalize(b);
+    float dot = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+    if (dot < 0.0f)
+    {
+        b = {-b.x, -b.y, -b.z, -b.w};
+        dot = -dot;
+    }
+
+    dot = std::clamp(dot, -1.0f, 1.0f);
+    if (dot > 0.9995f)
+        return Normalize({a.x + (b.x - a.x) * t,
+                          a.y + (b.y - a.y) * t,
+                          a.z + (b.z - a.z) * t,
+                          a.w + (b.w - a.w) * t});
+
+    const float theta = std::acos(dot);
+    const float sinTheta = std::sin(theta);
+    if (std::abs(sinTheta) <= 1e-8f)
+        return a;
+    const float wa = std::sin((1.0f - t) * theta) / sinTheta;
+    const float wb = std::sin(t * theta) / sinTheta;
+    return Normalize({a.x * wa + b.x * wb,
+                      a.y * wa + b.y * wb,
+                      a.z * wa + b.z * wb,
+                      a.w * wa + b.w * wb});
+}
+
 float Length(Vec3 v)
 {
     return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -54,6 +85,48 @@ const AnimationClip *FindClip(const ModelAsset &asset, std::string_view name)
     return it == asset.animations.end() ? nullptr : &*it;
 }
 
+Quaternion SampleRotation(const JointTrack &track, Quaternion fallback, float time)
+{
+    if (track.rotations.empty())
+        return Normalize(fallback);
+    if (track.rotations.size() == 1 || time <= track.rotations.front().time)
+        return Normalize(track.rotations.front().value);
+    if (time >= track.rotations.back().time)
+        return Normalize(track.rotations.back().value);
+
+    auto upper = std::upper_bound(track.rotations.begin(), track.rotations.end(), time,
+                                  [](float value, const RotationKey &key) {
+                                      return value < key.time;
+                                  });
+    const auto &b = *upper;
+    const auto &a = *(upper - 1);
+    const float span = b.time - a.time;
+    const float alpha = span > 1e-8f ? (time - a.time) / span : 0.0f;
+    return Slerp(a.value, b.value, alpha);
+}
+
+Vec3 SampleTranslation(const JointTrack &track, Vec3 fallback, float time)
+{
+    if (track.translations.empty())
+        return fallback;
+    if (track.translations.size() == 1 || time <= track.translations.front().time)
+        return track.translations.front().value;
+    if (time >= track.translations.back().time)
+        return track.translations.back().value;
+
+    auto upper = std::upper_bound(track.translations.begin(), track.translations.end(), time,
+                                  [](float value, const VectorKey &key) {
+                                      return value < key.time;
+                                  });
+    const auto &b = *upper;
+    const auto &a = *(upper - 1);
+    const float span = b.time - a.time;
+    const float alpha = span > 1e-8f ? (time - a.time) / span : 0.0f;
+    return {a.value.x + (b.value.x - a.value.x) * alpha,
+            a.value.y + (b.value.y - a.value.y) * alpha,
+            a.value.z + (b.value.z - a.value.z) * alpha};
+}
+
 JointTransform ReferenceTransform(const ModelAsset &source,
                                   const AnimationClip *reference,
                                   unsigned joint)
@@ -70,6 +143,57 @@ JointTransform ReferenceTransform(const ModelAsset &source,
     if (!track.scales.empty())
         result.scale = track.scales.front().value;
     return result;
+}
+
+std::vector<Quaternion> ReferenceGlobalRotations(const ModelAsset &model,
+                                                 const AnimationClip *reference)
+{
+    std::vector<Quaternion> globals(model.skeleton.joints.size());
+    for (unsigned i = 0; i < model.skeleton.joints.size(); ++i)
+    {
+        const auto local = ReferenceTransform(model, reference, i).rotation;
+        const int parent = model.skeleton.joints[i].parent;
+        globals[i] = parent < 0 ? Normalize(local)
+                                : MultiplyQ(globals[unsigned(parent)], local);
+    }
+    return globals;
+}
+
+std::vector<Quaternion> AnimatedGlobalRotations(const ModelAsset &model,
+                                                const AnimationClip &clip,
+                                                float time)
+{
+    std::vector<Quaternion> globals(model.skeleton.joints.size());
+    for (unsigned i = 0; i < model.skeleton.joints.size(); ++i)
+    {
+        Quaternion local = model.skeleton.joints[i].local.rotation;
+        if (i < clip.tracks.size())
+            local = SampleRotation(clip.tracks[i], local, time);
+        const int parent = model.skeleton.joints[i].parent;
+        globals[i] = parent < 0 ? Normalize(local)
+                                : MultiplyQ(globals[unsigned(parent)], local);
+    }
+    return globals;
+}
+
+std::vector<float> RotationTimes(const AnimationClip &clip,
+                                 const std::vector<std::optional<unsigned>> &mapping)
+{
+    std::vector<float> times{0.0f};
+    for (const auto &mapped : mapping)
+    {
+        if (!mapped || *mapped >= clip.tracks.size())
+            continue;
+        for (const auto &key : clip.tracks[*mapped].rotations)
+            times.push_back(key.time);
+    }
+
+    std::sort(times.begin(), times.end());
+    times.erase(std::unique(times.begin(), times.end(), [](float a, float b) {
+                    return std::abs(a - b) <= 1e-5f;
+                }),
+                times.end());
+    return times;
 }
 } // namespace
 
@@ -100,9 +224,17 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
         return std::nullopt;
     };
 
+    std::vector<std::optional<unsigned>> mapping(target->skeleton.joints.size());
+    unsigned mappedCount = 0;
+    for (unsigned i = 0; i < target->skeleton.joints.size(); ++i)
+    {
+        mapping[i] = resolveSource(target->skeleton.joints[i].name);
+        if (mapping[i])
+            ++mappedCount;
+    }
+
     const AnimationClip *sourceReference = nullptr;
     std::string sourceReferenceName = config.sourceReferenceClip;
-
     if (!sourceReferenceName.empty())
     {
         sourceReference = FindClip(*source, sourceReferenceName);
@@ -122,32 +254,30 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     float translationScale = config.translationScale;
     if (translationScale <= 0)
     {
-        for (const auto &targetJoint : target->skeleton.joints)
-            if (IsPelvis(targetJoint.name))
+        for (unsigned i = 0; i < target->skeleton.joints.size(); ++i)
+            if (IsPelvis(target->skeleton.joints[i].name) && mapping[i])
             {
-                if (auto mapped = resolveSource(targetJoint.name))
-                {
-                    const JointTransform sourceRef = ReferenceTransform(*source, sourceReference, *mapped);
-                    const float s = Length(sourceRef.translation);
-                    const float t = Length(targetJoint.local.translation);
-                    if (s > 1e-5f && t > 1e-5f)
-                        translationScale = t / s;
-                }
+                const JointTransform sourceRef =
+                    ReferenceTransform(*source, sourceReference, *mapping[i]);
+                const float s = Length(sourceRef.translation);
+                const float t = Length(target->skeleton.joints[i].local.translation);
+                if (s > 1e-5f && t > 1e-5f)
+                    translationScale = t / s;
                 break;
             }
     }
     if (translationScale <= 0 || !std::isfinite(translationScale))
         translationScale = 1.0f;
 
+    // The target skeleton's unanimated transforms are its authored A/T reference.
+    // Do not rewrite them. The source uses its explicit A_TPose reference clip.
+    const auto targetReferenceGlobals = ReferenceGlobalRotations(*target, nullptr);
+    const auto sourceReferenceGlobals = ReferenceGlobalRotations(*source, sourceReference);
+
     auto result = std::make_shared<ModelAsset>(*target.Shared());
     if (!config.preserveTargetAnimations)
         result->animations.clear();
     result->animations.reserve(result->animations.size() + source->animations.size());
-
-    unsigned mappedCount = 0;
-    for (const auto &targetJoint : target->skeleton.joints)
-        if (resolveSource(targetJoint.name))
-            ++mappedCount;
 
     for (const auto &sourceClip : source->animations)
     {
@@ -156,56 +286,89 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
         clip.duration = sourceClip.duration;
         clip.tracks.resize(target->skeleton.joints.size());
 
-        for (unsigned targetIndex = 0; targetIndex < target->skeleton.joints.size(); ++targetIndex)
+        // Every mapped joint is sampled on one shared timeline. This is important:
+        // a child's target-local rotation depends on its animated parent's global
+        // rotation at the same instant.
+        const auto times = RotationTimes(sourceClip, mapping);
+        for (float time : times)
         {
-            const auto &targetJoint = target->skeleton.joints[targetIndex];
-            auto &destination = clip.tracks[targetIndex];
-            auto sourceIndex = resolveSource(targetJoint.name);
+            const auto sourceAnimatedGlobals = AnimatedGlobalRotations(*source, sourceClip, time);
+            std::vector<Quaternion> targetAnimatedGlobals(target->skeleton.joints.size());
 
-            if (!sourceIndex)
+            for (unsigned i = 0; i < target->skeleton.joints.size(); ++i)
             {
-                destination.translations.push_back({0, targetJoint.local.translation});
-                destination.rotations.push_back({0, targetJoint.local.rotation});
-                destination.scales.push_back({0, targetJoint.local.scale});
-                continue;
-            }
-
-            const auto &sourceTrack = sourceClip.tracks[*sourceIndex];
-            const JointTransform sourceRef = ReferenceTransform(*source, sourceReference, *sourceIndex);
-            const bool translate = (config.rootTranslation && IsRoot(targetJoint.name)) ||
-                                   (config.pelvisTranslation && IsPelvis(targetJoint.name));
-
-            if (translate && !sourceTrack.translations.empty())
-            {
-                for (const auto &key : sourceTrack.translations)
+                const int parent = target->skeleton.joints[i].parent;
+                if (mapping[i])
                 {
-                    const Vec3 delta{(key.value.x - sourceRef.translation.x) * translationScale,
-                                     (key.value.y - sourceRef.translation.y) * translationScale,
-                                     (key.value.z - sourceRef.translation.z) * translationScale};
-                    destination.translations.push_back(
-                        {key.time, {targetJoint.local.translation.x + delta.x,
-                                    targetJoint.local.translation.y + delta.y,
-                                    targetJoint.local.translation.z + delta.z}});
+                    const unsigned sourceIndex = *mapping[i];
+                    // Global reference alignment:
+                    // targetAnimated = targetReference * inverse(sourceReference) * sourceAnimated.
+                    // This transfers the source absolute joint orientation through the
+                    // two neutral reference poses, so differing local bone axes do not
+                    // get multiplied directly into each other.
+                    targetAnimatedGlobals[i] = MultiplyQ(
+                        MultiplyQ(targetReferenceGlobals[i],
+                                  Conjugate(sourceReferenceGlobals[sourceIndex])),
+                        sourceAnimatedGlobals[sourceIndex]);
+                }
+                else if (parent < 0)
+                {
+                    targetAnimatedGlobals[i] =
+                        Normalize(target->skeleton.joints[i].local.rotation);
+                }
+                else
+                {
+                    targetAnimatedGlobals[i] = MultiplyQ(
+                        targetAnimatedGlobals[unsigned(parent)],
+                        target->skeleton.joints[i].local.rotation);
                 }
             }
-            else
-                destination.translations.push_back({0, targetJoint.local.translation});
 
-            const Quaternion sourceReferenceInverse = Conjugate(Normalize(sourceRef.rotation));
-            if (!sourceTrack.rotations.empty())
+            for (unsigned i = 0; i < target->skeleton.joints.size(); ++i)
             {
-                for (const auto &key : sourceTrack.rotations)
+                const int parent = target->skeleton.joints[i].parent;
+                Quaternion local = parent < 0
+                                       ? targetAnimatedGlobals[i]
+                                       : MultiplyQ(
+                                             Conjugate(targetAnimatedGlobals[unsigned(parent)]),
+                                             targetAnimatedGlobals[i]);
+                clip.tracks[i].rotations.push_back({time, Normalize(local)});
+            }
+        }
+
+        for (unsigned i = 0; i < target->skeleton.joints.size(); ++i)
+        {
+            const auto &targetJoint = target->skeleton.joints[i];
+            auto &destination = clip.tracks[i];
+
+            const bool translate = mapping[i] &&
+                                   ((config.rootTranslation && IsRoot(targetJoint.name)) ||
+                                    (config.pelvisTranslation && IsPelvis(targetJoint.name)));
+            if (translate && *mapping[i] < sourceClip.tracks.size())
+            {
+                const unsigned sourceIndex = *mapping[i];
+                const auto &sourceTrack = sourceClip.tracks[sourceIndex];
+                const auto sourceRef =
+                    ReferenceTransform(*source, sourceReference, sourceIndex);
+                if (!sourceTrack.translations.empty())
                 {
-                    const Quaternion sourceDelta =
-                        MultiplyQ(sourceReferenceInverse, Normalize(key.value));
-                    const Quaternion retargeted =
-                        MultiplyQ(targetJoint.local.rotation, sourceDelta);
-                    destination.rotations.push_back({key.time, retargeted});
+                    for (const auto &key : sourceTrack.translations)
+                    {
+                        const Vec3 delta{
+                            (key.value.x - sourceRef.translation.x) * translationScale,
+                            (key.value.y - sourceRef.translation.y) * translationScale,
+                            (key.value.z - sourceRef.translation.z) * translationScale};
+                        destination.translations.push_back(
+                            {key.time,
+                             {targetJoint.local.translation.x + delta.x,
+                              targetJoint.local.translation.y + delta.y,
+                              targetJoint.local.translation.z + delta.z}});
+                    }
                 }
             }
-            else
-                destination.rotations.push_back({0, targetJoint.local.rotation});
 
+            if (destination.translations.empty())
+                destination.translations.push_back({0, targetJoint.local.translation});
             destination.scales.push_back({0, targetJoint.local.scale});
         }
 
@@ -214,13 +377,13 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
 
     result->metadata.path = target->metadata.path + "#retarget:" + source->metadata.path;
     result->metadata.generation = std::max(target->metadata.generation, source->metadata.generation);
-    result->warnings.push_back("Animations retargeted at runtime from " + source->metadata.path +
-                               " using " + std::to_string(mappedCount) + " mapped joints" +
-                               (sourceReferenceName.empty()
-                                    ? " with source bind reference"
-                                    : " using source reference clip " + sourceReferenceName) +
-                               "; target authored reference pose preserved" +
-                               (config.preserveTargetAnimations ? "; native target clips preserved" : ""));
+    result->warnings.push_back(
+        "Animations retargeted in global reference space from " + source->metadata.path +
+        " using " + std::to_string(mappedCount) + " mapped joints" +
+        (sourceReferenceName.empty() ? " with source bind reference"
+                                     : " using source reference clip " + sourceReferenceName) +
+        "; target authored A/T reference pose preserved" +
+        (config.preserveTargetAnimations ? "; native target clips preserved" : ""));
     Validate(*result);
     return AssetHandle<ModelAsset>(std::move(result));
 }
