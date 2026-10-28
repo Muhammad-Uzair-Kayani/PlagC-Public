@@ -112,9 +112,6 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     }
     else if (!config.jointMap.empty())
     {
-        // UAL and similar humanoid libraries carry an explicit neutral reference clip.
-        // Prefer it for cross-rig retargeting instead of treating the imported source
-        // skeleton node transforms as the animation reference pose.
         if (auto *neutral = FindClip(*source, "A_TPose"))
         {
             sourceReference = neutral;
@@ -142,11 +139,10 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     if (translationScale <= 0 || !std::isfinite(translationScale))
         translationScale = 1.0f;
 
-    // Clone Joker exactly. The target model's own authored A/T reference pose,
-    // skeleton axes, mesh, weights and inverse-bind matrices remain untouched.
     auto result = std::make_shared<ModelAsset>(*target.Shared());
-    result->animations.clear();
-    result->animations.reserve(source->animations.size());
+    if (!config.preserveTargetAnimations)
+        result->animations.clear();
+    result->animations.reserve(result->animations.size() + source->animations.size());
 
     unsigned mappedCount = 0;
     for (const auto &targetJoint : target->skeleton.joints)
@@ -193,29 +189,22 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
                 }
             }
             else
-            {
                 destination.translations.push_back({0, targetJoint.local.translation});
-            }
 
             const Quaternion sourceReferenceInverse = Conjugate(Normalize(sourceRef.rotation));
             if (!sourceTrack.rotations.empty())
             {
                 for (const auto &key : sourceTrack.rotations)
                 {
-                    // UAL motion delta = inverse(UAL A_TPose) * animated UAL pose.
                     const Quaternion sourceDelta =
                         MultiplyQ(sourceReferenceInverse, Normalize(key.value));
-
-                    // Apply that delta onto Joker's own authored A/T reference pose.
                     const Quaternion retargeted =
                         MultiplyQ(targetJoint.local.rotation, sourceDelta);
                     destination.rotations.push_back({key.time, retargeted});
                 }
             }
             else
-            {
                 destination.rotations.push_back({0, targetJoint.local.rotation});
-            }
 
             destination.scales.push_back({0, targetJoint.local.scale});
         }
@@ -230,7 +219,8 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
                                (sourceReferenceName.empty()
                                     ? " with source bind reference"
                                     : " using source reference clip " + sourceReferenceName) +
-                               "; target authored A/T reference pose preserved");
+                               "; target authored reference pose preserved" +
+                               (config.preserveTargetAnimations ? "; native target clips preserved" : ""));
     Validate(*result);
     return AssetHandle<ModelAsset>(std::move(result));
 }
