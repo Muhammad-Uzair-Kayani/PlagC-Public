@@ -73,16 +73,22 @@ function vulkanLibraries()
     source, count = read(xcb):gsub('optFullScreen.currentValue = "Yes";', 'optFullScreen.currentValue = mVideoModes.empty() ? "No" : "Yes";')
     assert(count == 1, 'Pinned Ogre XCB defaults changed')
     write(generated .. '/OgreVulkanXcbSupport.cpp', source)
+
     local allocator = vk .. '/src/Vao/OgreVulkanVaoManager.cpp'
     local patchMemory = dofile(root .. '/Build/Patches/VulkanMemory.lua')
     write(generated .. '/OgreVulkanVaoManager.cpp', patchMemory(read(allocator)))
+
+    local device = vk .. '/src/OgreVulkanDevice.cpp'
+    local patchDevice = dofile(root .. '/Build/Patches/VulkanDeviceExtensions.lua')
+    write(generated .. '/OgreVulkanDevice.cpp', patchDevice(read(device)))
+
     project 'OgreRenderVulkan'
         kind 'StaticLib'; language 'C++'; cppdialect 'C++17'; warnings 'Off'; common(); ogreIncludes()
         defines { 'ENABLE_OPT=0' }
         includedirs { compiler, generated, vk .. '/src' }
         files { vk .. '/src/*.cpp', vk .. '/src/Vao/*.cpp', vk .. '/src/SPIRV-Reflect/*.c' }
-        removefiles { original, allocator }
-        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp' }
+        removefiles { original, allocator, device }
+        files { generated .. '/OgreVulkanProgram.cpp', generated .. '/OgreVulkanVaoManager.cpp', generated .. '/OgreVulkanDevice.cpp' }
         filter 'system:windows'; files { vk .. '/src/Windowing/win32/*.cpp' }
         filter 'system:linux'
             files { vk .. '/src/Windowing/X11/*.cpp', generated .. '/OgreVulkanXcbSupport.cpp' }
