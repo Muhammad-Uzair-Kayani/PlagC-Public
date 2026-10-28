@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Framework/Game.h"
+#include "../Framework/FpsOverlay.h"
 #include <vector>
 
 namespace PlagCGame
@@ -23,6 +24,8 @@ class RendererBenchmarkGame final : public IGame
     bool previousFpsLocked_ = true;
     PlagC::RenderSettings previousSettings_{};
     PlagC::EnvironmentDesc previousEnvironment_{};
+    PlagC::CameraDesc camera_{};
+    FpsOverlay fpsOverlay_{};
     std::vector<PlagC::MeshHandle> meshes_;
     std::vector<PlagC::MaterialHandle> materials_;
     std::vector<PlagC::ObjectHandle> objects_;
