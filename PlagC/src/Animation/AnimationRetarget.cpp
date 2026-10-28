@@ -2,7 +2,9 @@
 #include <PlagC/Animation/AnimationRetarget.h>
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <unordered_map>
+#include <vector>
 
 namespace PlagC
 {
@@ -17,7 +19,7 @@ Quaternion Normalize(Quaternion q)
 {
     const float n = std::sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
     if (n <= 1e-8f)
-        return {};
+        return {0, 0, 0, 1};
     return {q.x / n, q.y / n, q.z / n, q.w / n};
 }
 
@@ -29,9 +31,51 @@ Quaternion MultiplyQ(Quaternion a, Quaternion b)
                       a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z});
 }
 
+Vec3 Rotate(Quaternion q, Vec3 v)
+{
+    q = Normalize(q);
+    const Vec3 u{q.x, q.y, q.z};
+    const float dotUV = u.x * v.x + u.y * v.y + u.z * v.z;
+    const float dotUU = u.x * u.x + u.y * u.y + u.z * u.z;
+    const Vec3 cross{u.y * v.z - u.z * v.y,
+                     u.z * v.x - u.x * v.z,
+                     u.x * v.y - u.y * v.x};
+    return {2.0f * dotUV * u.x + (q.w * q.w - dotUU) * v.x + 2.0f * q.w * cross.x,
+            2.0f * dotUV * u.y + (q.w * q.w - dotUU) * v.y + 2.0f * q.w * cross.y,
+            2.0f * dotUV * u.z + (q.w * q.w - dotUU) * v.z + 2.0f * q.w * cross.z};
+}
+
 float Length(Vec3 v)
 {
     return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
+Vec3 Normalized(Vec3 v)
+{
+    const float length = Length(v);
+    if (length <= 1e-8f)
+        return {};
+    return {v.x / length, v.y / length, v.z / length};
+}
+
+Vec3 Mul(Vec3 a, Vec3 b)
+{
+    return {a.x * b.x, a.y * b.y, a.z * b.z};
+}
+
+Vec3 Add(Vec3 a, Vec3 b)
+{
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+
+Vec3 Sub(Vec3 a, Vec3 b)
+{
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+
+Vec3 Scale(Vec3 v, float s)
+{
+    return {v.x * s, v.y * s, v.z * s};
 }
 
 bool IsRoot(std::string_view name)
@@ -44,6 +88,38 @@ bool IsPelvis(std::string_view name)
 {
     return name == "pelvis" || name == "Pelvis" || name == "hips" || name == "Hips" ||
            name.find("Pelvis") != std::string_view::npos;
+}
+
+struct GlobalJoint
+{
+    Vec3 position{};
+    Quaternion rotation{0, 0, 0, 1};
+    Vec3 scale{1, 1, 1};
+};
+
+std::vector<GlobalJoint> Globals(const SkeletonAsset &skeleton)
+{
+    std::vector<GlobalJoint> globals(skeleton.joints.size());
+    for (unsigned i = 0; i < skeleton.joints.size(); ++i)
+    {
+        const auto &joint = skeleton.joints[i];
+        const auto &local = joint.local;
+        auto &global = globals[i];
+        if (joint.parent < 0)
+        {
+            global.position = local.translation;
+            global.rotation = Normalize(local.rotation);
+            global.scale = local.scale;
+            continue;
+        }
+
+        const auto &parent = globals[unsigned(joint.parent)];
+        global.position = Add(parent.position,
+                              Rotate(parent.rotation, Mul(parent.scale, local.translation)));
+        global.rotation = MultiplyQ(parent.rotation, local.rotation);
+        global.scale = Mul(parent.scale, local.scale);
+    }
+    return globals;
 }
 } // namespace
 
@@ -102,16 +178,105 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
         if (resolveSource(targetJoint.name))
             ++mappedCount;
 
+    // Rebase characters that were authored/bound in an idle/gameplay pose into the
+    // animation library's neutral reference pose before transferring motion. This
+    // changes the target rest skeleton but deliberately keeps the original inverse
+    // bind matrices, which physically reposes the skinned mesh into the neutral pose.
+    if (config.adoptSourceReferencePose)
+    {
+        const auto sourceGlobals = Globals(source->skeleton);
+        const auto originalTargetGlobals = Globals(target->skeleton);
+
+        std::optional<unsigned> targetAnchor;
+        std::optional<unsigned> sourceAnchor;
+        for (unsigned i = 0; i < target->skeleton.joints.size(); ++i)
+            if (IsPelvis(target->skeleton.joints[i].name))
+                if (auto mapped = resolveSource(target->skeleton.joints[i].name))
+                {
+                    targetAnchor = i;
+                    sourceAnchor = *mapped;
+                    break;
+                }
+
+        if (!targetAnchor || !sourceAnchor)
+            throw std::invalid_argument("neutral retarget pose requires a mapped pelvis");
+
+        const Quaternion globalAlignment = MultiplyQ(
+            originalTargetGlobals[*targetAnchor].rotation,
+            Conjugate(sourceGlobals[*sourceAnchor].rotation));
+
+        std::vector<GlobalJoint> rebasedGlobals(result->skeleton.joints.size());
+        for (unsigned i = 0; i < result->skeleton.joints.size(); ++i)
+        {
+            auto &joint = result->skeleton.joints[i];
+            const auto &original = target->skeleton.joints[i].local;
+            auto mapped = resolveSource(joint.name);
+
+            if (mapped && !IsRoot(joint.name))
+            {
+                const unsigned sourceIndex = *mapped;
+                const Quaternion desiredGlobalRotation =
+                    MultiplyQ(globalAlignment, sourceGlobals[sourceIndex].rotation);
+
+                if (joint.parent >= 0)
+                {
+                    const unsigned parentIndex = unsigned(joint.parent);
+                    const auto &parentGlobal = rebasedGlobals[parentIndex];
+                    joint.local.rotation = MultiplyQ(Conjugate(parentGlobal.rotation),
+                                                     desiredGlobalRotation);
+
+                    // Preserve Joker's proportions while adopting the UAL reference
+                    // direction. Prefer the source joint corresponding to Joker's
+                    // actual parent because the two humanoid hierarchies are not
+                    // structurally identical around neck/clavicles.
+                    unsigned sourceParent = sourceIndex;
+                    if (auto mappedParent = resolveSource(result->skeleton.joints[parentIndex].name))
+                        sourceParent = *mappedParent;
+                    else if (source->skeleton.joints[sourceIndex].parent >= 0)
+                        sourceParent = unsigned(source->skeleton.joints[sourceIndex].parent);
+
+                    if (!IsPelvis(joint.name) && sourceParent != sourceIndex)
+                    {
+                        Vec3 direction = Sub(sourceGlobals[sourceIndex].position,
+                                             sourceGlobals[sourceParent].position);
+                        direction = Rotate(globalAlignment, Normalized(direction));
+                        direction = Rotate(Conjugate(parentGlobal.rotation), direction);
+                        const float targetLength = Length(original.translation);
+                        if (Length(direction) > 1e-6f && targetLength > 1e-6f)
+                            joint.local.translation = Scale(Normalized(direction), targetLength);
+                    }
+                }
+            }
+
+            const auto &local = joint.local;
+            auto &global = rebasedGlobals[i];
+            if (joint.parent < 0)
+            {
+                global.position = local.translation;
+                global.rotation = Normalize(local.rotation);
+                global.scale = local.scale;
+            }
+            else
+            {
+                const auto &parent = rebasedGlobals[unsigned(joint.parent)];
+                global.position = Add(parent.position,
+                                      Rotate(parent.rotation, Mul(parent.scale, local.translation)));
+                global.rotation = MultiplyQ(parent.rotation, local.rotation);
+                global.scale = Mul(parent.scale, local.scale);
+            }
+        }
+    }
+
     for (const auto &sourceClip : source->animations)
     {
         AnimationClip clip;
         clip.name = sourceClip.name;
         clip.duration = sourceClip.duration;
-        clip.tracks.resize(target->skeleton.joints.size());
+        clip.tracks.resize(result->skeleton.joints.size());
 
-        for (unsigned targetIndex = 0; targetIndex < target->skeleton.joints.size(); ++targetIndex)
+        for (unsigned targetIndex = 0; targetIndex < result->skeleton.joints.size(); ++targetIndex)
         {
-            const auto &targetJoint = target->skeleton.joints[targetIndex];
+            const auto &targetJoint = result->skeleton.joints[targetIndex];
             auto &destination = clip.tracks[targetIndex];
             auto sourceIndex = resolveSource(targetJoint.name);
             if (!sourceIndex)
@@ -146,6 +311,8 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
             const Quaternion sourceBindInverse = Conjugate(Normalize(sourceJointNode.local.rotation));
             for (const auto &key : sourceTrack.rotations)
             {
+                // Motion is transferred relative to the source neutral reference,
+                // then composed on the rebased target neutral reference.
                 const Quaternion retargeted = MultiplyQ(
                     targetJoint.local.rotation,
                     MultiplyQ(sourceBindInverse, Normalize(key.value)));
@@ -161,7 +328,8 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     result->metadata.path = target->metadata.path + "#retarget:" + source->metadata.path;
     result->metadata.generation = std::max(target->metadata.generation, source->metadata.generation);
     result->warnings.push_back("Animations retargeted at runtime from " + source->metadata.path +
-                               " using " + std::to_string(mappedCount) + " mapped joints");
+                               " using " + std::to_string(mappedCount) + " mapped joints" +
+                               (config.adoptSourceReferencePose ? " with neutral reference rebase" : ""));
     Validate(*result);
     return AssetHandle<ModelAsset>(std::move(result));
 }
