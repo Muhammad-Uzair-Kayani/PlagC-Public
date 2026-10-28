@@ -178,11 +178,12 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
         if (resolveSource(targetJoint.name))
             ++mappedCount;
 
-    // Rebase characters that were authored/bound in an idle/gameplay pose into the
-    // animation library's neutral reference pose before transferring motion. This
-    // changes the target rest skeleton but deliberately keeps the original inverse
-    // bind matrices, which physically reposes the skinned mesh into the neutral pose.
-    if (config.adoptSourceReferencePose)
+    // An explicit humanoid alias map means the rigs have different local bases.
+    // In that case neutral-reference rebasing is the safe default: otherwise the
+    // source motion delta is composed on the target's authored gameplay/bind pose.
+    const bool rebaseReferencePose = config.adoptSourceReferencePose || !config.jointMap.empty();
+
+    if (rebaseReferencePose)
     {
         const auto sourceGlobals = Globals(source->skeleton);
         const auto originalTargetGlobals = Globals(target->skeleton);
@@ -225,10 +226,6 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
                     joint.local.rotation = MultiplyQ(Conjugate(parentGlobal.rotation),
                                                      desiredGlobalRotation);
 
-                    // Preserve Joker's proportions while adopting the UAL reference
-                    // direction. Prefer the source joint corresponding to Joker's
-                    // actual parent because the two humanoid hierarchies are not
-                    // structurally identical around neck/clavicles.
                     unsigned sourceParent = sourceIndex;
                     if (auto mappedParent = resolveSource(result->skeleton.joints[parentIndex].name))
                         sourceParent = *mappedParent;
@@ -311,8 +308,6 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
             const Quaternion sourceBindInverse = Conjugate(Normalize(sourceJointNode.local.rotation));
             for (const auto &key : sourceTrack.rotations)
             {
-                // Motion is transferred relative to the source neutral reference,
-                // then composed on the rebased target neutral reference.
                 const Quaternion retargeted = MultiplyQ(
                     targetJoint.local.rotation,
                     MultiplyQ(sourceBindInverse, Normalize(key.value)));
@@ -329,7 +324,7 @@ AssetHandle<ModelAsset> RetargetAnimations(AssetHandle<ModelAsset> target,
     result->metadata.generation = std::max(target->metadata.generation, source->metadata.generation);
     result->warnings.push_back("Animations retargeted at runtime from " + source->metadata.path +
                                " using " + std::to_string(mappedCount) + " mapped joints" +
-                               (config.adoptSourceReferencePose ? " with neutral reference rebase" : ""));
+                               (rebaseReferencePose ? " with neutral reference rebase" : ""));
     Validate(*result);
     return AssetHandle<ModelAsset>(std::move(result));
 }
