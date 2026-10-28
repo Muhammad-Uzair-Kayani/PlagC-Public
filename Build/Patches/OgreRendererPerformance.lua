@@ -9,11 +9,46 @@ return function(source)
         source = source:sub(1, first - 1) .. new .. source:sub(last + 1)
     end
 
+    replace('#include <PlagC/Renderer/Renderer.h>', [[#include <PlagC/Renderer/Renderer.h>
+#include <PlagC/GpuProfiler.h>]])
+
     replace('    Ogre::MaterialPtr skyMaterial;\n    RenderStats stats;', [[    Ogre::MaterialPtr skyMaterial;
     // Asset textures are allowed to stream together on Vulkan and are synchronized once
     // before the next rendered frame, instead of forcing a device-facing wait per texture.
     std::size_t pendingTextureUploads = 0;
     RenderStats stats;]])
+
+    replace([[        if (output && !nullBackend)
+            workspace = cm->addWorkspace(scene, output->getTexture(), camera, workspaceName, true);
+        for (auto &[id, t] : targets)
+            t.workspace = cm->addWorkspace(scene, t.value, camera, workspaceName, !nullBackend);]], [[        if (output && !nullBackend)
+        {
+            workspace = cm->addWorkspace(scene, output->getTexture(), camera, workspaceName, true);
+            // The Vulkan profiler records timestamps from compositor pass callbacks.  The
+            // listener must be attached to the workspace itself; registering only with the
+            // manager does not deliver pass execution callbacks in this Ogre pin.
+            GpuProfiler::AttachWorkspace(workspace);
+        }
+        for (auto &[id, t] : targets)
+        {
+            t.workspace = cm->addWorkspace(scene, t.value, camera, workspaceName, !nullBackend);
+            GpuProfiler::AttachWorkspace(t.workspace);
+        }]])
+
+    replace([[    p.output =
+        p.root->createRenderWindow("PlagC", window ? unsigned(window->Width()) : 640,
+                                   window ? unsigned(window->Height()) : 360, false, &options);]], [[    if (backend_ == RendererBackend::Vulkan)
+    {
+        // Ogre's persistent dynamic buffers rotate through this many backing regions and
+        // waitForTailFrameToFinish() before each map. Three regions were enough on average
+        // but produced 16-20 ms tail waits when the Radeon iGPU/present queue briefly fell
+        // behind. Four regions also gives the Vulkan swapchain one additional image, keeping
+        // vkAcquireNextImageKHR from becoming the same CPU-side bubble.
+        options["VaoManager::mDynamicBufferMultiplier"] = "4";
+    }
+    p.output =
+        p.root->createRenderWindow("PlagC", window ? unsigned(window->Width()) : 640,
+                                   window ? unsigned(window->Height()) : 360, false, &options);]])
 
     replace([[    p.output =
         p.root->createRenderWindow("PlagC", window ? unsigned(window->Width()) : 640,
@@ -23,9 +58,9 @@ return function(source)
                                    window ? unsigned(window->Height()) : 360, false, &options);
     if (backend_ == RendererBackend::Vulkan)
     {
-        // Ogre defaults to 256 MiB of temporary texture staging.  OUTPOST ZERO can stage
+        // Ogre defaults to 256 MiB of temporary texture staging. OUTPOST ZERO can stage
         // enough decoded textures during bootstrap to cross that threshold, which makes
-        // Ogre deliberately stall the GPU.  Give the batched bootstrap enough headroom;
+        // Ogre deliberately stall the GPU. Give the batched bootstrap enough headroom;
         // this is staging memory, not permanent texture residency.
         constexpr std::size_t VulkanStagingBudget = 512ull * 1024ull * 1024ull;
         p.root->getRenderSystem()->getTextureGpuManager()->setStagingTextureMaxBudgetBytes(
