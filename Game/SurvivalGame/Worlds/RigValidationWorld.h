@@ -29,9 +29,8 @@ class RigValidationWorld final : public IGameWorld
     PlagC::EventBus::Connection focus_;
     PlagC::EventBus::Connection mouse_;
 
-    int requestedMode_ = 0; // 0 = rest/A-pose, 1..6 = Joker native, >=100 = UAL clip index + 100
+    int requestedMode_ = 0; // 0 = bare JokerBase rest skeleton, >=100 = UAL clip index + 100
     int activeMode_ = -1;
-    unsigned nativeClipCount_ = 0;
     unsigned ualPage_ = 0;
     unsigned ualClipCount_ = 0;
     float cameraYaw_ = 0.0f;
