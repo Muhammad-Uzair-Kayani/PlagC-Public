@@ -1,13 +1,23 @@
-#version 330 core
-uniform sampler2D sceneTexture;
-uniform float exposure;
-uniform sampler2D bloomTexture;
-uniform float bloomStrength;
-uniform sampler2D depthTexture;
-uniform float cameraNear, cameraFar, fogDensity;
-uniform vec3 fogColour;
-in vec2 texCoord;
-out vec4 fragColour;
+#version ogre_glsl_ver_330
+#ifdef PLAGC_VULKAN_SHADER
+#define PC_UNIFORM
+#else
+#define PC_UNIFORM uniform
+#endif
+vulkan(layout(ogre_P0) uniform Params {)
+PC_UNIFORM float exposure;
+PC_UNIFORM float bloomStrength;
+PC_UNIFORM float cameraNear, cameraFar, fogDensity;
+PC_UNIFORM vec3 fogColour;
+vulkan(};)
+vulkan_layout(ogre_t0) uniform texture2D sceneTexture;
+vulkan(layout(ogre_s0) uniform sampler sceneTextureSampler);
+vulkan_layout(ogre_t1) uniform texture2D bloomTexture;
+vulkan(layout(ogre_s1) uniform sampler bloomTextureSampler);
+vulkan_layout(ogre_t2) uniform texture2D depthTexture;
+vulkan(layout(ogre_s2) uniform sampler depthTextureSampler);
+vulkan_layout(location = 0) in vec2 texCoord;
+vulkan_layout(location = 0) out vec4 fragColour;
 
 float luma(vec3 c)
 {
@@ -16,14 +26,14 @@ float luma(vec3 c)
 
 vec3 sampleScene(vec2 uv)
 {
-    return max(texture(sceneTexture, clamp(uv, vec2(0.0), vec2(1.0))).rgb, vec3(0.0));
+    return max(texture(vkSampler2D(sceneTexture, sceneTextureSampler), clamp(uv, vec2(0.0), vec2(1.0))).rgb, vec3(0.0));
 }
 
 // Lightweight FXAA performed before tone mapping.  Keeping it in the final HDR pass avoids
 // another full-resolution render target while still cleaning the high-contrast facility edges.
 vec3 fxaa(vec2 uv)
 {
-    vec2 px = 1.0 / vec2(textureSize(sceneTexture, 0));
+    vec2 px = 1.0 / vec2(textureSize(vkSampler2D(sceneTexture, sceneTextureSampler), 0));
     vec3 c  = sampleScene(uv);
     vec3 n  = sampleScene(uv + vec2(0.0, -px.y));
     vec3 s  = sampleScene(uv + vec2(0.0,  px.y));
@@ -56,12 +66,12 @@ float hash12(vec2 p)
 void main()
 {
     vec3 hdr = fxaa(texCoord);
-    float depth=texture(depthTexture,texCoord).r;
+    float depth=texture(vkSampler2D(depthTexture, depthTextureSampler),texCoord).r;
     // Ogre GL3+ uses reversed Z. Reconstruct axial view distance from the depth buffer.
     float distanceToCamera=cameraNear*cameraFar/max(cameraNear+depth*(cameraFar-cameraNear),.00001);
     float fog=depth>.000001 ? 1.0-exp(-max(0.0,distanceToCamera-25.0)*fogDensity) : 0.0;
     hdr=mix(hdr,fogColour,clamp(fog,0.0,.93));
-    hdr += max(texture(bloomTexture, texCoord).rgb, vec3(0)) * bloomStrength;
+    hdr += max(texture(vkSampler2D(bloomTexture, bloomTextureSampler), texCoord).rgb, vec3(0)) * bloomStrength;
     hdr *= exposure;
 
     // Very small cinematic grade: preserve neutral materials but push highlights slightly warm

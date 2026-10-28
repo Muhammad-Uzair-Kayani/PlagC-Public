@@ -1,12 +1,13 @@
-#version 330 core
-uniform samplerCube skyCubemap;
-in vec3 cameraDirection;
-out vec4 fragColour;
+#version ogre_glsl_ver_330
+vulkan_layout(ogre_t0) uniform textureCube skyCubemap;
+vulkan(layout(ogre_s0) uniform sampler skyCubemapSampler);
+vulkan_layout(location = 0) in vec3 cameraDirection;
+vulkan_layout(location = 0) out vec4 fragColour;
 void main()
 {
     vec3 worldDir = normalize(cameraDirection);
     // Ogre cubemap sampling uses left-handed texture coordinates.
-    vec3 env = texture(skyCubemap, vec3(worldDir.xy, -worldDir.z)).rgb;
+    vec3 env = texture(vkSamplerCube(skyCubemap, skyCubemapSampler), vec3(worldDir.xy, -worldDir.z)).rgb;
 
     // Match OUTPOST ZERO's late-afternoon directional key.  The cubemap remains the reflection
     // source; this atmospheric layer only enriches the visible sky and therefore does not fake IBL.

@@ -2,6 +2,7 @@ local base=path.getabsolute('../Vendor/ogre-next')
 local config=path.getabsolute('OgreConfig')
 local json=path.getabsolute('../Vendor/rapidjson/include')
 function ogreIncludes()
+    vulkanIncludes()
     includedirs {config,base..'/OgreMain/include',json,base..'/Components/Hlms/Common/include',base..'/Components/Hlms/Pbs/include',base..'/Components/Hlms/Unlit/include',base..'/RenderSystems/NULL/include',base..'/RenderSystems/GL3Plus/include',base..'/RenderSystems/GL3Plus/include/GLSL',base..'/RenderSystems/GL3Plus/include/GL'}
     if _OPTIONS['null-platform'] then defines {'PC_OGRE_NULL_ONLY'} end
     filter 'system:windows'
@@ -96,12 +97,15 @@ if not _OPTIONS['null-platform'] then
     filter {}
     dependson {'OgreMain'}
 end
+vulkanLibraries()
 function ogreLinks()
     links {'OgreHlmsPbs','OgreHlmsUnlit','OgreHlmsCommon','OgreRenderNULL'}
     if not _OPTIONS['null-platform'] then links {'OgreRenderGL3Plus'} end
+    if PLAGC_VULKAN then links {'OgreRenderVulkan','Glslang'} end
     links {'OgreMain'}
 end
 function ogreSystemLinks()
+    vulkanSystemLinks()
     filter 'system:windows'
         links {'opengl32','gdi32','user32','shell32','advapi32','ole32'}
     filter 'system:linux'

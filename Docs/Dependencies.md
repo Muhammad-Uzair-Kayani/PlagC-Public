@@ -107,3 +107,11 @@ For the Git error `not a git repository ... .git/modules/Vendor/...`, pull the
 updated `prototype` branch with recursive submodule fetching disabled, then rerun
 GenerateProjects.bat. Recovery tests use local remotes and need no network:
 `python Scripts/Tests/DependencyFetchTests.py`.
+
+### Optional Vulkan renderer
+
+`GenerateProjects.bat --vulkan` builds both OpenGL and Vulkan. Windows requires
+`VULKAN_SDK`; Linux needs Vulkan, X11-XCB and XCB RandR development packages.
+The glslang submodule is pinned to 14.3.0 and built by Premake with the engine CRT.
+Its licence is staged under `Licenses/glslang-LICENSE.txt`. See
+[RendererBackends.md](RendererBackends.md) for setup and verification.

@@ -41,12 +41,17 @@
 #include <OgreResourceGroupManager.h>
 #include <OgreHlmsManager.h>
 #include <OgreHlmsPbs.h>
+#include <OgreRootLayout.h>
+#include <OgreRenderable.h>
 #include <OgreHlmsPbsDatablock.h>
 #include <OgreHlmsUnlit.h>
 #include <OgreHlmsUnlitDatablock.h>
 #include <OgreTextureGpu.h>
 #include <OgreTextureGpuManager.h>
 #include <OgreNULLPlugin.h>
+#ifdef PC_OGRE_VULKAN
+#include <OgreVulkanPlugin.h>
+#endif
 #ifndef PC_OGRE_NULL_ONLY
 #include <OgreGL3PlusPlugin.h>
 #endif
@@ -98,6 +103,32 @@ std::string Name(const char *kind, std::uint64_t id)
 {
     return std::string("PlagC/") + kind + std::to_string(id);
 }
+#ifdef PC_OGRE_VULKAN
+// The pinned PBS caster layout omits the reflection texture, but its baked
+// descriptor set still contains it. Reserve that unused trailing binding.
+class VulkanPbs final : public Ogre::HlmsPbs
+{
+  public:
+    using Ogre::HlmsPbs::HlmsPbs;
+  protected:
+    void calculateHashForPreCaster(Ogre::Renderable* renderable, Ogre::PiecesMap* pieces,
+                                   const Ogre::PiecesMap* normalPieces) override
+    {
+        Ogre::HlmsPbs::calculateHashForPreCaster(renderable, pieces, normalPieces);
+        auto* material = static_cast<Ogre::HlmsPbsDatablock*>(renderable->getDatablock());
+        setProperty("plagc_shadow_reflection_binding",
+                    material->getAlphaTest() != Ogre::CMPF_ALWAYS_PASS &&
+                    material->getUseAlphaFromTextures() &&
+                    material->getTexture(Ogre::PBSM_REFLECTION) ? 1 : 0);
+    }
+    void setupRootLayout(Ogre::RootLayout& layout) override
+    {
+        Ogre::HlmsPbs::setupRootLayout(layout);
+        if (getProperty("plagc_shadow_reflection_binding"))
+            ++layout.mDescBindingRanges[1][Ogre::DescBindingTypes::Texture].end;
+    }
+};
+#endif
 template <class T> T *RegisterHlms(Ogre::Root &root, const std::string &media)
 {
     Ogre::String main;
@@ -109,8 +140,15 @@ template <class T> T *RegisterHlms(Ogre::Root &root, const std::string &media)
         paths.push_back(archives.load(media + "/" + lib, "FileSystem", true));
     if constexpr (std::is_same_v<T, Ogre::HlmsPbs>)
         paths.push_back(archives.load("Assets/Shaders/Pbs", "FileSystem", true));
-    auto result =
-        std::make_unique<T>(archives.load(media + "/" + main, "FileSystem", true), &paths);
+    auto* folder = archives.load(media + "/" + main, "FileSystem", true);
+    std::unique_ptr<T> result;
+#ifdef PC_OGRE_VULKAN
+    if constexpr (std::is_same_v<T, Ogre::HlmsPbs>)
+        if (root.getRenderSystem()->getName() == "Vulkan Rendering Subsystem")
+            result = std::make_unique<VulkanPbs>(folder, &paths);
+#endif
+    if (!result)
+        result = std::make_unique<T>(folder, &paths);
     auto *ptr = result.get();
     root.getHlmsManager()->registerHlms(result.release());
     return ptr;
@@ -330,6 +368,8 @@ RendererBackendCapabilities Renderer::BackendCapabilities()
 {
 #ifdef PC_OGRE_NULL_ONLY
     return {false, false, true};
+#elif defined(PC_OGRE_VULKAN)
+    return {true, true, true};
 #else
     return {true, false, true};
 #endif
@@ -360,6 +400,12 @@ Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::ma
         systemName = "OpenGL 3+ Rendering Subsystem";
         break;
 #endif
+#ifdef PC_OGRE_VULKAN
+    case RendererBackend::Vulkan:
+        p.plugin = std::make_unique<Ogre::VulkanPlugin>();
+        systemName = "Vulkan Rendering Subsystem";
+        break;
+#endif
     default:
         throw std::runtime_error("selected backend has no Ogre adapter");
     }
@@ -373,19 +419,34 @@ Renderer::Renderer(Window *window, const RendererConfig &config) : impl_(std::ma
     p.root->setRenderSystem(selected);
     if (config.offscreen)
     {
+        if (backend_ == RendererBackend::Vulkan)
+            selected->setConfigOption("Interface", "null");
+        else
+        {
 #if defined(__linux__) && !defined(PC_OGRE_NULL_ONLY)
-        p.root->getRenderSystem()->setConfigOption("Interface", "Headless EGL / PBuffer");
+        selected->setConfigOption("Interface", "Headless EGL / PBuffer");
 #else
         throw std::invalid_argument("--offscreen requires a native Linux build with EGL");
 #endif
+        }
     }
     p.root->initialise(false);
     p.root->getRenderSystem()->setMetricsRecordingEnabled(true);
+    // Borrowed display/window pair consumed synchronously by Ogre.
+    struct X11Handles { void* display; unsigned long window; } x11{};
     Ogre::NameValuePairList options;
     options["vsync"] = "true";
     if (!p.nullBackend && !config.offscreen)
     {
-        options["externalWindowHandle"] = std::to_string(window->NativeHandle().value);
+        const auto native = window->NativeHandle();
+        if (backend_ == RendererBackend::Vulkan && native.kind == NativeWindow::Kind::X11)
+        {
+            Require(native.display != nullptr, "Vulkan requires the GLFW X11 display");
+            x11 = {native.display, static_cast<unsigned long>(native.value)};
+            options["SDL2x11"] = std::to_string(reinterpret_cast<std::uintptr_t>(&x11));
+        }
+        else
+            options["externalWindowHandle"] = std::to_string(native.value);
 #ifdef __APPLE__
         options["macAPI"] = "cocoa";
         options["macAPICocoaUseNSView"] = "false";

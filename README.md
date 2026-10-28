@@ -45,6 +45,11 @@ Headless/Null/offscreen modes exit after 120 frames unless `--frames` is supplie
 Physics and gameplay regressions run separately through `Scripts/TestPhysics.sh`
 and `Scripts/TestTPS.sh`. Unexpected arguments/failures exit nonzero.
 
+To include Vulkan alongside OpenGL, install the Vulkan SDK, open a new terminal,
+and run `GenerateProjects.bat --vulkan`. Rebuild Sandbox, then use
+`Sandbox.exe --renderer vulkan` or `--renderer opengl` from the output directory.
+OpenGL remains the default. See [backend setup and limits](Docs/RendererBackends.md).
+
 ## Linux / macOS structure
 
 ```sh

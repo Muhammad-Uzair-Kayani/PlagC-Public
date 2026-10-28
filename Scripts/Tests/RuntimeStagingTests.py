@@ -12,6 +12,12 @@ SCRIPT = Path(__file__).resolve().parents[1] / "StageRuntimeAssets.py"
 
 class StagingTests(unittest.TestCase):
     def fixture(self, root):
+        config = root / "Game/SurvivalGame/Config/worlds.json"
+        config.parent.mkdir(parents=True, exist_ok=True)
+        config.write_text("{}")
+        license_file = root / "Vendor/glslang/LICENSE.txt"
+        license_file.parent.mkdir(parents=True, exist_ok=True)
+        license_file.write_text("compiler license fixture")
         for name in BASE:
             p = root / name
             p.parent.mkdir(parents=True, exist_ok=True)
@@ -69,6 +75,8 @@ class StagingTests(unittest.TestCase):
             result = self.stage(root, out)
             self.assertEqual(result.returncode, 0, result.stderr)
             verify(out)
+            self.assertEqual((out / "Licenses/glslang-LICENSE.txt").read_text(), "compiler license fixture")
+            self.assertTrue((out / "Game/SurvivalGame/Config/worlds.json").is_file())
             self.assertFalse((out / "Assets/Source").exists())
 
     def test_missing_required_model_fails_before_copy(self):

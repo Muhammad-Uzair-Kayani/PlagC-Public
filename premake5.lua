@@ -1,6 +1,7 @@
 include "Build/VerifyDependencies.lua"
 newoption { trigger = "null-platform", description = "Build GLFW Null backend only (headless validation)" }
 newoption { trigger = "sanitize", description = "Enable Linux sanitizers", value = "KIND", allowed = { {"address", "Address + undefined behavior"}, {"thread", "Thread sanitizer"} } }
+include "Build/Vulkan.lua"
 local root = path.getabsolute(".")
 workspace "PlagC"
     location "Build/Generated"

@@ -16,3 +16,6 @@ Vendor/assimp/include/assimp/Importer.hpp
 Vendor/ozz/include/ozz/animation/runtime/sampling_job.h
 Vendor/openal/include/AL/al.h
 Vendor/openal/fmt-11.1.1/include/fmt/format.h
+
+Vendor/glslang/glslang/Public/ShaderLang.h
+Vendor/glslang/SPIRV/GlslangToSpv.h

@@ -93,7 +93,7 @@ NativeWindow Window::NativeHandle() const {
 #elif defined(__APPLE__)
     return {NativeWindow::Kind::Cocoa,reinterpret_cast<std::uintptr_t>(glfwGetCocoaWindow(impl_->handle))};
 #else
-    return {NativeWindow::Kind::X11,static_cast<std::uintptr_t>(glfwGetX11Window(impl_->handle))};
+    return {NativeWindow::Kind::X11,static_cast<std::uintptr_t>(glfwGetX11Window(impl_->handle)),glfwGetX11Display()};
 #endif
 }
 }

@@ -1,14 +1,23 @@
-#version 330 core
-uniform sampler2D sourceTexture;
-uniform sampler2D lowTexture;
-uniform int mode;
-uniform float threshold;
-in vec2 texCoord;
-out vec4 fragColour;
-vec3 tap(vec2 uv) { return max(texture(sourceTexture, clamp(uv, vec2(0), vec2(1))).rgb,vec3(0)); }
+#version ogre_glsl_ver_330
+#ifdef PLAGC_VULKAN_SHADER
+#define PC_UNIFORM
+#else
+#define PC_UNIFORM uniform
+#endif
+vulkan(layout(ogre_P0) uniform Params {)
+PC_UNIFORM int mode;
+PC_UNIFORM float threshold;
+vulkan(};)
+vulkan_layout(ogre_t0) uniform texture2D sourceTexture;
+vulkan(layout(ogre_s0) uniform sampler sourceTextureSampler);
+vulkan_layout(ogre_t1) uniform texture2D lowTexture;
+vulkan(layout(ogre_s1) uniform sampler lowTextureSampler);
+vulkan_layout(location = 0) in vec2 texCoord;
+vulkan_layout(location = 0) out vec4 fragColour;
+vec3 tap(vec2 uv) { return max(texture(vkSampler2D(sourceTexture, sourceTextureSampler), clamp(uv, vec2(0), vec2(1))).rgb,vec3(0)); }
 void main()
 {
-    vec2 px=1.0/vec2(textureSize(sourceTexture,0));
+    vec2 px=1.0/vec2(textureSize(vkSampler2D(sourceTexture, sourceTextureSampler),0));
     vec3 c;
     if(mode==0 || mode==1)
     {
@@ -33,14 +42,14 @@ void main()
     else
     {
         // Upsample and combine at half resolution; scene stays in linear HDR until tone mapping.
-        vec2 p=1.0/vec2(textureSize(lowTexture,0));
-        vec3 low=texture(lowTexture,texCoord).rgb*4.0;
-        low+=(texture(lowTexture,texCoord+p*vec2(1,0)).rgb+
-              texture(lowTexture,texCoord-p*vec2(1,0)).rgb+
-              texture(lowTexture,texCoord+p*vec2(0,1)).rgb+
-              texture(lowTexture,texCoord-p*vec2(0,1)).rgb)*2.0;
-        low+=texture(lowTexture,texCoord+p).rgb+texture(lowTexture,texCoord-p).rgb+
-             texture(lowTexture,texCoord+p*vec2(1,-1)).rgb+texture(lowTexture,texCoord+p*vec2(-1,1)).rgb;
+        vec2 p=1.0/vec2(textureSize(vkSampler2D(lowTexture, lowTextureSampler),0));
+        vec3 low=texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord).rgb*4.0;
+        low+=(texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord+p*vec2(1,0)).rgb+
+              texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord-p*vec2(1,0)).rgb+
+              texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord+p*vec2(0,1)).rgb+
+              texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord-p*vec2(0,1)).rgb)*2.0;
+        low+=texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord+p).rgb+texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord-p).rgb+
+             texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord+p*vec2(1,-1)).rgb+texture(vkSampler2D(lowTexture, lowTextureSampler),texCoord+p*vec2(-1,1)).rgb;
         c=tap(texCoord)*.35+low*(.65/16.0);
     }
     fragColour=vec4(c,1);

@@ -2,13 +2,14 @@
 #include <PlagC/Application.h>
 #include <PlagC/Thread.h>
 #include "../../Game/src/TPSGame.h"
-int main()
+int main(int argc, char** argv)
 {
     PlagC::Thread::InitializeMain();
     try
     {
         PlagC::EngineConfig config;
         config.offscreen = true;
+        config.rendererBackend = PlagC::ParseRendererBackend(argc > 1 ? argv[1] : "opengl");
         config.workers = 2;
         config.audioEnabled = false;
         PlagC::Engine engine(config);

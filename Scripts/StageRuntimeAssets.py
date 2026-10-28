@@ -104,6 +104,13 @@ def main() -> int:
         sync_tree(root / media / directory, output / media / directory)
     verify(output, args.profile, args.asset)
 
+    # Vulkan builds statically link the pinned GLSL-to-SPIR-V compiler.
+    compiler_license = root / "Vendor/glslang/LICENSE.txt"
+    if compiler_license.is_file():
+        licenses = output / "Licenses"
+        licenses.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(compiler_license, licenses / "glslang-LICENSE.txt")
+
     # Game definitions are tracked source and must always be staged because the
     # runtime host loads world manifests relative to the executable working directory.
     sync_tree(

@@ -5,7 +5,7 @@
 namespace PlagC {
 class EventBus;
 struct WindowConfig { int width = 1280, height = 720; std::string title = "PlagC — Phase 1 Sandbox"; bool nullPlatform = false; };
-struct NativeWindow { enum class Kind { None,Win32,X11,Cocoa }; Kind kind=Kind::None; std::uintptr_t value=0; };
+struct NativeWindow { enum class Kind { None,Win32,X11,Cocoa }; Kind kind=Kind::None; std::uintptr_t value=0; void* display=nullptr; };
 class Window {
 public:
     Window(EventBus&, const WindowConfig&);

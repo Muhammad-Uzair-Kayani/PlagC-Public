@@ -1,8 +1,16 @@
-#version 330 core
-in vec3 vertex;
-in vec3 normal;
-uniform mat4 worldViewProj;
-out vec3 cameraDirection;
+#version ogre_glsl_ver_330
+#ifdef PLAGC_VULKAN_SHADER
+#define PC_UNIFORM
+#else
+#define PC_UNIFORM uniform
+#endif
+vulkan(layout(ogre_P0) uniform Params {)
+PC_UNIFORM mat4 worldViewProj;
+vulkan(};)
+vulkan_layout(OGRE_POSITION) in vec3 vertex;
+vulkan_layout(OGRE_NORMAL) in vec3 normal;
+vulkan_layout(location = 0) out vec3 cameraDirection;
+out gl_PerVertex { vec4 gl_Position; };
 void main()
 {
     vec4 clip = worldViewProj * vec4(vertex, 1.0);

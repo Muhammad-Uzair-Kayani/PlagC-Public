@@ -1,9 +1,20 @@
-vertex_program PlagC/ToneVS glsl
+vertex_program PlagC/ToneVS_GL glsl
 {
     source PlagCToneMap_vs.glsl
     default_params { param_named_auto worldViewProj worldviewproj_matrix }
 }
-fragment_program PlagC/TonePS glsl
+vertex_program PlagC/ToneVS_VK glslvk
+{
+    preprocessor_defines PLAGC_VULKAN_SHADER=1
+    source PlagCToneMap_vs.glsl
+    default_params { param_named_auto worldViewProj worldviewproj_matrix }
+}
+vertex_program PlagC/ToneVS unified
+{
+    delegate PlagC/ToneVS_VK
+    delegate PlagC/ToneVS_GL
+}
+fragment_program PlagC/TonePS_GL glsl
 {
     source PlagCToneMap_ps.glsl
     default_params
@@ -18,6 +29,25 @@ fragment_program PlagC/TonePS glsl
         param_named fogDensity float 0
         param_named fogColour float3 .38 .42 .40
     }
+}
+fragment_program PlagC/TonePS_VK glslvk
+{
+    preprocessor_defines PLAGC_VULKAN_SHADER=1
+    source PlagCToneMap_ps.glsl
+    default_params
+    {
+        param_named exposure float 1
+        param_named bloomStrength float .18
+        param_named cameraNear float .1
+        param_named cameraFar float 1000
+        param_named fogDensity float 0
+        param_named fogColour float3 .38 .42 .40
+    }
+}
+fragment_program PlagC/TonePS unified
+{
+    delegate PlagC/TonePS_VK
+    delegate PlagC/TonePS_GL
 }
 material PlagC/ToneMap
 {
@@ -37,7 +67,7 @@ material PlagC/ToneMap
     }
 }
 
-fragment_program PlagC/BloomExtractPS glsl
+fragment_program PlagC/BloomExtractPS_GL glsl
 {
     source PlagCBloom_ps.glsl
     default_params
@@ -47,6 +77,21 @@ fragment_program PlagC/BloomExtractPS glsl
         param_named mode int 0
         param_named threshold float 1.1
     }
+}
+fragment_program PlagC/BloomExtractPS_VK glslvk
+{
+    preprocessor_defines PLAGC_VULKAN_SHADER=1
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named mode int 0
+        param_named threshold float 1.1
+    }
+}
+fragment_program PlagC/BloomExtractPS unified
+{
+    delegate PlagC/BloomExtractPS_VK
+    delegate PlagC/BloomExtractPS_GL
 }
 material PlagC/BloomExtract
 {
@@ -65,7 +110,7 @@ material PlagC/BloomExtract
     }
 }
 
-fragment_program PlagC/BloomDownsamplePS glsl
+fragment_program PlagC/BloomDownsamplePS_GL glsl
 {
     source PlagCBloom_ps.glsl
     default_params
@@ -75,6 +120,21 @@ fragment_program PlagC/BloomDownsamplePS glsl
         param_named mode int 1
         param_named threshold float 1.1
     }
+}
+fragment_program PlagC/BloomDownsamplePS_VK glslvk
+{
+    preprocessor_defines PLAGC_VULKAN_SHADER=1
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named mode int 1
+        param_named threshold float 1.1
+    }
+}
+fragment_program PlagC/BloomDownsamplePS unified
+{
+    delegate PlagC/BloomDownsamplePS_VK
+    delegate PlagC/BloomDownsamplePS_GL
 }
 material PlagC/BloomDownsample
 {
@@ -93,7 +153,7 @@ material PlagC/BloomDownsample
     }
 }
 
-fragment_program PlagC/BloomBlurHPS glsl
+fragment_program PlagC/BloomBlurHPS_GL glsl
 {
     source PlagCBloom_ps.glsl
     default_params
@@ -103,6 +163,21 @@ fragment_program PlagC/BloomBlurHPS glsl
         param_named mode int 2
         param_named threshold float 1.1
     }
+}
+fragment_program PlagC/BloomBlurHPS_VK glslvk
+{
+    preprocessor_defines PLAGC_VULKAN_SHADER=1
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named mode int 2
+        param_named threshold float 1.1
+    }
+}
+fragment_program PlagC/BloomBlurHPS unified
+{
+    delegate PlagC/BloomBlurHPS_VK
+    delegate PlagC/BloomBlurHPS_GL
 }
 material PlagC/BloomBlurH
 {
@@ -121,7 +196,7 @@ material PlagC/BloomBlurH
     }
 }
 
-fragment_program PlagC/BloomBlurVPS glsl
+fragment_program PlagC/BloomBlurVPS_GL glsl
 {
     source PlagCBloom_ps.glsl
     default_params
@@ -131,6 +206,21 @@ fragment_program PlagC/BloomBlurVPS glsl
         param_named mode int 3
         param_named threshold float 1.1
     }
+}
+fragment_program PlagC/BloomBlurVPS_VK glslvk
+{
+    preprocessor_defines PLAGC_VULKAN_SHADER=1
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named mode int 3
+        param_named threshold float 1.1
+    }
+}
+fragment_program PlagC/BloomBlurVPS unified
+{
+    delegate PlagC/BloomBlurVPS_VK
+    delegate PlagC/BloomBlurVPS_GL
 }
 material PlagC/BloomBlurV
 {
@@ -149,7 +239,7 @@ material PlagC/BloomBlurV
     }
 }
 
-fragment_program PlagC/BloomUpsamplePS glsl
+fragment_program PlagC/BloomUpsamplePS_GL glsl
 {
     source PlagCBloom_ps.glsl
     default_params
@@ -159,6 +249,21 @@ fragment_program PlagC/BloomUpsamplePS glsl
         param_named mode int 4
         param_named threshold float 1.1
     }
+}
+fragment_program PlagC/BloomUpsamplePS_VK glslvk
+{
+    preprocessor_defines PLAGC_VULKAN_SHADER=1
+    source PlagCBloom_ps.glsl
+    default_params
+    {
+        param_named mode int 4
+        param_named threshold float 1.1
+    }
+}
+fragment_program PlagC/BloomUpsamplePS unified
+{
+    delegate PlagC/BloomUpsamplePS_VK
+    delegate PlagC/BloomUpsamplePS_GL
 }
 material PlagC/BloomUpsample
 {

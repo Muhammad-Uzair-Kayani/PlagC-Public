@@ -45,6 +45,14 @@ inline const char *BackendName(RendererBackend backend)
     }
     throw std::invalid_argument("unknown renderer backend");
 }
+inline RendererBackend ParseRendererBackend(const std::string &name)
+{
+    if (name == "auto") return RendererBackend::Auto;
+    if (name == "opengl") return RendererBackend::OpenGL;
+    if (name == "vulkan") return RendererBackend::Vulkan;
+    if (name == "null") return RendererBackend::Null;
+    throw std::invalid_argument("renderer must be auto, opengl, vulkan or null");
+}
 // Pure selection policy shared by initialization, tests and a future settings UI.
 // Explicit requests never silently fall back. Auto prefers the established OpenGL path.
 inline RendererBackend ResolveRendererBackend(RendererBackend requested,
@@ -71,8 +79,8 @@ inline RendererBackend ResolveRendererBackend(RendererBackend requested,
     if (!available.Supports(requested))
         throw std::runtime_error(std::string(BackendName(requested)) +
                                  " backend is not implemented in this build");
-    if (offscreen && requested != RendererBackend::OpenGL)
-        throw std::invalid_argument("offscreen EGL currently requires OpenGL");
+    if (offscreen && requested == RendererBackend::Null)
+        throw std::invalid_argument("offscreen rendering requires a graphical backend");
     return requested;
 }
 } // namespace PlagC
