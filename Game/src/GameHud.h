@@ -1,5 +1,7 @@
 #pragma once
 #include <PlagC/Renderer/Renderer.h>
+#include <cstddef>
+#include <string>
 class GameHud
 {
   public:
@@ -13,4 +15,6 @@ class GameHud
     PlagC::ObjectHandle object_;
     PlagC::MeshHandle crossMesh_;
     PlagC::ObjectHandle cross_;
+    std::string text_;
+    std::size_t capacityQuads_ = 0;
 };
