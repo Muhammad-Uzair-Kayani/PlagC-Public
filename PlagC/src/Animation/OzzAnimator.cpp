@@ -27,6 +27,10 @@ struct Animator::Impl
     double upperFade = .12;
     std::vector<ozz::math::Float4x4> matrices;
     std::vector<Matrix4> pose;
+    // CPU skinning hot-path scratch. These buffers are sized once per Animator and reused for
+    // every frame so DeformVertices performs no heap allocation and does not copy mesh indices.
+    std::vector<Matrix4> skinMatrices;
+    std::vector<std::vector<Vertex>> deformedVertices;
     explicit Impl(AssetHandle<ModelAsset> a) : model(std::move(a))
     {
         Validate(*model);
@@ -84,6 +88,10 @@ struct Animator::Impl
         blendTarget.resize(locals.size());
         matrices.resize(joints.size());
         pose.resize(joints.size());
+        skinMatrices.resize(joints.size());
+        deformedVertices.resize(model->meshes.size());
+        for (unsigned i = 0; i < model->meshes.size(); ++i)
+            deformedVertices[i].resize(model->meshes[i].geometry.vertices.size());
         context.Resize(skeleton->num_joints());
         std::copy(skeleton->joint_rest_poses().begin(), skeleton->joint_rest_poses().end(),
                   locals.begin());
@@ -313,11 +321,14 @@ std::span<const Matrix4> Animator::Pose() const
 {
     return impl_->pose;
 }
-MeshData Animator::Deform(unsigned mesh) const
+std::span<const Vertex> Animator::DeformVertices(unsigned mesh) const
 {
     auto &p = *impl_;
     const auto &src = p.model->meshes.at(mesh);
-    MeshData output = src.geometry;
+    auto &output = p.deformedVertices.at(mesh);
+    if (output.size() != src.geometry.vertices.size())
+        output.resize(src.geometry.vertices.size());
+
     auto direction = [](const Matrix4 &m, Vec3 v) {
         return Vec3{m.m[0] * v.x + m.m[4] * v.y + m.m[8] * v.z,
                     m.m[1] * v.x + m.m[5] * v.y + m.m[9] * v.z,
@@ -331,43 +342,50 @@ MeshData Animator::Deform(unsigned mesh) const
     };
     if (src.skin.empty())
     {
-        auto transform = p.pose.at(src.node);
-        for (auto &v : output.vertices)
+        const auto transform = p.pose.at(src.node);
+        for (unsigned i = 0; i < output.size(); ++i)
         {
-            v.position = TransformPoint(transform, v.position);
-            v.normal = TransformNormal(transform, v.normal);
-            v.tangent = tangent(direction(transform, v.tangent), v.normal);
+            const auto &original = src.geometry.vertices[i];
+            auto &v = output[i];
+            v = original;
+            v.position = TransformPoint(transform, original.position);
+            v.normal = TransformNormal(transform, original.normal);
+            v.tangent = tangent(direction(transform, original.tangent), v.normal);
         }
     }
     else
     {
-        std::vector<Matrix4> skin(p.pose.size());
-        for (unsigned i = 0; i < skin.size(); ++i)
-            skin[i] = Multiply(p.pose[i], src.inverseBind[i]);
-        for (unsigned i = 0; i < output.vertices.size(); ++i)
+        if (p.skinMatrices.size() != p.pose.size())
+            p.skinMatrices.resize(p.pose.size());
+        for (unsigned i = 0; i < p.skinMatrices.size(); ++i)
+            p.skinMatrices[i] = Multiply(p.pose[i], src.inverseBind[i]);
+
+        for (unsigned i = 0; i < output.size(); ++i)
         {
-            auto original = output.vertices[i];
+            const auto &original = src.geometry.vertices[i];
+            auto &result = output[i];
+            result = original;
             Vec3 pos{}, normal{}, tan{};
             for (unsigned k = 0; k < 4; ++k)
             {
-                float weight = src.skin[i].weights[k];
+                const float weight = src.skin[i].weights[k];
                 if (weight == 0)
                     continue;
-                auto &m = skin[src.skin[i].joints[k]];
-                auto v = TransformPoint(m, original.position),
-                     n = TransformNormal(m, original.normal);
+                const auto &m = p.skinMatrices[src.skin[i].joints[k]];
+                const auto v = TransformPoint(m, original.position);
+                const auto n = TransformNormal(m, original.normal);
                 pos.x += weight * v.x;
                 pos.y += weight * v.y;
                 pos.z += weight * v.z;
                 normal.x += weight * n.x;
                 normal.y += weight * n.y;
                 normal.z += weight * n.z;
-                auto t = direction(m, original.tangent);
+                const auto t = direction(m, original.tangent);
                 tan.x += weight * t.x;
                 tan.y += weight * t.y;
                 tan.z += weight * t.z;
             }
-            float length =
+            const float length =
                 std::sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
             if (length > 1e-8f)
             {
@@ -375,11 +393,19 @@ MeshData Animator::Deform(unsigned mesh) const
                 normal.y /= length;
                 normal.z /= length;
             }
-            output.vertices[i].position = pos;
-            output.vertices[i].normal = normal;
-            output.vertices[i].tangent = tangent(tan, normal);
+            result.position = pos;
+            result.normal = normal;
+            result.tangent = tangent(tan, normal);
         }
     }
+    return output;
+}
+MeshData Animator::Deform(unsigned mesh) const
+{
+    const auto &src = impl_->model->meshes.at(mesh);
+    MeshData output = src.geometry;
+    const auto vertices = DeformVertices(mesh);
+    output.vertices.assign(vertices.begin(), vertices.end());
     return output;
 }
 } // namespace PlagC
