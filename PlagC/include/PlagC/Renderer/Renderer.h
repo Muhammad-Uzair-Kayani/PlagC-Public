@@ -50,6 +50,38 @@ using MaterialHandle = RenderHandle<struct MaterialTag>;
 using ObjectHandle = RenderHandle<struct ObjectTag>;
 using LightHandle = RenderHandle<struct LightTag>;
 using TargetHandle = RenderHandle<struct TargetTag>;
+
+enum class UiTextureKind : std::uint8_t
+{
+    Texture,
+    Target
+};
+struct UiTextureRef
+{
+    UiTextureKind kind = UiTextureKind::Texture;
+    std::uint64_t value = 0;
+};
+struct UiVertex
+{
+    float x = 0, y = 0;
+    float u = 0, v = 0;
+    std::uint32_t colour = 0xffffffffu;
+};
+struct UiDrawCommand
+{
+    std::uint32_t firstIndex = 0;
+    std::uint32_t indexCount = 0;
+    float clipLeft = 0, clipTop = 0, clipRight = 0, clipBottom = 0;
+    UiTextureRef texture{};
+};
+struct UiDrawData
+{
+    float width = 0, height = 0;
+    std::vector<UiVertex> vertices;
+    std::vector<std::uint32_t> indices;
+    std::vector<UiDrawCommand> commands;
+};
+
 enum class MaterialModel
 {
     Pbr,
@@ -169,6 +201,10 @@ class Renderer
     void ResizeTarget(TargetHandle, unsigned, unsigned);
     void DestroyTarget(TargetHandle);
     void CaptureTarget(TargetHandle, const std::string &path);
+    // Replaces the pending immediate-mode UI frame. The data is consumed by the graphics backend
+    // during the next render and is never allowed to expose raw GL/Vulkan objects to callers.
+    void SubmitUI(UiDrawData);
+    void ClearUI();
     void Resize(unsigned, unsigned);
     void Render(double deltaSeconds);
     RenderStats Statistics() const;

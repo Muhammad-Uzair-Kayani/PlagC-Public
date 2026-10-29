@@ -13,4 +13,3 @@ project "ImGui"
         "../Vendor/imgui/imgui_widgets.cpp"
     }
     includedirs { "../Vendor/imgui" }
-    defines { "IMGUI_DISABLE_OBSOLETE_FUNCTIONS" }

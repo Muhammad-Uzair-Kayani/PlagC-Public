@@ -1,6 +1,7 @@
 #include "pgcpch.h"
 #include "EditorLayer.h"
 #include "ImGuiInputBridge.h"
+#include "ImGuiRendererBridge.h"
 #include <PlagC/Application.h>
 #include <PlagC/Editor/EditorSession.h>
 #include <imgui.h>
@@ -26,6 +27,7 @@ public:
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         ImGui::StyleColorsDark();
         input_.Initialize(engine.Events());
+        renderer_.Initialize(engine.Graphics());
         layer_.Initialize(engine, *session_);
 
         engine.Logger().Write(
@@ -47,11 +49,13 @@ public:
         ImGui::NewFrame();
         layer_.Frame(engine, *session_);
         ImGui::Render();
+        renderer_.Submit(engine.Graphics(), ImGui::GetDrawData());
     }
 
     void OnStop(PlagC::Engine &engine) override
     {
         layer_.Shutdown();
+        renderer_.Shutdown(engine.Graphics());
         input_.Shutdown();
         session_.reset();
         if (ImGui::GetCurrentContext())
@@ -64,6 +68,7 @@ public:
 private:
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
     PlagC::Editor::ImGuiInputBridge input_;
+    PlagC::Editor::ImGuiRendererBridge renderer_;
     PlagC::Editor::EditorLayer layer_;
 };
 } // namespace
