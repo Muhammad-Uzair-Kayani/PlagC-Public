@@ -53,6 +53,17 @@ class EngineBoundaryTests(unittest.TestCase):
             self.assertNotIn(forbidden, manifest)
             self.assertNotIn(forbidden, staging)
 
+    def test_project_generators_do_not_fetch_game_assets(self):
+        generators = self.read("GenerateProjects.bat") + self.read("GenerateProjects.sh")
+        for forbidden in (
+            "FetchVisualAssets",
+            "BuildAAAAssets",
+            "PrepareTPSAssets",
+            "OUTPOST ZERO",
+            "TestTPS",
+        ):
+            self.assertNotIn(forbidden, generators)
+
     def test_promoted_facilities_live_under_plagc(self):
         for relative in (
             "PlagC/include/PlagC/Assets/AssetManifest.h",
