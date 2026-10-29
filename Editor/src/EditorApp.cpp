@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "EditorLayer.h"
 #include "ImGuiInputBridge.h"
 #include <PlagC/Application.h>
 #include <PlagC/Editor/EditorSession.h>
@@ -25,6 +26,7 @@ public:
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         ImGui::StyleColorsDark();
         input_.Initialize(engine.Events());
+        layer_.Initialize(engine, *session_);
 
         engine.Logger().Write(
             PlagC::Severity::Info, "EDITOR",
@@ -33,7 +35,7 @@ public:
 
     void OnFrame(PlagC::Engine &engine, double dt) override
     {
-        if (!ImGui::GetCurrentContext())
+        if (!ImGui::GetCurrentContext() || !session_)
             return;
 
         ImGuiIO &io = ImGui::GetIO();
@@ -43,14 +45,13 @@ public:
         io.DeltaTime = dt > 0.0 ? static_cast<float>(dt) : (1.0f / 60.0f);
 
         ImGui::NewFrame();
-        ImGui::Begin("PlagC Editor Bootstrap");
-        ImGui::TextUnformatted("Editor frontend bootstrap is active.");
-        ImGui::End();
+        layer_.Frame(engine, *session_);
         ImGui::Render();
     }
 
     void OnStop(PlagC::Engine &engine) override
     {
+        layer_.Shutdown();
         input_.Shutdown();
         session_.reset();
         if (ImGui::GetCurrentContext())
@@ -63,6 +64,7 @@ public:
 private:
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
     PlagC::Editor::ImGuiInputBridge input_;
+    PlagC::Editor::EditorLayer layer_;
 };
 } // namespace
 
