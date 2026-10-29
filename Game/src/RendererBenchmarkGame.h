@@ -22,6 +22,7 @@ class RendererBenchmarkGame final : public IGame
   private:
     bool started_ = false;
     bool previousFpsLocked_ = true;
+    int previousWidth_ = 0, previousHeight_ = 0;
     PlagC::RenderSettings previousSettings_{};
     PlagC::EnvironmentDesc previousEnvironment_{};
     PlagC::CameraDesc camera_{};
