@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include "EditorLayer.h"
+#include "EditorViewportPresenter.h"
 #include "ImGuiInputBridge.h"
 #include "ImGuiRendererBridge.h"
 #include <PlagC/Application.h>
@@ -61,6 +62,7 @@ public:
 
         ImGui::NewFrame();
         layer_.Frame(engine, *session_);
+        viewportPresenter_.Draw(viewportTarget_->Handle());
         ImGui::Render();
         renderer_.Submit(engine.Graphics(), ImGui::GetDrawData());
     }
@@ -89,6 +91,7 @@ private:
     PlagC::Editor::ImGuiInputBridge input_;
     PlagC::Editor::ImGuiRendererBridge renderer_;
     PlagC::Editor::EditorLayer layer_;
+    PlagC::Editor::EditorViewportPresenter viewportPresenter_;
 };
 } // namespace
 
