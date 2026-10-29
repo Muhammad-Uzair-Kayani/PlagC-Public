@@ -33,7 +33,11 @@ struct Window::Impl {
                 const auto after = Input::state_.GetMouseDelta();
                 event.dx = after.x - before.x; event.dy = after.y - before.y;
             }
-            if (!events->Post(event)) eventFailure = true;
+            // GLFW invokes these callbacks from glfwPollEvents on the engine's owner/main
+            // thread. Dispatch synchronously instead of routing them through EventBus::Post,
+            // which is the MPSC path for true cross-thread producers. This makes key press,
+            // key release and Escape visible in the same callback/poll without queue backlog.
+            events->Dispatch(event);
         } catch (...) { eventFailure = true; }
     }
     static Impl& Self(GLFWwindow* window) { return *static_cast<Impl*>(glfwGetWindowUserPointer(window)); }
@@ -70,7 +74,7 @@ Window::Window(EventBus& events, const WindowConfig& config) : impl_(std::make_u
     glfwSetMouseButtonCallback(impl_->handle, [](GLFWwindow* w,int button,int action,int mods){ Event e{action == GLFW_PRESS ? EventType::MousePressed : EventType::MouseReleased}; e.button = FromGLFWButton(button); e.code = static_cast<int>(e.button); e.modifiers = FromGLFWModifiers(mods); Impl::Self(w).Emit(e); });
 }
 Window::~Window() { Thread::RequireMain(); if (impl_->handle) glfwDestroyWindow(impl_->handle); glfwTerminate(); activeWindow = false; Input::state_.Reset(); }
-void Window::Poll() { Thread::RequireMain(); Input::state_.BeginFrame(); LatencyProfiler::BeginPoll(); glfwPollEvents(); LatencyProfiler::EndPoll(); if (impl_->eventFailure) { impl_->eventFailure = false; throw std::runtime_error("window event delivery failed/overflowed"); } }
+void Window::Poll() { Thread::RequireMain(); Input::state_.BeginFrame(); LatencyProfiler::BeginPoll(); glfwPollEvents(); LatencyProfiler::EndPoll(); if (impl_->eventFailure) { impl_->eventFailure = false; throw std::runtime_error("window event delivery failed"); } }
 bool Window::ShouldClose() const { Thread::RequireMain(); return glfwWindowShouldClose(impl_->handle) != 0; }
 void Window::RequestClose() { Thread::RequireMain(); glfwSetWindowShouldClose(impl_->handle, GLFW_TRUE); }
 void Window::SetTitle(const std::string& value) { Thread::RequireMain(); glfwSetWindowTitle(impl_->handle,value.c_str()); }
