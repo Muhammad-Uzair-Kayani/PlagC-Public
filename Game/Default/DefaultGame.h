@@ -15,7 +15,7 @@ class DefaultGame final : public IGame
     std::string_view Name() const override { return "PlagC Default"; }
     std::vector<std::string_view> Worlds() const override
     {
-        return {"DefaultScene", "BlackDragonLab"};
+        return {"DefaultScene", "BlackDragonLab", "CityScaleLab"};
     }
     std::string_view DefaultWorld() const override { return "DefaultScene"; }
 
