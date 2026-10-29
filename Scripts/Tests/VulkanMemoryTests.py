@@ -79,6 +79,8 @@ return {chosenMemoryTypeIdx, poolSize, bIsTextureOnly};
 using uint32 = uint32_t;
 using VkDeviceSize = uint64_t;
 using VkBufferUsageFlags = uint32_t;
+using VkMemoryPropertyFlags = uint32_t;
+using String = std::string;
 constexpr uint32 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT=1, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT=2,
  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT=4, VK_MEMORY_PROPERTY_HOST_CACHED_BIT=8,
  VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD=256;

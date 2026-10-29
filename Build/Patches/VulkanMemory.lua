@@ -89,11 +89,13 @@ return function(source)
     replace([[                                    std::min( (VkDeviceSize)mDefaultPoolSize[vboFlag],
                                                   memHeaps[heapIdx].size - mUsedHeapMemory[heapIdx] );]], [[                                    std::min( static_cast<size_t>( mDefaultPoolSize[vboFlag] ),
                                               availableHeapMemory[heapIdx] );
-                                if( !( memTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) &&
-                                    ( vboFlag == CPU_INACCESSIBLE || vboFlag == TEXTURES_OPTIMAL ) )
-                                    defaultPoolSize = std::min<size_t>(
-                                        defaultPoolSize,
-                                        std::max<size_t>( sizeBytes, 8u * 1024u * 1024u ) );]])
+                                    if( !( memTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) &&
+                                        ( vboFlag == CPU_INACCESSIBLE || vboFlag == TEXTURES_OPTIMAL ) )
+                                    {
+                                        defaultPoolSize = std::min<size_t>(
+                                            defaultPoolSize,
+                                            std::max<size_t>( sizeBytes, 8u * 1024u * 1024u ) );
+                                    }]])
 
     replace([[                        OGRE_EXCEPT( Exception::ERR_RENDERINGAPI_ERROR,
                                      "Out of Memory trying to allocate " +]], [[                        for( uint32 heap = 0u;

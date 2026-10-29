@@ -87,15 +87,63 @@ return function(source)
         vb = vm->createVertexBuffer(elements, data.vertices.size(), vertexType,
                                     const_cast<Vertex *>(data.vertices.data()), false);]])
 
+    replace('        std::vector<std::uint64_t> users{};', [[        std::vector<std::uint64_t> users{};
+        std::vector<Vertex> pendingVertices{};
+        bool uploadQueued = false;]])
+    replace('    std::string workspaceName;', [[    std::string workspaceName;
+    std::vector<std::uint64_t> pendingMeshUploads;]])
+
+    -- Validate and compute bounds in one traversal, before mutating any mesh state.
+    replace([[    for (auto &v : vertices)
+        Require(Finite(v.position) && Finite(v.normal) && std::isfinite(v.u) && std::isfinite(v.v),
+                "nonfinite mesh update");]], [[    Ogre::Vector3 lo = V(vertices[0].position), hi = lo;
+    for (const auto &v : vertices)
+    {
+        Require(Finite(v.position) && Finite(v.normal) && std::isfinite(v.u) && std::isfinite(v.v),
+                "nonfinite mesh update");
+        lo.makeFloor(V(v.position));
+        hi.makeCeil(V(v.position));
+    }]])
+    replace([[    Ogre::Vector3 lo = V(vertices[0].position), hi = lo;
+    for (auto &v : vertices)
+    {
+        lo.makeFloor(V(v.position));
+        hi.makeCeil(V(v.position));
+    }
+]], '')
+
     replace('    buffer->upload(vertices.data(), 0, vertices.size());', [[    if (backend_ == RendererBackend::Vulkan &&
         buffer->getBufferType() >= Ogre::BT_DYNAMIC_PERSISTENT)
     {
-        void *destination = buffer->map(0, vertices.size());
-        std::memcpy(destination, vertices.data(), vertices.size_bytes());
-        buffer->unmap(Ogre::UO_KEEP_PERSISTENT);
+        // Own the data until submission. Updating twice must not rotate the GPU ring twice.
+        mesh.pendingVertices.assign(vertices.begin(), vertices.end());
+        if (!mesh.uploadQueued)
+        {
+            impl_->pendingMeshUploads.push_back(handle.value);
+            mesh.uploadQueued = true;
+        }
     }
     else
         buffer->upload(vertices.data(), 0, vertices.size());]])
+
+    replace('    if (!p.root->renderOneFrame())', [[    // Visit only dirty mesh IDs. IDs are never reused; a mesh destroyed before rendering
+    // leaves a harmless skipped entry. Keep CPU vector capacity for the next animated pose.
+    for (auto id : p.pendingMeshUploads)
+    {
+        auto found = p.meshes.find(id);
+        if (found == p.meshes.end() || found->second.pendingVertices.empty())
+            continue;
+        auto &mesh = found->second;
+        auto *buffer = mesh.value->getSubMesh(0)->mVao[Ogre::VpNormal][0]->getVertexBuffers()[0];
+        void *destination = buffer->map(0, mesh.pendingVertices.size());
+        std::memcpy(destination, mesh.pendingVertices.data(),
+                    mesh.pendingVertices.size() * sizeof(Vertex));
+        buffer->unmap(Ogre::UO_KEEP_PERSISTENT);
+        mesh.pendingVertices.clear();
+        mesh.uploadQueued = false;
+    }
+    p.pendingMeshUploads.clear();
+    if (!p.root->renderOneFrame())]])
 
     replace([[        texture->scheduleTransitionTo(Ogre::GpuResidency::Resident, image.release(), true);
         tm->waitForStreamingCompletion();

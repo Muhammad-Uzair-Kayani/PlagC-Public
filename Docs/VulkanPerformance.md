@@ -89,3 +89,12 @@ Vulkan GPU total                        <= OpenGL GPU total
 
 Raw `vkQueuePresentKHR` worker time does not need to be near zero if it is successfully overlapped;
 the critical metric is how much of that time remains visible as `main-wait` on the render thread.
+
+## Follow-up audit and update ownership
+
+See [VulkanAudit20261029.md](VulkanAudit20261029.md) for current implementation status,
+validation limits and remaining work. Dynamic vertex writes now coalesce per render
+submission through a dirty-ID queue. Their map/copy time is included in renderer
+submission; animation upload time alone must not be used to claim a speedup.
+Vulkan timestamp readback batches a completed slot into one driver call and first
+checks its owning frame so old query values cannot masquerade as a new sample.

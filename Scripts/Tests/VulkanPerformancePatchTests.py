@@ -43,7 +43,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert '#include <PlagC/GpuProfiler.h>' in renderer
     assert '#include <cstdlib>' in renderer
     assert 'Ogre::BT_DYNAMIC_PERSISTENT_COHERENT' in renderer
-    assert 'buffer->map(0, vertices.size())' in renderer
+    assert 'buffer->map(0, mesh.pendingVertices.size())' in renderer
+    assert 'pendingMeshUploads' in renderer
+    assert 'mesh.uploadQueued' in renderer
     assert 'buffer->unmap(Ogre::UO_KEEP_PERSISTENT)' in renderer
     assert 'pendingTextureUploads' in renderer
     assert 'setStagingTextureMaxBudgetBytes' in renderer
@@ -53,7 +55,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'options["VaoManager::mDynamicBufferMultiplier"] = std::to_string(framesInFlight)' in renderer
     assert 'GpuProfiler::AttachWorkspace(workspace)' in renderer
     assert 'GpuProfiler::AttachWorkspace(t.workspace)' in renderer
-    assert 'dynamic ? Ogre::BT_DEFAULT : Ogre::BT_IMMUTABLE' not in renderer
+    assert 'data.vertices.size(), vertexType,' in renderer
 
     profiler = apply(
         work,

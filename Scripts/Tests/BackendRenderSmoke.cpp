@@ -40,6 +40,24 @@ int main(int argc, char** argv)
         r.CaptureTarget(target, prefix + "-hdr.ppm");
         for (auto& vertex : data.vertices) vertex.position.y *= 1.2f;
         r.UpdateMesh(mesh, data.vertices);
+        // More updates than the GPU ring size; two writes before each submission coalesce.
+        const auto baseVertices = data.vertices;
+        for (int frame=0; frame<12; ++frame)
+        {
+            auto pose = baseVertices;
+            for (auto& vertex : pose) vertex.position.y += .01f * frame;
+            r.UpdateMesh(mesh, baseVertices);
+            r.UpdateMesh(mesh, pose);
+            r.Render(1./60);
+        }
+        r.Resize(0, 0);
+        r.UpdateMesh(mesh, baseVertices);
+        r.Render(1./60);
+        r.Resize(640, 360);
+        r.Render(1./60);
+        auto discarded = r.CreateMesh(data, true);
+        r.UpdateMesh(discarded, baseVertices);
+        r.DestroyMesh(discarded);
         settings.bloom = false;
         r.SetSettings(settings);
         r.ResizeTarget(target, 320, 180);
