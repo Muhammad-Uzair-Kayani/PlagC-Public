@@ -37,6 +37,23 @@ class EditorArchitectureTests(unittest.TestCase):
         ):
             self.assertIn(required, header)
 
+    def test_editor_session_owns_file_and_transport_policy(self):
+        header = self.read("PlagC/include/PlagC/Editor/EditorSession.h")
+        source = self.read("PlagC/src/Editor/EditorSession.cpp")
+        for required in (
+            "class EditorSession",
+            "void NewEmpty(",
+            "void Open(",
+            "void Save();",
+            "void SaveAs(",
+            "void StartPlay();",
+            "const SceneDocument& ViewDocument() const",
+            "const World& ViewWorld() const",
+        ):
+            self.assertIn(required, header)
+        self.assertIn("SceneDocument::Load", source)
+        self.assertIn("play_.Start(*document_)", source)
+
     def test_editor_bridge_uses_existing_engine_services(self):
         bridge = self.read("PlagC/include/PlagC/Editor/EngineEditorBridge.h")
         for required in (

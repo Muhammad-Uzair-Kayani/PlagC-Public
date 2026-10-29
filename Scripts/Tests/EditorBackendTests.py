@@ -32,6 +32,7 @@ link_sources = [
     'PlagC/src/Editor/SceneSerialization.cpp',
     'PlagC/src/Editor/EditorModels.cpp',
     'PlagC/src/Editor/PlaySession.cpp',
+    'PlagC/src/Editor/EditorSession.cpp',
 ]
 compile_only = [
     'PlagC/src/Editor/ViewportTarget.cpp',
@@ -43,6 +44,7 @@ tests = [
     'EditorSerializationTests',
     'EditorModelTests',
     'EditorPlaySessionTests',
+    'EditorSessionTests',
 ]
 
 with tempfile.TemporaryDirectory(prefix='plagc-editor-tests-') as tmp:
