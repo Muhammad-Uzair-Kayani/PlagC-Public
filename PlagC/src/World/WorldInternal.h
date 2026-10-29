@@ -1,5 +1,5 @@
 #pragma once
-// Engine-only access shared by the World, transform system and render bridge.
+// Engine-only access shared by the World, transform system and render/physics bridges.
 #include <PlagC/World/World.h>
 #include <PlagC/Thread.h>
 #include <entt/entity/registry.hpp>
@@ -12,6 +12,9 @@ struct WorldLifetime {};
 struct World::Impl {
     entt::registry registry;
     std::unordered_map<std::uint64_t, entt::entity> entities;
+    // Resolved world transforms live in the ECS Transform component. Every entity also owns
+    // a local transform here; roots keep local == world.
+    std::unordered_map<std::uint64_t, Transform> localByEntity;
     // child public Entity value -> parent public Entity value. Values are session-unique.
     std::unordered_map<std::uint64_t, std::uint64_t> parentByChild;
     Entity active;

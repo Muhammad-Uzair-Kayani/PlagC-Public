@@ -35,12 +35,12 @@ struct RenderableComponent
 };
 struct LightComponent
 {
-    // World-space direction. Position is supplied by the entity's Transform.
+    // World-space direction. Position is supplied by the entity's resolved Transform.
     LightDesc light;
 };
 struct CameraComponent
 {
-    // Look-at camera: world-space target; position comes from Transform.
+    // Look-at target remains world-space; position comes from the resolved Transform.
     Vec3 target{0, 0, 0};
     float fov = 60, nearClip = .1f, farClip = 1000;
     float aspect = 0; // Zero follows the render viewport; positive values override it.
@@ -54,7 +54,7 @@ struct EntityRecord
 {
     Entity entity;
     std::string name;
-    Transform transform;
+    Transform transform; // Resolved world-space transform.
     std::optional<RenderableComponent> renderable;
     std::optional<LightComponent> light;
     std::optional<CameraComponent> camera;
@@ -77,19 +77,25 @@ class World
     bool Alive(Entity) const;
     std::size_t Size() const;
     EntityRecord Read(Entity) const;
+
+    // Existing transform API remains world-space for compatibility. Parented entities
+    // derive their local transform from world writes; descendant world transforms propagate.
     Transform ReadTransform(Entity) const;
+    void SetTransform(Entity, const Transform &world);
+    Transform ReadLocalTransform(Entity) const;
+    void SetLocalTransform(Entity, const Transform &local);
+
     std::vector<EntityRecord> Snapshot() const;
     void Rename(Entity, std::string);
-    void SetTransform(Entity, const Transform &);
 
-    // Scene-graph relationship metadata. Transform remains world-space in this phase;
-    // parenting does not implicitly modify or propagate transforms.
+    // Scene graph. Reparenting preserves the child's current world-space transform.
     Entity Parent(Entity) const;
     std::vector<Entity> Children(Entity) const;
     void SetParent(Entity child, Entity parent);
     void ClearParent(Entity child);
 
-    // Dynamic transforms belong to physics; use PhysicsSystem::Teleport after attachment.
+    // Physics and hierarchy ownership are intentionally disjoint in this phase. Attach/remove
+    // physics only while the entity is a hierarchy root with no children.
     void SetPhysics(Entity, const PhysicsComponent &);
     void RemovePhysics(Entity);
     void SetModel(Entity, const ModelComponent &);
@@ -106,7 +112,8 @@ class World
     void ClearActiveCamera();
     Entity ActiveCamera() const;
     std::vector<TransformUpdate> TransformSnapshot() const;
-    // Validates the entire batch before any mutation. Duplicate/stale IDs rejected.
+    // World-space batch. Validates the complete final hierarchy before any mutation.
+    // Duplicate/stale IDs are rejected and explicit child targets win over propagation.
     void ApplyTransforms(std::span<const TransformUpdate>);
 
   private:

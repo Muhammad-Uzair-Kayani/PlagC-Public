@@ -7,7 +7,7 @@ struct TransformSystem::Impl {
     World::Impl* world=nullptr;
     std::weak_ptr<WorldLifetime> lifetime;
     std::uint64_t topology=0;
-    struct Binding { Transform* transform; WorldChanges* changes; CameraComponent* camera; };
+    struct Binding { Transform* transform; Transform* local; WorldChanges* changes; CameraComponent* camera; };
     std::vector<Binding> bindings;
     std::vector<Transform> values;
     std::vector<std::uint64_t> versions, cameraVersions;
@@ -26,8 +26,18 @@ void TransformSystem::Bind(World& world,std::span<const Entity> entities) {
         auto raw=w.Get(e);
         if(auto* pc=w.registry.try_get<PhysicsComponent>(raw);pc&&pc->body.motion==MotionType::Dynamic)
             throw std::invalid_argument("dynamic transforms are physics-owned");
+        if(w.parentByChild.contains(e.value))
+            throw std::invalid_argument("hierarchical transforms require World transform APIs");
+        for(const auto& [child,parent]:w.parentByChild) {
+            (void)child;
+            if(parent==e.value)
+                throw std::invalid_argument("hierarchical transforms require World transform APIs");
+        }
         if(!seen.insert(e.value).second)throw std::invalid_argument("duplicate transform system entity");
-        next->bindings.push_back({&w.registry.get<Transform>(raw), &w.registry.get<WorldChanges>(raw),
+        auto local=w.localByEntity.find(e.value);
+        if(local==w.localByEntity.end())throw std::logic_error("world lost an entity local transform");
+        next->bindings.push_back({&w.registry.get<Transform>(raw), &local->second,
+                                  &w.registry.get<WorldChanges>(raw),
                                   w.registry.try_get<CameraComponent>(raw)});
     }
     next->values.resize(entities.size());next->versions.resize(entities.size());next->cameraVersions.resize(entities.size());
@@ -56,9 +66,11 @@ void TransformSystem::Commit() {
         ValidateWorldTransform(p.values[i]);
         if(b.camera)ValidateWorldCamera(*b.camera,p.values[i]);
     }
-    // No allocations, ID lookups, duplicate hashes or EnTT replacement notifications.
+    // Bound entities are hierarchy-isolated roots, so local == resolved world.
     for(std::size_t i=0;i<p.values.size();++i) {
-        *p.bindings[i].transform=p.values[i];++p.bindings[i].changes->transform;
+        *p.bindings[i].transform=p.values[i];
+        *p.bindings[i].local=p.values[i];
+        ++p.bindings[i].changes->transform;
     }
     p.prepared=false;
 }
