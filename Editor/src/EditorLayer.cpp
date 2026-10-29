@@ -1,15 +1,20 @@
 #include "pgcpch.h"
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
+#include <PlagC/World/TransformGraph.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <algorithm>
-#include <cstdint>
+#include <cfloat>
+#include <cstdio>
+#include <cstring>
 #include <functional>
 #include <unordered_map>
 
 namespace PlagC::Editor {
 namespace {
+
+constexpr const char* EntityPayload = "PLAGC_EDITOR_ENTITY";
 
 const char* SeverityName(Severity severity)
 {
@@ -41,11 +46,11 @@ void EditorLayer::Frame(Engine& engine, EditorSession& session)
 {
     DrawDockHost(engine, session);
 
-    if (showHierarchy_)
-        DrawHierarchy(engine, session);
     DrawViewport(session);
     if (showInspector_)
-        DrawInspector(session);
+        DrawInspector(engine, session);
+    if (showHierarchy_)
+        DrawHierarchy(engine, session);
     if (showContentBrowser_)
         DrawContentBrowser();
     if (showConsole_)
@@ -56,6 +61,10 @@ void EditorLayer::Frame(Engine& engine, EditorSession& session)
 
 void EditorLayer::Shutdown()
 {
+    transformEdit_.reset();
+    transformEditPersistentID_ = 0;
+    inspectorPersistentID_ = 0;
+    inspectorRevision_ = 0;
     viewport_ = {};
 }
 
@@ -94,7 +103,11 @@ void EditorLayer::DrawDockHost(Engine& engine, EditorSession& session)
         {
             if (ImGui::MenuItem("New", "Ctrl+N", false, session.EditingEnabled()))
             {
-                try { session.NewEmpty(); }
+                try
+                {
+                    session.NewEmpty();
+                    inspectorPersistentID_ = inspectorRevision_ = 0;
+                }
                 catch (const std::exception& error) { LogEditorError(engine, error); }
             }
             ImGui::MenuItem("Open...", "Ctrl+O", false, false);
@@ -114,10 +127,27 @@ void EditorLayer::DrawDockHost(Engine& engine, EditorSession& session)
 
         if (ImGui::BeginMenu("Edit"))
         {
-            if (ImGui::MenuItem("Undo", "Ctrl+Z", false, session.CanUndo()))
+            std::string undo = "Undo";
+            std::string redo = "Redo";
+            if (session.EditingEnabled())
+            {
+                const auto& document = session.EditDocument();
+                if (!document.UndoLabel().empty())
+                    undo += " " + std::string(document.UndoLabel());
+                if (!document.RedoLabel().empty())
+                    redo += " " + std::string(document.RedoLabel());
+            }
+
+            if (ImGui::MenuItem(undo.c_str(), "Ctrl+Z", false, session.CanUndo()))
+            {
                 session.Undo();
-            if (ImGui::MenuItem("Redo", "Ctrl+Y", false, session.CanRedo()))
+                inspectorRevision_ = 0;
+            }
+            if (ImGui::MenuItem(redo.c_str(), "Ctrl+Y", false, session.CanRedo()))
+            {
                 session.Redo();
+                inspectorRevision_ = 0;
+            }
             ImGui::EndMenu();
         }
 
@@ -125,7 +155,33 @@ void EditorLayer::DrawDockHost(Engine& engine, EditorSession& session)
         {
             if (ImGui::MenuItem("Create Empty", nullptr, false, session.EditingEnabled()))
             {
-                try { session.EditDocument().Create(); }
+                try
+                {
+                    session.EditDocument().Create();
+                    inspectorRevision_ = 0;
+                }
+                catch (const std::exception& error) { LogEditorError(engine, error); }
+            }
+
+            Entity selected{};
+            if (session.EditingEnabled())
+                selected = session.EditDocument().Selection();
+            if (ImGui::MenuItem("Duplicate Selected", "Ctrl+D", false, bool(selected)))
+            {
+                try
+                {
+                    session.EditDocument().Duplicate(selected);
+                    inspectorRevision_ = 0;
+                }
+                catch (const std::exception& error) { LogEditorError(engine, error); }
+            }
+            if (ImGui::MenuItem("Delete Selected", "Delete", false, bool(selected)))
+            {
+                try
+                {
+                    session.EditDocument().Destroy(selected);
+                    inspectorPersistentID_ = inspectorRevision_ = 0;
+                }
                 catch (const std::exception& error) { LogEditorError(engine, error); }
             }
             ImGui::EndMenu();
@@ -190,14 +246,21 @@ void EditorLayer::DrawTransport(Engine& engine, EditorSession& session)
         {
         case PlaySession::State::Stopped:
             if (ImGui::Button("Play"))
+            {
+                FinishTransformEdit(engine, true);
                 session.StartPlay();
+                inspectorPersistentID_ = inspectorRevision_ = 0;
+            }
             break;
         case PlaySession::State::Playing:
             if (ImGui::Button("Pause"))
                 session.PausePlay();
             ImGui::SameLine();
             if (ImGui::Button("Stop"))
+            {
                 session.StopPlay();
+                inspectorPersistentID_ = inspectorRevision_ = 0;
+            }
             break;
         case PlaySession::State::Paused:
             if (ImGui::Button("Resume"))
@@ -207,7 +270,10 @@ void EditorLayer::DrawTransport(Engine& engine, EditorSession& session)
                 session.RequestStep();
             ImGui::SameLine();
             if (ImGui::Button("Stop"))
+            {
                 session.StopPlay();
+                inspectorPersistentID_ = inspectorRevision_ = 0;
+            }
             break;
         }
     }
@@ -225,11 +291,77 @@ void EditorLayer::DrawHierarchy(Engine& engine, EditorSession& session)
         return;
     }
 
+    if (session.EditingEnabled())
+    {
+        auto& document = session.EditDocument();
+        if (ImGui::Button("+ Empty"))
+        {
+            try
+            {
+                document.Create();
+                inspectorRevision_ = 0;
+            }
+            catch (const std::exception& error) { LogEditorError(engine, error); }
+        }
+        ImGui::SameLine();
+        const Entity selected = document.Selection();
+        ImGui::BeginDisabled(!selected);
+        if (ImGui::Button("Duplicate"))
+        {
+            try
+            {
+                document.Duplicate(selected);
+                inspectorRevision_ = 0;
+            }
+            catch (const std::exception& error) { LogEditorError(engine, error); }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Delete"))
+        {
+            try
+            {
+                document.Destroy(selected);
+                inspectorPersistentID_ = inspectorRevision_ = 0;
+            }
+            catch (const std::exception& error) { LogEditorError(engine, error); }
+        }
+        ImGui::EndDisabled();
+        ImGui::Separator();
+    }
+
     const auto entities = session.ViewDocument().Snapshot();
     std::unordered_map<std::uint64_t, std::vector<const AuthoringEntity*>> children;
     children.reserve(entities.size() + 1);
     for (const auto& entity : entities)
         children[entity.parentPersistentID].push_back(&entity);
+
+    if (session.EditingEnabled())
+    {
+        const float width = std::max(1.0f, ImGui::GetContentRegionAvail().x);
+        ImGui::Button("Scene Root (drop here)", ImVec2(width, 0.0f));
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(EntityPayload))
+            {
+                if (payload->DataSize == sizeof(std::uint64_t))
+                {
+                    std::uint64_t draggedID = 0;
+                    std::memcpy(&draggedID, payload->Data, sizeof(draggedID));
+                    try
+                    {
+                        auto& document = session.EditDocument();
+                        const Entity child = document.FindByPersistentID(draggedID);
+                        if (child)
+                            document.ClearParent(child);
+                        inspectorRevision_ = 0;
+                    }
+                    catch (const std::exception& error) { LogEditorError(engine, error); }
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+        ImGui::Spacing();
+    }
 
     std::function<void(std::uint64_t)> drawChildren = [&](std::uint64_t parentID)
     {
@@ -252,8 +384,46 @@ void EditorLayer::DrawHierarchy(Engine& engine, EditorSession& session)
             const bool open = ImGui::TreeNodeEx("##entity", flags, "%s", item->record.name.c_str());
             if (ImGui::IsItemClicked() && session.EditingEnabled())
             {
-                try { session.EditDocument().SelectPersistent(item->persistentID); }
+                try
+                {
+                    session.EditDocument().SelectPersistent(item->persistentID);
+                    inspectorPersistentID_ = inspectorRevision_ = 0;
+                }
                 catch (const std::exception& error) { LogEditorError(engine, error); }
+            }
+
+            if (session.EditingEnabled() && ImGui::BeginDragDropSource())
+            {
+                const std::uint64_t id = item->persistentID;
+                ImGui::SetDragDropPayload(EntityPayload, &id, sizeof(id));
+                ImGui::TextUnformatted(item->record.name.c_str());
+                ImGui::EndDragDropSource();
+            }
+
+            if (session.EditingEnabled() && ImGui::BeginDragDropTarget())
+            {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(EntityPayload))
+                {
+                    if (payload->DataSize == sizeof(std::uint64_t))
+                    {
+                        std::uint64_t draggedID = 0;
+                        std::memcpy(&draggedID, payload->Data, sizeof(draggedID));
+                        if (draggedID != item->persistentID)
+                        {
+                            try
+                            {
+                                auto& document = session.EditDocument();
+                                const Entity child = document.FindByPersistentID(draggedID);
+                                const Entity parent = document.FindByPersistentID(item->persistentID);
+                                if (child && parent)
+                                    document.SetParent(child, parent);
+                                inspectorRevision_ = 0;
+                            }
+                            catch (const std::exception& error) { LogEditorError(engine, error); }
+                        }
+                    }
+                }
+                ImGui::EndDragDropTarget();
             }
 
             if (hasChildren && open)
@@ -301,7 +471,74 @@ void EditorLayer::DrawViewport(EditorSession& session)
     ImGui::End();
 }
 
-void EditorLayer::DrawInspector(EditorSession& session)
+void EditorLayer::SyncInspector(EditorSession& session, const AuthoringEntity& selected)
+{
+    if (!session.EditingEnabled())
+        return;
+
+    auto& document = session.EditDocument();
+    if (transformEdit_)
+        return;
+    if (inspectorPersistentID_ == selected.persistentID &&
+        inspectorRevision_ == document.Revision())
+        return;
+
+    inspectorPersistentID_ = selected.persistentID;
+    inspectorRevision_ = document.Revision();
+    inspectorLocal_ = document.LocalTransform(selected.entity);
+    std::snprintf(renameBuffer_.data(), renameBuffer_.size(), "%s", selected.record.name.c_str());
+}
+
+void EditorLayer::PreviewInspectorTransform(Engine& engine,
+                                            EditorSession& session,
+                                            const AuthoringEntity& selected)
+{
+    if (!transformEdit_ || transformEditPersistentID_ != selected.persistentID)
+        return;
+
+    try
+    {
+        auto& document = session.EditDocument();
+        Transform world = inspectorLocal_;
+        if (selected.parentPersistentID)
+        {
+            const Entity parent = document.FindByPersistentID(selected.parentPersistentID);
+            if (!parent)
+                throw std::logic_error("Inspector transform parent no longer exists");
+            world = ComposeTransform(document.Scene().ReadTransform(parent), inspectorLocal_);
+        }
+        transformEdit_->Preview(world);
+        inspectorRevision_ = document.Revision();
+    }
+    catch (const std::exception& error)
+    {
+        LogEditorError(engine, error);
+        FinishTransformEdit(engine, false);
+        inspectorRevision_ = 0;
+    }
+}
+
+void EditorLayer::FinishTransformEdit(Engine& engine, bool commit)
+{
+    if (!transformEdit_)
+        return;
+    try
+    {
+        if (commit)
+            transformEdit_->Commit();
+        else
+            transformEdit_->Cancel();
+    }
+    catch (const std::exception& error)
+    {
+        LogEditorError(engine, error);
+    }
+    transformEdit_.reset();
+    transformEditPersistentID_ = 0;
+    inspectorRevision_ = 0;
+}
+
+void EditorLayer::DrawInspector(Engine& engine, EditorSession& session)
 {
     if (!ImGui::Begin("Inspector", &showInspector_))
     {
@@ -322,8 +559,44 @@ void EditorLayer::DrawInspector(EditorSession& session)
         return;
     }
 
-    ImGui::TextUnformatted(selected->record.name.c_str());
-    ImGui::Separator();
+    if (!session.EditingEnabled())
+    {
+        ImGui::TextUnformatted(selected->record.name.c_str());
+        ImGui::Separator();
+        ImGui::Text("Persistent ID: %llu",
+                    static_cast<unsigned long long>(selected->persistentID));
+        const Transform& transform = selected->record.transform;
+        ImGui::SeparatorText("World Transform");
+        ImGui::Text("Position  %.3f  %.3f  %.3f",
+                    transform.position.x, transform.position.y, transform.position.z);
+        ImGui::Text("Rotation  %.3f  %.3f  %.3f",
+                    transform.rotationDegrees.x, transform.rotationDegrees.y,
+                    transform.rotationDegrees.z);
+        ImGui::Text("Scale     %.3f  %.3f  %.3f",
+                    transform.scale.x, transform.scale.y, transform.scale.z);
+        ImGui::End();
+        return;
+    }
+
+    SyncInspector(session, *selected);
+    auto& document = session.EditDocument();
+
+    if (ImGui::InputText("Name", renameBuffer_.data(), renameBuffer_.size(),
+                         ImGuiInputTextFlags_EnterReturnsTrue) ||
+        ImGui::IsItemDeactivatedAfterEdit())
+    {
+        try
+        {
+            document.Rename(selected->entity, renameBuffer_.data());
+            inspectorRevision_ = document.Revision();
+        }
+        catch (const std::exception& error)
+        {
+            LogEditorError(engine, error);
+            inspectorRevision_ = 0;
+        }
+    }
+
     ImGui::Text("Persistent ID: %llu",
                 static_cast<unsigned long long>(selected->persistentID));
     if (selected->parentPersistentID)
@@ -332,17 +605,54 @@ void EditorLayer::DrawInspector(EditorSession& session)
     else
         ImGui::TextDisabled("Root entity");
 
-    const Transform transform = session.EditingEnabled()
-                                    ? session.EditDocument().LocalTransform(selected->entity)
-                                    : selected->record.transform;
-    ImGui::SeparatorText(session.EditingEnabled() ? "Local Transform" : "World Transform");
-    ImGui::Text("Position  %.3f  %.3f  %.3f",
-                transform.position.x, transform.position.y, transform.position.z);
-    ImGui::Text("Rotation  %.3f  %.3f  %.3f",
-                transform.rotationDegrees.x, transform.rotationDegrees.y,
-                transform.rotationDegrees.z);
-    ImGui::Text("Scale     %.3f  %.3f  %.3f",
-                transform.scale.x, transform.scale.y, transform.scale.z);
+    ImGui::SeparatorText("Local Transform");
+
+    auto beginTransformEdit = [&]()
+    {
+        if (transformEdit_)
+            return;
+        try
+        {
+            auto edit = document.BeginTransformEdit(selected->entity);
+            transformEdit_ = std::make_unique<SceneDocument::TransformEdit>(std::move(edit));
+            transformEditPersistentID_ = selected->persistentID;
+        }
+        catch (const std::exception& error)
+        {
+            LogEditorError(engine, error);
+            inspectorRevision_ = 0;
+        }
+    };
+
+    bool changed = ImGui::DragFloat3("Position", &inspectorLocal_.position.x, 0.05f);
+    if (ImGui::IsItemActivated())
+        beginTransformEdit();
+    if (changed)
+        PreviewInspectorTransform(engine, session, *selected);
+    if (ImGui::IsItemDeactivated())
+        FinishTransformEdit(engine, true);
+
+    changed = ImGui::DragFloat3("Rotation", &inspectorLocal_.rotationDegrees.x, 0.25f);
+    if (ImGui::IsItemActivated())
+        beginTransformEdit();
+    if (changed)
+        PreviewInspectorTransform(engine, session, *selected);
+    if (ImGui::IsItemDeactivated())
+        FinishTransformEdit(engine, true);
+
+    changed = ImGui::DragFloat3("Scale", &inspectorLocal_.scale.x, 0.01f, 0.001f, FLT_MAX);
+    if (changed)
+    {
+        inspectorLocal_.scale.x = std::max(inspectorLocal_.scale.x, 0.001f);
+        inspectorLocal_.scale.y = std::max(inspectorLocal_.scale.y, 0.001f);
+        inspectorLocal_.scale.z = std::max(inspectorLocal_.scale.z, 0.001f);
+    }
+    if (ImGui::IsItemActivated())
+        beginTransformEdit();
+    if (changed)
+        PreviewInspectorTransform(engine, session, *selected);
+    if (ImGui::IsItemDeactivated())
+        FinishTransformEdit(engine, true);
 
     ImGui::SeparatorText("Components");
     ImGui::Text("Camera: %s", selected->record.camera ? "yes" : "no");

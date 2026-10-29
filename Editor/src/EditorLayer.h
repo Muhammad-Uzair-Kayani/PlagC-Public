@@ -2,6 +2,8 @@
 
 #include <PlagC/Editor/EditorModels.h>
 #include <PlagC/Editor/EditorSession.h>
+#include <array>
+#include <memory>
 
 namespace PlagC {
 class Engine;
@@ -22,11 +24,14 @@ private:
     void BuildDefaultLayout(unsigned width, unsigned height);
     void DrawHierarchy(Engine&, EditorSession&);
     void DrawViewport(EditorSession&);
-    void DrawInspector(EditorSession&);
+    void DrawInspector(Engine&, EditorSession&);
     void DrawContentBrowser();
     void DrawConsole(Engine&);
     void DrawStatistics(Engine&, EditorSession&);
     void DrawTransport(Engine&, EditorSession&);
+    void SyncInspector(EditorSession&, const AuthoringEntity&);
+    void PreviewInspectorTransform(Engine&, EditorSession&, const AuthoringEntity&);
+    void FinishTransformEdit(Engine&, bool commit);
 
     ViewportState viewport_{};
     bool showHierarchy_ = true;
@@ -34,6 +39,13 @@ private:
     bool showContentBrowser_ = true;
     bool showConsole_ = true;
     bool showStatistics_ = true;
+
+    std::uint64_t inspectorPersistentID_ = 0;
+    std::uint64_t inspectorRevision_ = 0;
+    Transform inspectorLocal_{};
+    std::array<char, 256> renameBuffer_{};
+    std::unique_ptr<SceneDocument::TransformEdit> transformEdit_;
+    std::uint64_t transformEditPersistentID_ = 0;
 };
 
 } // namespace PlagC::Editor
