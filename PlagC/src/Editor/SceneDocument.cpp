@@ -10,6 +10,7 @@ namespace PlagC::Editor {
 namespace {
 
 using PersistentMap = std::unordered_map<std::uint64_t, std::uint64_t>;
+
 bool Equal(Vec3 a, Vec3 b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
@@ -90,6 +91,15 @@ void Unbind(PersistentMap& persistent, Entity entity) noexcept {
     persistent.erase(entity.value);
 }
 
+std::uint64_t PersistentOf(const PersistentMap& persistent, Entity entity) {
+    if (!entity)
+        return 0;
+    const auto it = persistent.find(entity.value);
+    if (it == persistent.end())
+        throw std::logic_error("Scene document lost an entity persistent ID");
+    return it->second;
+}
+
 Entity Resolve(const PersistentMap& persistent, std::uint64_t persistentID) {
     for (const auto& [runtimeID, id] : persistent)
         if (id == persistentID)
@@ -133,6 +143,32 @@ private:
     std::uint64_t id_;
     Transform before_;
     Transform after_;
+};
+
+class ReparentCommand final : public Command {
+public:
+    ReparentCommand(World& world, PersistentMap& persistent,
+                    std::uint64_t child, std::uint64_t before, std::uint64_t after)
+        : world_(world), persistent_(persistent), child_(child), before_(before), after_(after) {}
+
+    std::string_view Label() const noexcept override { return "Reparent entity"; }
+    void Apply() override { Set(after_); }
+    void Revert() override { Set(before_); }
+
+private:
+    void Set(std::uint64_t parent) {
+        const Entity child = Resolve(persistent_, child_);
+        if (parent)
+            world_.SetParent(child, Resolve(persistent_, parent));
+        else
+            world_.ClearParent(child);
+    }
+
+    World& world_;
+    PersistentMap& persistent_;
+    std::uint64_t child_ = 0;
+    std::uint64_t before_ = 0;
+    std::uint64_t after_ = 0;
 };
 
 class CreateEntityCommand final : public Command {
@@ -188,7 +224,11 @@ public:
           selection_(selection), id_(id), entity_(entity),
           record_(world.Read(entity)),
           activeCamera_(world.ActiveCamera() == entity),
-          selected_(selection == entity) {}
+          selected_(selection == entity),
+          parentID_(PersistentOf(persistent, world.Parent(entity))) {
+        for (const Entity child : world.Children(entity))
+            childIDs_.push_back(PersistentOf(persistent, child));
+    }
 
     std::string_view Label() const noexcept override { return "Delete entity"; }
 
@@ -203,11 +243,26 @@ public:
     }
 
     void Revert() override {
+        const Entity parent = parentID_ ? Resolve(persistent_, parentID_) : Entity{};
+        std::vector<Entity> children;
+        children.reserve(childIDs_.size());
+        for (const auto childID : childIDs_)
+            children.push_back(Resolve(persistent_, childID));
+
         const Entity restored = RestoreRecord(world_, record_, activeCamera_);
         try {
             Bind(persistent_, id_, restored);
+            if (parent)
+                world_.SetParent(restored, parent);
+            for (const Entity child : children)
+                world_.SetParent(child, restored);
         } catch (...) {
-            world_.Destroy(restored);
+            for (const Entity child : children)
+                if (world_.Alive(child) && world_.Parent(child) == restored)
+                    world_.ClearParent(child);
+            Unbind(persistent_, restored);
+            if (world_.Alive(restored))
+                world_.Destroy(restored);
             throw;
         }
         entity_ = restored;
@@ -224,23 +279,30 @@ private:
     EntityRecord record_;
     bool activeCamera_ = false;
     bool selected_ = false;
+    std::uint64_t parentID_ = 0;
+    std::vector<std::uint64_t> childIDs_;
 };
 
 class DuplicateEntityCommand final : public Command {
 public:
     DuplicateEntityCommand(World& world, PersistentMap& persistent,
-                           Entity& selection, std::uint64_t id, EntityRecord record)
+                           Entity& selection, std::uint64_t id, EntityRecord record,
+                           std::uint64_t parentID)
         : world_(world), persistent_(persistent),
           selection_(selection), previousSelection_(selection),
-          id_(id), record_(std::move(record)) {}
+          id_(id), record_(std::move(record)), parentID_(parentID) {}
 
     std::string_view Label() const noexcept override { return "Duplicate entity"; }
 
     void Apply() override {
+        const Entity parent = parentID_ ? Resolve(persistent_, parentID_) : Entity{};
         const Entity created = RestoreRecord(world_, record_, false);
         try {
             Bind(persistent_, id_, created);
+            if (parent)
+                world_.SetParent(created, parent);
         } catch (...) {
+            Unbind(persistent_, created);
             world_.Destroy(created);
             throw;
         }
@@ -249,11 +311,11 @@ public:
     }
 
     void Revert() override {
-        if (!entity_ || !world_.Alive(entity_))
+        if (!entity_ || !world_.Alive(entity_)
             throw std::logic_error("Duplicated entity no longer exists");
         if (selection_ == entity_)
             selection_ = previousSelection_ && world_.Alive(previousSelection_)
-                             ? previousSelection_ : Entity{};
+                           ? previousSelection_ : Entity{};
         world_.Destroy(entity_);
         Unbind(persistent_, entity_);
         entity_ = {};
@@ -268,6 +330,7 @@ private:
     Entity previousSelection_{};
     std::uint64_t id_;
     EntityRecord record_;
+    std::uint64_t parentID_ = 0;
     Entity entity_{};
 };
 
@@ -466,8 +529,10 @@ std::vector<AuthoringEntity> SceneDocument::Snapshot() const {
         const auto it = persistentIDs_.find(record.entity.value);
         if (it == persistentIDs_.end())
             throw std::logic_error("Scene document lost an entity persistent ID");
+        const Entity parent = world_->Parent(record.entity);
+        const std::uint64_t parentID = parent ? PersistentID(parent) : 0;
         result.push_back({it->second, record.entity, record,
-                          selection_ == record.entity, active == record.entity});
+                          selection_ == record.entity, active == record.entity, parentID});
     }
 
     std::sort(result.begin(), result.end(),
@@ -520,6 +585,12 @@ std::uint64_t SceneDocument::PersistentID(Entity entity) const {
     return it->second;
 }
 
+std::uint64_t SceneDocument::ParentPersistentID(Entity entity) const {
+    Thread::RequireMain();
+    const Entity parent = world_->Parent(entity);
+    return parent ? PersistentID(parent) : 0;
+}
+
 Entity SceneDocument::FindByPersistentID(std::uint64_t persistentID) const {
     Thread::RequireMain();
     for (const auto& [runtimeID, id] : persistentIDs_)
@@ -534,8 +605,7 @@ Entity SceneDocument::Create(EntityTemplate value) {
 
     const std::uint64_t persistentID = AllocatePersistentID();
     auto command = std::make_unique<CreateEntityCommand>(
-        *world_, persistentIDs_, selection_,
-        persistentID, ToRecord(value));
+        *world_, persistentIDs_, selection_, persistentID, ToRecord(value));
     auto* raw = command.get();
     history_.Execute(std::move(command));
     BumpRevision();
@@ -547,8 +617,7 @@ void SceneDocument::Destroy(Entity entity) {
     RequireStableEditState();
     const std::uint64_t persistentID = PersistentID(entity);
     history_.Execute(std::make_unique<DeleteEntityCommand>(
-        *world_, persistentIDs_, selection_,
-        entity, persistentID));
+        *world_, persistentIDs_, selection_, entity, persistentID));
     BumpRevision();
 }
 
@@ -560,8 +629,8 @@ Entity SceneDocument::Duplicate(Entity entity) {
 
     const std::uint64_t persistentID = AllocatePersistentID();
     auto command = std::make_unique<DuplicateEntityCommand>(
-        *world_, persistentIDs_, selection_,
-        persistentID, world_->Read(entity));
+        *world_, persistentIDs_, selection_, persistentID,
+        world_->Read(entity), ParentPersistentID(entity));
     auto* raw = command.get();
     history_.Execute(std::move(command));
     BumpRevision();
@@ -603,6 +672,29 @@ SceneDocument::TransformEdit SceneDocument::BeginTransformEdit(Entity entity) {
     transformEditActive_ = true;
     transformEditEntity_ = entity;
     return TransformEdit(*this, entity, world_->ReadTransform(entity));
+}
+
+void SceneDocument::SetParent(Entity child, Entity parent) {
+    Thread::RequireMain();
+    RequireStableEditState();
+    if (!world_->Alive(child))
+        throw std::invalid_argument("Invalid hierarchy child");
+    if (parent && !world_->Alive(parent))
+        throw std::invalid_argument("Invalid hierarchy parent");
+
+    const std::uint64_t before = ParentPersistentID(child);
+    const std::uint64_t after = parent ? PersistentID(parent) : 0;
+    if (before == after)
+        return;
+
+    const auto childID = PersistentID(child);
+    history_.Execute(std::make_unique<ReparentCommand>(
+        *world_, persistentIDs_, childID, before, after));
+    BumpRevision();
+}
+
+void SceneDocument::ClearParent(Entity child) {
+    SetParent(child, {});
 }
 
 void SceneDocument::SetCamera(Entity entity, const CameraComponent& camera) {
@@ -802,6 +894,11 @@ std::unique_ptr<SceneDocument> SceneDocument::CloneForRuntime() const {
             activeID = item.persistentID;
     }
 
+    for (const auto& item : authoring)
+        if (item.parentPersistentID)
+            clonedWorld->SetParent(clonedEntities.at(item.persistentID),
+                                   clonedEntities.at(item.parentPersistentID));
+
     if (activeID)
         clonedWorld->SetActiveCamera(clonedEntities.at(activeID));
 
@@ -867,9 +964,6 @@ std::uint64_t SceneDocument::AllocatePersistentID() {
     if (nextPersistentID_ == 0)
         throw std::overflow_error("Persistent entity ID space exhausted");
 
-    // Deserialize may replace the constructor-assigned IDs with arbitrary v1
-    // IDs. Reconcile the high-water mark before issuing the next ID, then never
-    // reuse an ID during this document session even after delete/branching.
     for (const auto& [runtimeID, persistentID] : persistentIDs_) {
         (void)runtimeID;
         if (persistentID >= nextPersistentID_) {

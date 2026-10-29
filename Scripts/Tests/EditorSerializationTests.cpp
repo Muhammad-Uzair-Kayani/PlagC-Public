@@ -15,8 +15,10 @@ int main() {
     auto plain=world->Create(std::string("Name\0with \"quotes\"",18));
     auto asset=std::make_shared<ModelAsset>(); asset->metadata.path="Game://props/crate.plasset";
     auto model=world->Create("Crate"); world->SetModel(model,{AssetHandle<ModelAsset>(asset),false});
+    world->SetParent(model,plain);
     SceneDocument d(std::move(world));
     auto text=d.Serialize();
+    assert(text.find("\"version\":2")!=std::string::npos);
     int loads=0;
     auto resolver=[&](const std::string &path) { ++loads; assert(path==asset->metadata.path); return AssetHandle<ModelAsset>(asset); };
     auto restored=SceneDocument::Deserialize(text,resolver);
@@ -25,16 +27,20 @@ int main() {
     assert(restored->Scene().ActiveCamera()!=camera);
     assert(restored->PersistentID(restored->Scene().ActiveCamera())==d.PersistentID(camera));
     assert(restored->Scene().Size()==4);
+    auto restoredModel=restored->FindByPersistentID(d.PersistentID(model));
+    auto restoredPlain=restored->FindByPersistentID(d.PersistentID(plain));
+    assert(restored->Scene().Parent(restoredModel)==restoredPlain);
     Reject([&]{SceneDocument::Deserialize(text);});
     Reject([&]{SceneDocument::Deserialize(text,[](const std::string&){return AssetHandle<ModelAsset>{};});});
     auto replace=[&](std::string from,std::string to) {auto s=text; auto p=s.find(from); assert(p!=std::string::npos); s.replace(p,from.size(),to); return s;};
-    Reject([&]{SceneDocument::Deserialize(replace("\"version\":1","\"version\":2"),resolver);});
-    Reject([&]{SceneDocument::Deserialize(replace("\"version\":1","\"version\":1,\"version\":1"),resolver);});
+    Reject([&]{SceneDocument::Deserialize(replace("\"version\":2","\"version\":3"),resolver);});
+    Reject([&]{SceneDocument::Deserialize(replace("\"version\":2","\"version\":2,\"version\":2"),resolver);});
     Reject([&]{SceneDocument::Deserialize(replace("\"id\":\"2\"","\"id\":\"1\""),resolver);});
     Reject([&]{SceneDocument::Deserialize(replace("\"activeCamera\":\"1\"","\"activeCamera\":\"999\""),resolver);});
     Reject([&]{SceneDocument::Deserialize(replace("\"activeCamera\":\"1\"","\"activeCamera\":\"2\""),resolver);});
     Reject([&]{SceneDocument::Deserialize(replace("\"scale\":[1.0,1.0,1.0]","\"scale\":[-1,1,1]"),resolver);});
-    assert(loads==1); // schema/component failures precede asset resolution
+    Reject([&]{SceneDocument::Deserialize(replace("\"parent\":null","\"parent\":\"999\""),resolver);});
+    assert(loads==1); // schema/component/hierarchy failures precede asset resolution
     Reject([&]{SceneDocument::Deserialize(replace("Game://props/crate.plasset","../crate.plasset"),resolver);});
     Reject([&]{SceneDocument::Deserialize("{}");});
     Reject([&]{SceneDocument::Deserialize(text+"garbage",resolver);});

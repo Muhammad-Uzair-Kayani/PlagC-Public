@@ -31,6 +31,7 @@ struct AuthoringEntity {
     EntityRecord record{};
     bool selected = false;
     bool activeCamera = false;
+    std::uint64_t parentPersistentID = 0;
 };
 
 class SceneDocument {
@@ -79,6 +80,7 @@ public:
     void Select(Entity);
     void SelectPersistent(std::uint64_t);
     std::uint64_t PersistentID(Entity) const;
+    std::uint64_t ParentPersistentID(Entity) const;
     Entity FindByPersistentID(std::uint64_t) const;
 
     Entity Create(EntityTemplate entity = {});
@@ -88,6 +90,10 @@ public:
     void Rename(Entity, std::string);
     void SetTransform(Entity, const Transform&);
     TransformEdit BeginTransformEdit(Entity);
+
+    // Undoable relationship editing. Parent {} means root. Transforms remain world-space.
+    void SetParent(Entity child, Entity parent);
+    void ClearParent(Entity child);
 
     void SetCamera(Entity, const CameraComponent&);
     void RemoveCamera(Entity);

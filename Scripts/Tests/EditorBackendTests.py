@@ -45,6 +45,8 @@ tests = [
     'EditorModelTests',
     'EditorPlaySessionTests',
     'EditorSessionTests',
+    'WorldHierarchyTests',
+    'EditorHierarchyTests',
 ]
 
 with tempfile.TemporaryDirectory(prefix='plagc-editor-tests-') as tmp:

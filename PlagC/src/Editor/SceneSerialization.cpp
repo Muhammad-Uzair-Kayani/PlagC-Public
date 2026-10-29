@@ -6,6 +6,7 @@
 #include <rapidjson/writer.h>
 #include <charconv>
 #include <limits>
+#include <unordered_map>
 #include <unordered_set>
 #if defined(_WIN32)
 #ifndef NOMINMAX
@@ -77,7 +78,7 @@ void AssetPath(const std::string &path) {
     for(const auto &part:std::filesystem::path(relative)) if(part=="..") Fail("Asset path traversal is not allowed");
 }
 struct Record {
-    std::uint64_t id;
+    std::uint64_t id=0,parent=0;
     std::string name;
     Transform transform;
     std::optional<CameraComponent> camera;
@@ -85,19 +86,53 @@ struct Record {
     std::string model;
     bool visible=true;
 };
+void ValidateHierarchy(const std::vector<Record>& records,
+                       const std::unordered_set<std::uint64_t>& ids) {
+    std::unordered_map<std::uint64_t,std::uint64_t> parents;
+    parents.reserve(records.size());
+    for(const auto& r:records) {
+        if(r.parent) {
+            if(r.parent==r.id) Fail("Entity cannot parent itself");
+            if(!ids.contains(r.parent)) Fail("Scene parent refers to missing entity");
+        }
+        parents.emplace(r.id,r.parent);
+    }
+
+    // 0=unvisited, 1=visiting, 2=complete. Each node completes once: O(n).
+    std::unordered_map<std::uint64_t,std::uint8_t> state;
+    state.reserve(records.size());
+    std::vector<std::uint64_t> path;
+    for(const auto& r:records) {
+        if(state[r.id]==2) continue;
+        path.clear();
+        std::uint64_t current=r.id;
+        while(current) {
+            auto& mark=state[current];
+            if(mark==2) break;
+            if(mark==1) Fail("Scene hierarchy contains a cycle");
+            mark=1;
+            path.push_back(current);
+            current=parents.at(current);
+        }
+        for(auto id:path) state[id]=2;
+    }
 }
+}
+
 std::string SceneDocument::Serialize() const {
     Thread::RequireMain();
     auto records=world_->Snapshot();
     if(records.size()>MaxEntities) Fail("Scene entity limit exceeded");
     rapidjson::StringBuffer buffer; Writer w(buffer);
-    w.StartObject(); w.Key("format"); w.String("PlagC.Scene"); w.Key("version"); w.Uint(1);
+    w.StartObject(); w.Key("format"); w.String("PlagC.Scene"); w.Key("version"); w.Uint(2);
     w.Key("activeCamera");
     if(auto camera=world_->ActiveCamera()) WriteString(w,std::to_string(PersistentID(camera))); else w.Null();
     w.Key("entities"); w.StartArray();
     for(const auto &r:records) {
-        if(r.renderable || r.physics || r.animator) Fail("Scene v1 cannot save renderable, physics or animator components yet");
+        if(r.renderable || r.physics || r.animator) Fail("Scene v2 cannot save renderable, physics or animator components yet");
         w.StartObject(); w.Key("id"); WriteString(w,std::to_string(PersistentID(r.entity)));
+        w.Key("parent");
+        if(auto parent=world_->Parent(r.entity)) WriteString(w,std::to_string(PersistentID(parent))); else w.Null();
         w.Key("name"); WriteString(w,r.name); w.Key("transform"); w.StartObject();
         VectorField(w,"position",r.transform.position); VectorField(w,"rotation",r.transform.rotationDegrees); VectorField(w,"scale",r.transform.scale); w.EndObject();
         if(r.camera) {
@@ -123,25 +158,34 @@ std::string SceneDocument::Serialize() const {
     if(buffer.GetSize()>MaxBytes) Fail("Scene exceeds size limit");
     return {buffer.GetString(),buffer.GetSize()};
 }
+
 std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text, ModelResolver resolve) {
     Thread::RequireMain();
     if(text.size()>MaxBytes) Fail("Scene exceeds size limit");
     if(text.find('\0')!=std::string_view::npos) Fail("Unexpected NUL byte in scene JSON");
-    // Iterative parsing bounds parser stack usage for maliciously nested input.
     rapidjson::Document json;
     json.Parse<rapidjson::kParseValidateEncodingFlag | rapidjson::kParseIterativeFlag>(text.data(),text.size());
     if(json.HasParseError()) Fail("Invalid scene JSON");
     Fields(json,{"format","version","activeCamera","entities"});
     if(String(Get(json,"format"))!="PlagC.Scene") Fail("Unknown scene format");
-    auto &version=Get(json,"version"); if(!version.IsUint() || version.GetUint()!=1) Fail("Unsupported scene version");
+    auto &versionValue=Get(json,"version");
+    if(!versionValue.IsUint()) Fail("Unsupported scene version");
+    const unsigned version=versionValue.GetUint();
+    if(version!=1 && version!=2) Fail("Unsupported scene version");
     auto &entities=Get(json,"entities");
     if(!entities.IsArray() || entities.Size()>MaxEntities) Fail("Invalid scene entity array");
     auto &active=Get(json,"activeCamera"); std::uint64_t activeID=active.IsNull()?0:ID(active);
     std::vector<Record> records; records.reserve(entities.Size());
     std::unordered_set<std::uint64_t> ids;
+    ids.reserve(entities.Size());
     for(const auto &v:entities.GetArray()) {
-        Fields(v,{"id","name","transform","camera","light","model"});
+        if(version==1) Fields(v,{"id","name","transform","camera","light","model"});
+        else Fields(v,{"id","parent","name","transform","camera","light","model"});
         Record r; r.id=ID(Get(v,"id")); if(!ids.insert(r.id).second) Fail("Duplicate persistent entity ID");
+        if(version==2) {
+            const auto& parent=Get(v,"parent");
+            r.parent=parent.IsNull()?0:ID(parent);
+        }
         r.name=String(Get(v,"name")); auto &t=Get(v,"transform"); Fields(t,{"position","rotation","scale"});
         r.transform={Vector(Get(t,"position")),Vector(Get(t,"rotation")),Vector(Get(t,"scale"))};
         if(v.HasMember("camera")) {
@@ -160,17 +204,22 @@ std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text,
         }
         records.push_back(std::move(r));
     }
-    // Validate every component and reference before invoking asset loaders.
+
+    ValidateHierarchy(records,ids);
+    if(activeID && !ids.contains(activeID)) Fail("Active camera refers to missing entity");
+
+    // Validate every component and relationship before invoking asset loaders.
     auto world=std::make_unique<World>(); std::unordered_map<std::uint64_t,Entity> entitiesByID;
+    entitiesByID.reserve(records.size());
     for(const auto &r:records) {
         auto e=world->Create(r.name); entitiesByID.emplace(r.id,e); world->SetTransform(e,r.transform);
         if(r.camera) world->SetCamera(e,*r.camera);
         if(r.light) world->SetLight(e,*r.light);
     }
-    if(activeID) {
-        auto it=entitiesByID.find(activeID); if(it==entitiesByID.end()) Fail("Active camera refers to missing entity");
-        world->SetActiveCamera(it->second);
-    }
+    for(const auto &r:records)
+        if(r.parent) world->SetParent(entitiesByID.at(r.id),entitiesByID.at(r.parent));
+    if(activeID) world->SetActiveCamera(entitiesByID.at(activeID));
+
     for(const auto &r:records) if(!r.model.empty()) {
         if(!resolve) Fail("Model resolver required to load this scene");
         auto asset=resolve(r.model); if(!asset) Fail("Scene model could not be resolved");
@@ -182,11 +231,11 @@ std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text,
     for(const auto &[id,e]:entitiesByID) document->persistentIDs_.emplace(e.value,id);
     return document;
 }
+
 void SceneDocument::Save(const std::filesystem::path &path) {
     Thread::RequireMain();
-    const auto data=Serialize(); // fail before touching the destination
+    const auto data=Serialize();
     auto parent=path.parent_path(); if(parent.empty()) parent=".";
-    // Exclusively reserve a directory on the same filesystem for atomic replacement.
     static std::atomic<std::uint64_t> serial{0}; std::filesystem::path staging;
     for(unsigned attempt=0;attempt<100;++attempt) {
         auto candidate=parent/(".plagc-scene-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+"-"+std::to_string(serial++));
@@ -207,6 +256,7 @@ void SceneDocument::Save(const std::filesystem::path &path) {
 #endif
     history_.MarkSaved();
 }
+
 std::unique_ptr<SceneDocument> SceneDocument::Load(const std::filesystem::path &path,ModelResolver resolve) {
     Thread::RequireMain();
     std::ifstream file(path,std::ios::binary); if(!file) throw std::runtime_error("Cannot open scene file");
