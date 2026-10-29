@@ -30,6 +30,7 @@ link_sources = [
     'PlagC/src/World/TransformGraph.cpp',
     'PlagC/src/Physics/PhysicsTypes.cpp',
     'PlagC/src/Editor/SceneDocument.cpp',
+    'PlagC/src/Editor/SceneLocalTransform.cpp',
     'PlagC/src/Editor/SceneSerialization.cpp',
     'PlagC/src/Editor/EditorModels.cpp',
     'PlagC/src/Editor/PickingMath.cpp',
@@ -53,6 +54,7 @@ tests = [
     'WorldHierarchyTests',
     'TransformGraphTests',
     'EditorHierarchyTests',
+    'EditorLocalTransformTests',
 ]
 
 with tempfile.TemporaryDirectory(prefix='plagc-editor-tests-') as tmp:
