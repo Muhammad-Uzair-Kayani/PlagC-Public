@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EditorDataPanels.h"
 #include "EditorFileController.h"
 #include <PlagC/Editor/EditorModels.h>
 #include <PlagC/Editor/EditorSession.h>
@@ -26,7 +27,7 @@ private:
     void DrawHierarchy(Engine&, EditorSession&);
     void DrawViewport(EditorSession&);
     void DrawInspector(Engine&, EditorSession&);
-    void DrawContentBrowser();
+    void DrawContentBrowser(Engine&);
     void DrawConsole(Engine&);
     void DrawStatistics(Engine&, EditorSession&);
     void DrawTransport(Engine&, EditorSession&);
@@ -35,6 +36,7 @@ private:
     void FinishTransformEdit(Engine&, bool commit);
 
     EditorFileController files_;
+    EditorDataPanels dataPanels_;
     std::uint64_t seenDocumentGeneration_ = 1;
     ViewportState viewport_{};
     bool showHierarchy_ = true;

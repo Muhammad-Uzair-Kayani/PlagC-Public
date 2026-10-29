@@ -16,20 +16,6 @@ namespace {
 
 constexpr const char* EntityPayload = "PLAGC_EDITOR_ENTITY";
 
-const char* SeverityName(Severity severity)
-{
-    switch (severity)
-    {
-    case Severity::Trace: return "TRACE";
-    case Severity::Debug: return "DEBUG";
-    case Severity::Info: return "INFO";
-    case Severity::Warning: return "WARN";
-    case Severity::Error: return "ERROR";
-    case Severity::Critical: return "CRITICAL";
-    }
-    return "?";
-}
-
 void LogEditorError(Engine& engine, const std::exception& error)
 {
     engine.Logger().Write(Severity::Error, "EDITOR", error.what());
@@ -40,6 +26,7 @@ void LogEditorError(Engine& engine, const std::exception& error)
 void EditorLayer::Initialize(Engine& engine, EditorSession&)
 {
     seenDocumentGeneration_ = files_.DocumentGeneration();
+    dataPanels_.Initialize(engine);
     engine.Logger().Write(Severity::Info, "EDITOR", "Docked editor workspace initialized.");
 }
 
@@ -61,7 +48,7 @@ void EditorLayer::Frame(Engine& engine, EditorSession& session)
     if (showHierarchy_)
         DrawHierarchy(engine, session);
     if (showContentBrowser_)
-        DrawContentBrowser();
+        DrawContentBrowser(engine);
     if (showConsole_)
         DrawConsole(engine);
     if (showStatistics_)
@@ -649,14 +636,14 @@ void EditorLayer::DrawInspector(Engine& engine, EditorSession& session)
     ImGui::End();
 }
 
-void EditorLayer::DrawContentBrowser()
+void EditorLayer::DrawContentBrowser(Engine& engine)
 {
     if (!ImGui::Begin("Content Browser", &showContentBrowser_))
     {
         ImGui::End();
         return;
     }
-    ImGui::TextDisabled("Asset discovery will populate this panel in the next editor checkpoint.");
+    dataPanels_.DrawContentBrowser(engine);
     ImGui::End();
 }
 
@@ -667,20 +654,7 @@ void EditorLayer::DrawConsole(Engine& engine)
         ImGui::End();
         return;
     }
-
-    if (ImGui::Button("Clear"))
-        engine.Logger().Clear();
-    ImGui::Separator();
-
-    const auto records = engine.Logger().Snapshot();
-    ImGui::BeginChild("ConsoleRecords", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None,
-                      ImGuiWindowFlags_HorizontalScrollbar);
-    for (const auto& record : records)
-        ImGui::TextUnformatted((record.timestamp + " [" + SeverityName(record.severity) + "] [" +
-                                record.category + "] " + record.message).c_str());
-    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 1.0f)
-        ImGui::SetScrollHereY(1.0f);
-    ImGui::EndChild();
+    dataPanels_.DrawConsole(engine);
     ImGui::End();
 }
 
