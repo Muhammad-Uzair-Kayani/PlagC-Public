@@ -41,8 +41,12 @@ class Animator
     void Update(AnimationState &, double dt);
     void Update(AnimatorComponent &, double dt);
     std::span<const Matrix4> Pose() const;
-    MeshData Deform(
-        unsigned mesh) const; // CPU skinning baseline; GPU skinning can replace this adapter.
+    // Allocation-free hot path. Storage is owned by this Animator and remains valid until the
+    // next DeformVertices call for the same mesh or Animator destruction.
+    std::span<const Vertex> DeformVertices(unsigned mesh) const;
+    // Convenience/setup path that retains indices and other MeshData fields. Per-frame animation
+    // should use DeformVertices so static mesh data is not copied every frame.
+    MeshData Deform(unsigned mesh) const;
   private:
     void ApplyUpperBody(AnimatorComponent &, double dt);
     struct Impl;
