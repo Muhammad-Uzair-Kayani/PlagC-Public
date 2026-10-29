@@ -7,7 +7,11 @@ namespace PlagC::Editor {
 
 // Owns only the engine render target lifecycle. How that target is presented
 // inside ImGui is backend-specific (Ogre/OpenGL/Vulkan) and remains outside
-// this class so the editor UI never depends on raw GL/Vulkan handles.
+// this class so normal editor panels never depend on raw graphics handles.
+//
+// Resize may replace the TargetHandle. Presentation adapters must observe
+// Revision() and rebuild any backend-specific texture/descriptor binding when
+// it changes.
 class ViewportTarget {
 public:
     explicit ViewportTarget(Renderer&);
@@ -20,6 +24,7 @@ public:
     void Reset();
 
     TargetHandle Handle() const noexcept { return handle_; }
+    RendererBackend Backend() const noexcept { return renderer_.Backend(); }
     unsigned Width() const noexcept { return width_; }
     unsigned Height() const noexcept { return height_; }
     float Aspect() const noexcept {

@@ -34,7 +34,22 @@ void ViewportTarget::Resize(unsigned width, unsigned height) {
     if (width_ == width && height_ == height)
         return;
 
-    renderer_.ResizeTarget(handle_, width, height);
+    // Recreate instead of Renderer::ResizeTarget so the public TargetHandle
+    // continues to match Ogre's deterministic PlagC/Target<id> texture name.
+    // Presentation adapters can therefore resolve the texture without exposing
+    // Renderer::Impl or backend-native GL/Vulkan objects.
+    const auto replacement = renderer_.CreateTarget(width, height);
+    try {
+        renderer_.DestroyTarget(handle_);
+    } catch (...) {
+        try {
+            renderer_.DestroyTarget(replacement);
+        } catch (...) {
+        }
+        throw;
+    }
+
+    handle_ = replacement;
     width_ = width;
     height_ = height;
     ++revision_;

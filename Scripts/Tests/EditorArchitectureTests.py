@@ -101,6 +101,18 @@ class EditorArchitectureTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, combined)
 
+    def test_ogre_viewport_interop_is_isolated_and_revision_aware(self):
+        header = self.read("PlagC/include/PlagC/Editor/OgreViewportInterop.h")
+        source = self.read("PlagC/src/Editor/OgreViewportInterop.cpp")
+        viewport = self.read("PlagC/src/Editor/ViewportTarget.cpp")
+        self.assertIn("Ogre::TextureGpu* texture", header)
+        self.assertIn("ResolveOgreViewportBinding", header + source)
+        self.assertIn("findTextureNoThrow", source)
+        self.assertIn('"PlagC/Target"', source)
+        self.assertIn("viewport.Revision()", source)
+        self.assertIn("const auto replacement = renderer_.CreateTarget", viewport)
+        self.assertNotIn("renderer_.ResizeTarget(handle_", viewport)
+
     def test_engine_backend_does_not_depend_on_imgui(self):
         paths = [
             ROOT / "PlagC/include/PlagC/Editor",
