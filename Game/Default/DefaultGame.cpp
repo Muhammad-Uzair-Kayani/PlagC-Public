@@ -1,6 +1,7 @@
 #include "pgcpch.h"
 #include "DefaultGame.h"
 #include "BlackDragonLabWorld.h"
+#include "CityScaleLabWorld.h"
 #include <stdexcept>
 
 namespace PlagCGame
@@ -18,6 +19,13 @@ void DefaultGame::Start(PlagC::Engine &engine, const PlagC::EngineConfig &config
     {
         defaultSceneActive_ = false;
         customWorld_ = std::make_unique<BlackDragonLabWorld>();
+        customWorld_->Start(engine);
+        return;
+    }
+    if (world == "CityScaleLab")
+    {
+        defaultSceneActive_ = false;
+        customWorld_ = std::make_unique<CityScaleLabWorld>();
         customWorld_->Start(engine);
         return;
     }
