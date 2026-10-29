@@ -45,11 +45,14 @@ void Renderer::SubmitUI(UiDrawData data)
     Thread::RequireMain();
     ValidateUI(data);
     gPendingUiFrames[this] = std::move(data);
+    if (backend_ != RendererBackend::Null)
+        Detail::RegisterOgreUIRenderer(this);
 }
 
 void Renderer::ClearUI()
 {
     Thread::RequireMain();
+    Detail::UnregisterOgreUIRenderer(this);
     Detail::RemoveUIFrame(this);
 }
 
