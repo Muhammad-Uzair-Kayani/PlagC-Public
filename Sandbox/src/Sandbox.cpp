@@ -1,118 +1,118 @@
 #include "pgcpch.h"
 #include <PlagC/Application.h>
-#include "../../Game/Framework/GameRegistry.h"
-#include "../../Game/Default/DefaultGame.h"
-#include <algorithm>
-#include <iostream>
-#include <stdexcept>
+#include <PlagC/Debug/FpsOverlay.h>
+#include <cmath>
 
 namespace
 {
 class Sandbox final : public PlagC::Application
 {
-    PlagC::EngineConfig config_;
-    PlagCGame::GameRegistry registry_;
-    PlagCGame::GamePtr game_;
-    std::string selectedGame_;
-    std::string selectedWorld_;
-
-    void RegisterGames()
-    {
-        registry_.Register("Default", "PlagC Default",
-                           [] { return std::make_unique<PlagCGame::DefaultGame>(); });
-    }
-
-    static bool NonInteractive(const PlagC::EngineConfig &c)
-    {
-        return c.headless || c.nullPlatform || c.offscreen;
-    }
-
-    std::string SelectGame() const
-    {
-        if (!config_.game.empty() && config_.game != "Default")
-            throw std::invalid_argument("only the Default game is available: " + config_.game);
-        return "Default";
-    }
-
-    std::string SelectWorld(const PlagCGame::IGame &game) const
-    {
-        const auto worlds = game.Worlds();
-        if (!config_.world.empty())
-        {
-            if (std::find(worlds.begin(), worlds.end(), config_.world) == worlds.end())
-                throw std::invalid_argument("game does not provide world: " + config_.world);
-            return config_.world;
-        }
-
-#ifdef PC_DIST
-        // Dist is a WindowedApp on Windows and must not block waiting on stdin.
-        return std::string(game.DefaultWorld());
-#else
-        if (NonInteractive(config_) || worlds.size() <= 1)
-            return std::string(game.DefaultWorld());
-
-        std::cout << "\n=== PlagC Worlds ===\n";
-        for (std::size_t i = 0; i < worlds.size(); ++i)
-            std::cout << '[' << (i + 1) << "] " << worlds[i]
-                      << (worlds[i] == game.DefaultWorld() ? " [default]" : "") << '\n';
-        std::cout << "Select world [Enter = " << game.DefaultWorld() << "]: ";
-
-        std::string input;
-        std::getline(std::cin, input);
-        if (input.empty())
-            return std::string(game.DefaultWorld());
-
-        try
-        {
-            const auto index = std::stoul(input);
-            if (index >= 1 && index <= worlds.size())
-                return std::string(worlds[index - 1]);
-        }
-        catch (...)
-        {
-        }
-
-        if (std::find(worlds.begin(), worlds.end(), input) != worlds.end())
-            return input;
-        throw std::invalid_argument("invalid world selection: " + input);
-#endif
-    }
-
   public:
-    explicit Sandbox(const PlagC::EngineConfig &c) : config_(c)
-    {
-        RegisterGames();
-    }
-
     void OnStart(PlagC::Engine &engine) override
     {
-        selectedGame_ = SelectGame();
-        game_ = registry_.Create(selectedGame_);
-        if (!game_)
-            throw std::runtime_error("failed to create game: " + selectedGame_);
+        if (auto *window = engine.MainWindow())
+            window->SetTitle("PlagC Sandbox | Engine Smoke");
 
-        selectedWorld_ = SelectWorld(*game_);
-        engine.Logger().Write(PlagC::Severity::Info, "GAME",
-                              "Selected game=" + selectedGame_ + " world=" + selectedWorld_);
-        game_->Start(engine, config_, selectedWorld_);
+        engine.SetFPSLocked(false);
+        auto &renderer = engine.Graphics();
+
+        PlagC::MaterialDesc material;
+        material.colour = {.18f, .58f, .92f};
+        material.roughness = .35f;
+        material.metallic = .1f;
+
+        mesh_ = renderer.CreateMesh(PlagC::MakePrimitive(PlagC::Primitive::Cube));
+        material_ = renderer.CreateMaterial(material);
+        object_ = renderer.CreateObject(mesh_, material_);
+
+        PlagC::LightDesc light;
+        light.type = PlagC::LightType::Directional;
+        light.direction = {-1.0f, -1.5f, -1.0f};
+        light.power = 3.0f;
+        light_ = renderer.CreateLight(light);
+
+        camera_.position = {4.0f, 3.0f, 6.0f};
+        camera_.target = {0.0f, 0.0f, 0.0f};
+        camera_.fov = 60.0f;
+        renderer.SetCamera(camera_);
+
+        auto settings = renderer.Settings();
+        settings.background = {.025f, .035f, .055f};
+        settings.hdr = false;
+        settings.bloom = false;
+        renderer.SetSettings(settings);
+
+        escape_ = engine.Events().Subscribe(
+            PlagC::EventType::KeyPressed,
+            [&engine](const PlagC::Event &event) {
+                if (event.key == PlagC::KeyCode::Escape)
+                    engine.Stop();
+            });
+
+        engine.Logger().Write(
+            PlagC::Severity::Info, "SANDBOX",
+            "Generic engine smoke scene started; close the window or press Escape to exit.");
     }
 
     void OnFrame(PlagC::Engine &engine, double dt) override
     {
-        if (game_)
-            game_->Frame(engine, dt);
+        if (!std::isfinite(dt) || dt < 0.0)
+            return;
+
+        angle_ = std::fmod(angle_ + dt * 35.0, 360.0);
+        engine.Graphics().SetTransform(
+            object_,
+            {{0.0f, 0.0f, 0.0f},
+             {static_cast<float>(angle_ * .35), static_cast<float>(angle_), 0.0f},
+             {1.0f, 1.0f, 1.0f}});
+
+        float aspect = 16.0f / 9.0f;
+        if (auto *window = engine.MainWindow())
+        {
+            if (window->Height() > 0)
+                aspect = static_cast<float>(window->Width()) /
+                         static_cast<float>(window->Height());
+        }
+        camera_.aspect = aspect;
+        engine.Graphics().SetCamera(camera_);
+        if (engine.Graphics().Backend() != PlagC::RendererBackend::Null)
+            overlay_.Frame(engine.Graphics(), camera_, dt, aspect);
     }
 
     void OnStop(PlagC::Engine &engine) override
     {
-        if (game_)
-            game_->Stop(engine);
-        game_.reset();
+        escape_.Reset();
+        overlay_.Clear(engine.Graphics());
+
+        if (light_)
+            engine.Graphics().DestroyLight(light_);
+        if (object_)
+            engine.Graphics().DestroyObject(object_);
+        if (material_)
+            engine.Graphics().DestroyMaterial(material_);
+        if (mesh_)
+            engine.Graphics().DestroyMesh(mesh_);
+
+        light_ = {};
+        object_ = {};
+        material_ = {};
+        mesh_ = {};
     }
+
+  private:
+    PlagC::MeshHandle mesh_{};
+    PlagC::MaterialHandle material_{};
+    PlagC::ObjectHandle object_{};
+    PlagC::LightHandle light_{};
+    PlagC::CameraDesc camera_{};
+    PlagC::FpsOverlay overlay_;
+    PlagC::EventBus::Connection escape_;
+    double angle_ = 0.0;
 };
 } // namespace
 
-std::unique_ptr<PlagC::Application> PlagC::CreateApplication(const PlagC::EngineConfig &config)
+std::unique_ptr<PlagC::Application>
+PlagC::CreateApplication(const PlagC::EngineConfig &)
 {
-    return std::make_unique<Sandbox>(config);
+    return std::make_unique<Sandbox>();
 }

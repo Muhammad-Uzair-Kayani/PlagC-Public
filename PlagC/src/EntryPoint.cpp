@@ -2,22 +2,449 @@
 #include <PlagC/Application.h>
 #include <PlagC/GpuProfiler.h>
 #include <PlagC/LatencyProfiler.h>
-#include <PlagC/Thread.h>
 #include <PlagC/PerformanceCapture.h>
-int main(int argc,char**argv)
+#include <PlagC/Thread.h>
+#include <iomanip>
+
+namespace
 {
-try{
-PlagC::Thread::InitializeMain();PlagC::EngineConfig config;bool physicsWorkersExplicit=false;
-for(int i=1;i<argc;++i){std::string arg=argv[i];auto value=[&]()->std::string{if(i+1>=argc)throw std::invalid_argument("missing value for "+arg);return argv[++i];};auto number=[&](){auto text=value();std::size_t used=0;auto n=std::stoul(text,&used);if(used!=text.size()||text.starts_with('-')||n>1000000)throw std::invalid_argument("invalid number for "+arg);return unsigned(n);};if(arg=="--performance-csv")config.performanceCSV=value();else if(arg=="--performance-warmup")config.performanceWarmup=number();else if(arg=="--performance-seconds"){const auto text=value();std::size_t used=0;config.performanceSeconds=std::stod(text,&used);if(used!=text.size())throw std::invalid_argument("invalid performance duration");}else if(arg=="--headless")config.headless=true;else if(arg=="--no-audio")config.audioEnabled=false;else if(arg=="--null")config.nullPlatform=true;else if(arg=="--offscreen")config.offscreen=true;else if(arg=="--frames")config.frameLimit=number();else if(arg=="--workers")config.workers=number();else if(arg=="--physics-workers"){config.physicsWorkers=number();physicsWorkersExplicit=true;}else if(arg=="--physics-hz")config.physicsHz=std::stod(value());else if(arg=="--physics-scheduler")config.physicsScheduler=value();else if(arg=="--renderer")config.rendererBackend=PlagC::ParseRendererBackend(value());else if(arg=="--help"){std::cout<<"OUTPOST ZERO: WASD move, mouse look, Shift sprint, Space jump, RMB aim, LMB fire, R reload, E interact, Escape mouse, Backspace redeploy.\nOptions: --renderer auto|opengl|vulkan|null, --headless | --null | --offscreen, --frames N, --workers N, --physics-workers N, --physics-hz N, --physics-scheduler native|plagc, --no-audio, --performance-csv PATH, --performance-warmup N, --performance-seconds N.\n";return 0;}else throw std::invalid_argument("Unknown option "+arg+". See Docs/TPS.md.");}
-if(unsigned(config.headless)+unsigned(config.nullPlatform)+unsigned(config.offscreen)>1)throw std::invalid_argument("choose one rendering mode");if(config.physicsWorkers>64||config.workers>32||!std::isfinite(config.physicsHz)||config.physicsHz<1||config.physicsHz>240)throw std::invalid_argument("invalid worker count or physics rate");if((config.headless||config.nullPlatform||config.offscreen)&&!config.frameLimit)config.frameLimit=120;if(config.physicsScheduler!="native"&&config.physicsScheduler!="plagc")throw std::invalid_argument("physics scheduler must be native or plagc");const unsigned hardware=std::max(1u,std::thread::hardware_concurrency());if(!physicsWorkersExplicit)config.physicsWorkers=std::min(config.physicsWorkers,hardware>2?hardware-2:0u);if(!config.workers)config.workers=config.physicsScheduler=="plagc"?std::min(32u,std::max(1u,hardware-1)):1u;if(!std::isfinite(config.performanceSeconds)||config.performanceSeconds<=0||config.performanceSeconds>3600)throw std::invalid_argument("performance duration must be in (0, 3600] seconds");
-const auto bootStart=std::chrono::steady_clock::now();PlagC::Engine engine(config);auto application=PlagC::CreateApplication(config);if(!application)throw std::runtime_error("CreateApplication returned null");struct Drain{PlagC::JobSystem&jobs;~Drain(){jobs.Shutdown();}}drain{engine.Jobs()};PlagC::GpuProfiler gpuProfiler(engine.Graphics().Backend());PlagC::PerformanceCapture capture(config.performanceCSV,config.performanceWarmup,config.performanceSeconds);const auto loadStart=std::chrono::steady_clock::now();application->OnStart(engine);const auto ready=std::chrono::steady_clock::now();capture.Startup(std::chrono::duration<double,std::milli>(loadStart-bootStart).count(),std::chrono::duration<double,std::milli>(ready-loadStart).count(),config.workers,config.physicsWorkers,config.physicsScheduler,config.headless||config.nullPlatform||config.offscreen);auto previous=std::chrono::steady_clock::now();auto lastMeasurementEnd=previous;unsigned frames=0;auto ms=[](auto d){return std::chrono::duration<double,std::milli>(d).count();};
-struct Extra{double input=0,gameplay=0,physIn=0,physRead=0,world=0,camera=0,animSetup=0,combat=0,sStruct=0,sResource=0,sTransform=0,sProperty=0,sLightCamera=0,sTraversal=0,rendererState=0;std::uint64_t n=0,scanned=0,transforms=0,props=0,lights=0,cameras=0,created=0,destroyed=0;void add(const PlagC::Engine::SystemTimings&t){input+=t.inputMs;gameplay+=t.gameplayMs;physIn+=t.physicsInputMs;physRead+=t.physicsReadbackMs;world+=t.characterWorldMs;camera+=t.cameraMs;animSetup+=t.animationSetupMs;combat+=t.combatMs;sStruct+=t.syncStructureMs;sResource+=t.syncResourceMs;sTransform+=t.syncTransformMs;sProperty+=t.syncPropertyMs;sLightCamera+=t.syncLightCameraMs;sTraversal+=t.syncTraversalMs;rendererState+=t.rendererStateMs;scanned+=t.syncScanned;transforms+=t.syncTransforms;props+=t.syncPropertyCalls;lights+=t.syncLightCalls;cameras+=t.syncCameraCalls;created+=t.syncCreated;destroyed+=t.syncDestroyed;++n;}void clear(){*this={};}}extra;
-while(engine.Running()){
-PlagC::LatencyProfiler::BeginFrame();const auto frameStart=std::chrono::steady_clock::now();auto*window=engine.MainWindow();if(window)window->Poll();engine.Events().Pump();const auto pollEnd=std::chrono::steady_clock::now();if(window&&window->ShouldClose())break;const auto now=std::chrono::steady_clock::now();engine.Assets().Pump();const auto assetEnd=std::chrono::steady_clock::now();engine.timings={};PlagC::DetailedTimings()={};const auto updateStart=std::chrono::steady_clock::now();application->OnFrame(engine,std::chrono::duration<double>(now-previous).count());const auto updateEnd=std::chrono::steady_clock::now();extra.add(engine.timings);PlagC::LatencyProfiler::OnSceneSync();gpuProfiler.BeginFrame();engine.Graphics().Render(std::chrono::duration<double>(now-previous).count());gpuProfiler.EndFrame();PlagC::LatencyProfiler::OnRenderSubmit();const auto renderEnd=std::chrono::steady_clock::now();previous=now;engine.PaceFrame(frameStart);const auto frameEnd=std::chrono::steady_clock::now();const auto renderStats=engine.Graphics().Statistics();const auto gpu=gpuProfiler.Latest();PlagC::LatencyProfiler::OnGpuTiming(gpu.supported,gpu.valid,gpu.totalMs,gpu.latencyFrames,gpu.outstandingFrames);const double updateMs=ms(updateEnd-updateStart);const double knownGameMs=engine.timings.physicsMs+engine.timings.animationMs+engine.timings.syncMs+engine.timings.landscapeMs+engine.timings.audioMs+engine.timings.hudMs;auto detail=PlagC::DetailedTimings();PlagC::FrameProfile profile;profile.frameMs=ms(frameEnd-frameStart);profile.pollEventsMs=ms(pollEnd-frameStart);profile.assetPumpMs=ms(assetEnd-pollEnd);profile.gameUpdateMs=updateMs;profile.physicsMs=engine.timings.physicsMs;profile.animationMs=engine.timings.animationMs;profile.sceneSyncMs=engine.timings.syncMs;profile.landscapeMs=engine.timings.landscapeMs;profile.audioMs=engine.timings.audioMs;profile.hudMs=engine.timings.hudMs;profile.gameOtherMs=std::max(0.0,updateMs-knownGameMs);profile.renderSubmitMs=ms(renderEnd-updateEnd);profile.rendererCpuMs=renderStats.cpuMilliseconds;profile.pacingMs=ms(frameEnd-renderEnd);profile.unaccountedMs=std::max(0.0,profile.frameMs-profile.pollEventsMs-profile.assetPumpMs-profile.gameUpdateMs-profile.renderSubmitMs-profile.pacingMs);profile.animation=detail.animation;profile.animation.otherMs=std::max(0.0,profile.animationMs-profile.animation.poseMs-profile.animation.skinningMs-profile.animation.uploadMs);profile.renderer=detail.renderer;profile.renderer.renderFrameMs=renderStats.cpuMilliseconds;profile.renderer.otherMs=std::max(0.0,profile.renderSubmitMs-profile.renderer.renderFrameMs);profile.gpuSupported=gpu.supported;profile.gpuValid=gpu.valid;profile.gpuTotalMs=gpu.totalMs;profile.gpuLatencyFrames=gpu.latencyFrames;profile.render=renderStats;engine.Profile().Submit(profile);
-if(engine.Profile().ConsumePublished()){
-const auto latency=PlagC::LatencyProfiler::ConsumeOneSecond();const auto gpuPasses=gpuProfiler.ConsumePassStats();const auto&p=engine.Profile().Latest();const double en=extra.n?double(extra.n):1.0;std::ostringstream out;out<<std::fixed<<std::setprecision(3)<<"\nFRAME "<<p.frameMs<<" ms | "<<p.fps<<" FPS | P95 "<<p.frameP95Ms<<" | P99 "<<p.frameP99Ms<<" | Max "<<p.frameMaxMs<<" | Hitches >16.7 "<<p.hitch16Count<<" >33.3 "<<p.hitch33Count<<"\nLATENCY | frame "<<latency.frame<<" | transitions "<<latency.transitions<<" | releases "<<latency.releases<<" | movement releases "<<latency.movementReleases<<" | mouse "<<latency.mouseMoves<<"\n|- GLFW Poll              "<<latency.pollMs<<" ms | P99 "<<latency.pollP99Ms<<" | Max "<<latency.pollMaxMs<<"\n";const char*stageNames[]={"Game read","Movement intent","Physics input","Physics step","Physics output","World/character state","Camera","Animation","Scene sync/end game","Render submit"};for(unsigned i=0;i<static_cast<unsigned>(PlagC::LatencyStage::Count);++i){const auto&s=latency.stages[i];out<<"|- "<<std::left<<std::setw(23)<<stageNames[i]<<std::right<<s.averageMs<<" ms | P99 "<<s.p99Ms<<" | Max "<<s.maxMs<<" | Frames avg "<<s.averageFrames<<" max "<<s.maxFrames<<" | N "<<s.samples<<"\n";}out<<"|- Physics fixed step     steps "<<latency.physicsSteps<<" | alpha "<<latency.physicsAlpha<<" | dropped "<<latency.physicsDroppedMs<<" ms\n|- Oldest tracked input   "<<latency.oldestPendingMs<<" ms\n";if(latency.gpuSupported&&latency.gpuValid)out<<"`- GPU async              "<<latency.gpuMs<<" ms | query age "<<latency.gpuQueryLatencyFrames<<" | queued "<<latency.gpuOutstandingFrames<<"\n";else out<<"`- GPU async              "<<(latency.gpuSupported?"waiting":"unsupported")<<"\n";
-out<<"CPU\n|- Platform/events         "<<p.pollEventsMs<<" ms | P99 "<<p.eventsP99Ms<<" | Max "<<p.eventsMaxMs<<"\n|- Asset pump              "<<p.assetPumpMs<<" ms\n|- Game                    "<<p.gameUpdateMs<<" ms | P99 "<<p.gameP99Ms<<" | Max "<<p.gameMaxMs<<"\n|  |- Input read           "<<extra.input/en<<" ms\n|  |- Gameplay/logic       "<<extra.gameplay/en<<" ms\n|  |- Physics input        "<<extra.physIn/en<<" ms\n|  |- Physics advance      "<<p.physicsMs<<" ms\n|  |- Physics readback     "<<extra.physRead/en<<" ms\n|  |- Character->World     "<<extra.world/en<<" ms\n|  |- Camera               "<<extra.camera/en<<" ms\n|  |- Animation setup      "<<extra.animSetup/en<<" ms\n|  |- Animation runtime    "<<p.animationMs<<" ms\n|  |  |- Pose/Ozz          "<<p.animation.poseMs<<" ms\n|  |  |- CPU skinning      "<<p.animation.skinningMs<<" ms\n|  |  |- Renderer upload   "<<p.animation.uploadMs<<" ms\n|  |  `- Other             "<<p.animation.otherMs<<" ms\n|  |- Combat/door          "<<extra.combat/en<<" ms\n|  |- Scene Sync           "<<p.sceneSyncMs<<" ms\n|  |  |- Structure         "<<extra.sStruct/en<<" ms\n|  |  |- Resource churn    "<<extra.sResource/en<<" ms\n|  |  |- Transforms        "<<extra.sTransform/en<<" ms\n|  |  |- Properties        "<<extra.sProperty/en<<" ms\n|  |  |- Lights + camera   "<<extra.sLightCamera/en<<" ms\n|  |  `- Traversal/other   "<<extra.sTraversal/en<<" ms\n|  |     counts/frame: scanned "<<double(extra.scanned)/en<<" transform "<<double(extra.transforms)/en<<" props "<<double(extra.props)/en<<" lights "<<double(extra.lights)/en<<" camera "<<double(extra.cameras)/en<<" create "<<double(extra.created)/en<<" destroy "<<double(extra.destroyed)/en<<"\n|  |- Landscape            "<<p.landscapeMs<<" ms\n|  |- Renderer state       "<<extra.rendererState/en<<" ms\n|  |- Audio                "<<p.audioMs<<" ms\n|  |- HUD                  "<<p.hudMs<<" ms\n|  `- Unclassified game    "<<p.gameOtherMs<<" ms\n|- Renderer submit         "<<p.renderSubmitMs<<" ms | P99 "<<p.renderP99Ms<<" | Max "<<p.renderMaxMs<<"\n|  |- Ogre renderOneFrame  "<<p.renderer.renderFrameMs<<" ms\n|  `- Wrapper/driver other "<<p.renderer.otherMs<<" ms\n|- Frame pacing            "<<p.pacingMs<<" ms\n`- Frame unaccounted       "<<p.unaccountedMs<<" ms\n";
-if(p.gpuSupported&&p.gpuValid){out<<"GPU\n|- Total frame             "<<p.gpuTotalMs<<" ms | P99 "<<p.gpuP99Ms<<" | Max "<<p.gpuMaxMs<<" | N "<<p.gpuSamples<<"\n";const char*passNames[]={"Shadows","Main scene/PBS","Sky/environment","Bloom extract","Bloom downsample","Bloom blur H","Bloom blur V","Bloom upsample","Tone map / FXAA","Overlay"};for(std::size_t i=0;i<PlagC::GpuPassCount;++i){const auto&s=gpuPasses[i];out<<(i+1==PlagC::GpuPassCount?"`- ":"|- ")<<std::left<<std::setw(23)<<passNames[i]<<std::right<<s.averageMs<<" ms | P95 "<<s.p95Ms<<" | P99 "<<s.p99Ms<<" | Max "<<s.maxMs<<" | N "<<s.samples<<"\n";}}else out<<"GPU\n`- "<<(p.gpuSupported?"waiting for asynchronous timestamps":"unsupported by active backend")<<"\n";out<<"RENDER STATS | Draws "<<p.render.drawCalls<<" | Tri "<<p.render.triangles<<" | Inst "<<p.render.instances<<" | Obj "<<p.render.objects<<" | Lights "<<p.render.lights<<"\nNOTE: Release profiling measures PlagC-owned stages plus Ogre/GPU black-box boundaries; Dist remains compiled without PC_ENABLE_PROFILING.";engine.Logger().Write(PlagC::Severity::Info,"PROFILER",out.str());extra.clear();}
-const bool done=capture.Frame(ms(frameEnd-lastMeasurementEnd),updateMs,renderStats,engine.timings.physicsMs,engine.timings.animationMs,engine.timings.syncMs,engine.IsFPSLocked(),engine.Graphics().Settings().vsync,window?window->Width():0,window?window->Height():0,window&&window->Minimized());lastMeasurementEnd=frameEnd;if(done||(config.frameLimit&&++frames>=config.frameLimit))break;}
-capture.Finish();if(!config.performanceCSV.empty())engine.Logger().Write(PlagC::Severity::Info,"PERF","Performance capture saved: "+config.performanceCSV);engine.Jobs().Shutdown();application->OnStop(engine);return 0;
-}catch(const std::exception&e){std::cerr<<"PlagC fatal: "<<e.what()<<'\n';return 1;}}
+using Clock = std::chrono::steady_clock;
+
+double Milliseconds(Clock::duration duration)
+{
+    return std::chrono::duration<double, std::milli>(duration).count();
+}
+
+unsigned ParseUnsigned(const std::string &argument, int &index, int argc, char **argv)
+{
+    if (index + 1 >= argc)
+        throw std::invalid_argument("missing value for " + argument);
+    const std::string text = argv[++index];
+    std::size_t used = 0;
+    const auto value = std::stoul(text, &used);
+    if (used != text.size() || text.starts_with('-') || value > 1000000)
+        throw std::invalid_argument("invalid number for " + argument);
+    return static_cast<unsigned>(value);
+}
+
+std::string ParseString(const std::string &argument, int &index, int argc, char **argv)
+{
+    if (index + 1 >= argc)
+        throw std::invalid_argument("missing value for " + argument);
+    return argv[++index];
+}
+} // namespace
+
+int main(int argc, char **argv)
+{
+    try
+    {
+        PlagC::Thread::InitializeMain();
+
+        PlagC::EngineConfig config;
+        bool physicsWorkersExplicit = false;
+
+        for (int i = 1; i < argc; ++i)
+        {
+            const std::string argument = argv[i];
+            if (argument == "--performance-csv")
+                config.performanceCSV = ParseString(argument, i, argc, argv);
+            else if (argument == "--performance-warmup")
+                config.performanceWarmup = ParseUnsigned(argument, i, argc, argv);
+            else if (argument == "--performance-seconds")
+            {
+                const auto text = ParseString(argument, i, argc, argv);
+                std::size_t used = 0;
+                config.performanceSeconds = std::stod(text, &used);
+                if (used != text.size())
+                    throw std::invalid_argument("invalid performance duration");
+            }
+            else if (argument == "--headless")
+                config.headless = true;
+            else if (argument == "--no-audio")
+                config.audioEnabled = false;
+            else if (argument == "--null")
+                config.nullPlatform = true;
+            else if (argument == "--offscreen")
+                config.offscreen = true;
+            else if (argument == "--frames")
+                config.frameLimit = ParseUnsigned(argument, i, argc, argv);
+            else if (argument == "--workers")
+                config.workers = ParseUnsigned(argument, i, argc, argv);
+            else if (argument == "--physics-workers")
+            {
+                config.physicsWorkers = ParseUnsigned(argument, i, argc, argv);
+                physicsWorkersExplicit = true;
+            }
+            else if (argument == "--physics-hz")
+                config.physicsHz =
+                    std::stod(ParseString(argument, i, argc, argv));
+            else if (argument == "--physics-scheduler")
+                config.physicsScheduler = ParseString(argument, i, argc, argv);
+            else if (argument == "--renderer")
+                config.rendererBackend =
+                    PlagC::ParseRendererBackend(ParseString(argument, i, argc, argv));
+            else if (argument == "--help")
+            {
+                std::cout
+                    << "PlagC runtime options:\n"
+                    << "  --renderer auto|opengl|vulkan|null\n"
+                    << "  --headless | --null | --offscreen\n"
+                    << "  --frames N\n"
+                    << "  --workers N\n"
+                    << "  --physics-workers N\n"
+                    << "  --physics-hz N\n"
+                    << "  --physics-scheduler native|plagc\n"
+                    << "  --no-audio\n"
+                    << "  --performance-csv PATH\n"
+                    << "  --performance-warmup N\n"
+                    << "  --performance-seconds N\n";
+                return 0;
+            }
+            else
+            {
+                throw std::invalid_argument("unknown option: " + argument);
+            }
+        }
+
+        if (unsigned(config.headless) + unsigned(config.nullPlatform) +
+                unsigned(config.offscreen) >
+            1)
+            throw std::invalid_argument("choose only one rendering mode");
+
+        if (config.physicsWorkers > 64 || config.workers > 32 ||
+            !std::isfinite(config.physicsHz) || config.physicsHz < 1.0 ||
+            config.physicsHz > 240.0)
+            throw std::invalid_argument("invalid worker count or physics rate");
+
+        if ((config.headless || config.nullPlatform || config.offscreen) &&
+            !config.frameLimit)
+            config.frameLimit = 120;
+
+        if (config.physicsScheduler != "native" &&
+            config.physicsScheduler != "plagc")
+            throw std::invalid_argument(
+                "physics scheduler must be native or plagc");
+
+        if (!std::isfinite(config.performanceSeconds) ||
+            config.performanceSeconds <= 0.0 || config.performanceSeconds > 3600.0)
+            throw std::invalid_argument(
+                "performance duration must be in (0, 3600] seconds");
+
+        const unsigned hardware = std::max(1u, std::thread::hardware_concurrency());
+        if (!physicsWorkersExplicit)
+            config.physicsWorkers =
+                std::min(config.physicsWorkers, hardware > 2 ? hardware - 2 : 0u);
+        if (!config.workers)
+            config.workers = config.physicsScheduler == "plagc"
+                                 ? std::min(32u, std::max(1u, hardware - 1))
+                                 : 1u;
+
+        const auto bootStart = Clock::now();
+        PlagC::Engine engine(config);
+        auto application = PlagC::CreateApplication(config);
+        if (!application)
+            throw std::runtime_error("CreateApplication returned null");
+
+        struct JobDrain
+        {
+            PlagC::JobSystem &jobs;
+            ~JobDrain() { jobs.Shutdown(); }
+        } jobDrain{engine.Jobs()};
+
+        PlagC::GpuProfiler gpuProfiler(engine.Graphics().Backend());
+        PlagC::PerformanceCapture capture(
+            config.performanceCSV, config.performanceWarmup, config.performanceSeconds);
+
+        const auto applicationStart = Clock::now();
+        application->OnStart(engine);
+        bool applicationStarted = true;
+
+        struct ApplicationStop
+        {
+            std::unique_ptr<PlagC::Application> &application;
+            PlagC::Engine &engine;
+            bool &started;
+            ~ApplicationStop()
+            {
+                if (started && application)
+                {
+                    try
+                    {
+                        application->OnStop(engine);
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+            }
+        } stopGuard{application, engine, applicationStarted};
+
+        const auto ready = Clock::now();
+        capture.Startup(
+            Milliseconds(applicationStart - bootStart),
+            Milliseconds(ready - applicationStart), config.workers,
+            config.physicsWorkers, config.physicsScheduler,
+            config.headless || config.nullPlatform || config.offscreen);
+
+        auto previous = ready;
+        auto lastMeasurementEnd = ready;
+        unsigned frames = 0;
+
+        while (engine.Running())
+        {
+            PlagC::LatencyProfiler::BeginFrame();
+            const auto frameStart = Clock::now();
+
+            auto *window = engine.MainWindow();
+            if (window)
+                window->Poll();
+            engine.Events().Pump();
+            const auto pollEnd = Clock::now();
+
+            if (window && window->ShouldClose())
+                break;
+
+            const auto now = Clock::now();
+            engine.Assets().Pump();
+            const auto assetEnd = Clock::now();
+
+            engine.timings = {};
+            PlagC::DetailedTimings() = {};
+
+            const auto updateStart = Clock::now();
+            const double deltaSeconds =
+                std::chrono::duration<double>(now - previous).count();
+            application->OnFrame(engine, deltaSeconds);
+            const auto updateEnd = Clock::now();
+            PlagC::LatencyProfiler::OnSceneSync();
+
+            gpuProfiler.BeginFrame();
+            engine.Graphics().Render(deltaSeconds);
+            gpuProfiler.EndFrame();
+            PlagC::LatencyProfiler::OnRenderSubmit();
+            const auto renderEnd = Clock::now();
+
+            previous = now;
+            engine.PaceFrame(frameStart);
+            const auto frameEnd = Clock::now();
+
+            const auto renderStats = engine.Graphics().Statistics();
+            const auto gpu = gpuProfiler.Latest();
+            PlagC::LatencyProfiler::OnGpuTiming(
+                gpu.supported, gpu.valid, gpu.totalMs, gpu.latencyFrames,
+                gpu.outstandingFrames);
+
+            const double updateMs = Milliseconds(updateEnd - updateStart);
+            const double knownApplicationMs =
+                engine.timings.physicsMs + engine.timings.animationMs +
+                engine.timings.sceneSyncMs + engine.timings.audioMs;
+
+            const auto detail = PlagC::DetailedTimings();
+            PlagC::FrameProfile profile;
+            profile.frameMs = Milliseconds(frameEnd - frameStart);
+            profile.pollEventsMs = Milliseconds(pollEnd - frameStart);
+            profile.assetPumpMs = Milliseconds(assetEnd - pollEnd);
+            profile.applicationUpdateMs = updateMs;
+            profile.physicsMs = engine.timings.physicsMs;
+            profile.animationMs = engine.timings.animationMs;
+            profile.sceneSyncMs = engine.timings.sceneSyncMs;
+            profile.audioMs = engine.timings.audioMs;
+            profile.applicationOtherMs =
+                std::max(0.0, updateMs - knownApplicationMs);
+            profile.renderSubmitMs = Milliseconds(renderEnd - updateEnd);
+            profile.rendererCpuMs = renderStats.cpuMilliseconds;
+            profile.pacingMs = Milliseconds(frameEnd - renderEnd);
+            profile.unaccountedMs =
+                std::max(0.0,
+                         profile.frameMs - profile.pollEventsMs -
+                             profile.assetPumpMs - profile.applicationUpdateMs -
+                             profile.renderSubmitMs - profile.pacingMs);
+
+            profile.animation = detail.animation;
+            profile.animation.otherMs =
+                std::max(0.0,
+                         profile.animationMs - profile.animation.poseMs -
+                             profile.animation.skinningMs -
+                             profile.animation.uploadMs);
+            profile.renderer = detail.renderer;
+            profile.renderer.renderFrameMs = renderStats.cpuMilliseconds;
+            profile.renderer.otherMs =
+                std::max(0.0,
+                         profile.renderSubmitMs -
+                             profile.renderer.renderFrameMs);
+            profile.gpuSupported = gpu.supported;
+            profile.gpuValid = gpu.valid;
+            profile.gpuTotalMs = gpu.totalMs;
+            profile.gpuLatencyFrames = gpu.latencyFrames;
+            profile.render = renderStats;
+            engine.Profile().Submit(profile);
+
+            if (engine.Profile().ConsumePublished())
+            {
+                const auto latency = PlagC::LatencyProfiler::ConsumeOneSecond();
+                const auto gpuPasses = gpuProfiler.ConsumePassStats();
+                const auto &published = engine.Profile().Latest();
+
+                std::ostringstream output;
+                output << std::fixed << std::setprecision(3)
+                       << "\nFRAME " << published.frameMs << " ms | "
+                       << published.fps << " FPS | P95 "
+                       << published.frameP95Ms << " | P99 "
+                       << published.frameP99Ms << " | Max "
+                       << published.frameMaxMs << " | Hitches >16.7 "
+                       << published.hitch16Count << " >33.3 "
+                       << published.hitch33Count << '\n';
+
+                output << "LATENCY | frame " << latency.frame
+                       << " | transitions " << latency.transitions
+                       << " | releases " << latency.releases
+                       << " | mouse " << latency.mouseMoves << '\n';
+
+                const char *stageNames[] = {
+                    "Input read",      "Simulation input", "Physics input",
+                    "Physics step",    "Physics output",   "World transform",
+                    "Camera",          "Animation",        "Scene sync",
+                    "Render submit"};
+                for (unsigned i = 0;
+                     i < static_cast<unsigned>(PlagC::LatencyStage::Count); ++i)
+                {
+                    const auto &stage = latency.stages[i];
+                    output << "|- " << std::left << std::setw(20) << stageNames[i]
+                           << std::right << stage.averageMs << " ms | P99 "
+                           << stage.p99Ms << " | Max " << stage.maxMs
+                           << " | Frames avg " << stage.averageFrames
+                           << " max " << stage.maxFrames << " | N "
+                           << stage.samples << '\n';
+                }
+
+                output << "|- Physics fixed step     steps "
+                       << latency.physicsSteps << " | alpha "
+                       << latency.physicsAlpha << " | dropped "
+                       << latency.physicsDroppedMs << " ms\n"
+                       << "|- Oldest tracked input   "
+                       << latency.oldestPendingMs << " ms\n";
+
+                if (latency.gpuSupported && latency.gpuValid)
+                    output << "`- GPU async              " << latency.gpuMs
+                           << " ms | query age "
+                           << latency.gpuQueryLatencyFrames << " | queued "
+                           << latency.gpuOutstandingFrames << '\n';
+                else
+                    output << "`- GPU async              "
+                           << (latency.gpuSupported ? "waiting" : "unsupported")
+                           << '\n';
+
+                output << "CPU\n"
+                       << "|- Platform/events        "
+                       << published.pollEventsMs << " ms | P99 "
+                       << published.eventsP99Ms << " | Max "
+                       << published.eventsMaxMs << '\n'
+                       << "|- Asset pump             "
+                       << published.assetPumpMs << " ms\n"
+                       << "|- Application update     "
+                       << published.applicationUpdateMs << " ms | P99 "
+                       << published.applicationP99Ms << " | Max "
+                       << published.applicationMaxMs << '\n'
+                       << "|  |- Physics             "
+                       << published.physicsMs << " ms\n"
+                       << "|  |- Animation           "
+                       << published.animationMs << " ms\n"
+                       << "|  |  |- Pose/Ozz         "
+                       << published.animation.poseMs << " ms\n"
+                       << "|  |  |- CPU skinning     "
+                       << published.animation.skinningMs << " ms\n"
+                       << "|  |  |- Renderer upload  "
+                       << published.animation.uploadMs << " ms\n"
+                       << "|  |  `- Other            "
+                       << published.animation.otherMs << " ms\n"
+                       << "|  |- Scene sync          "
+                       << published.sceneSyncMs << " ms\n"
+                       << "|  |- Audio               "
+                       << published.audioMs << " ms\n"
+                       << "|  `- Other application   "
+                       << published.applicationOtherMs << " ms\n"
+                       << "|- Renderer submit        "
+                       << published.renderSubmitMs << " ms | P99 "
+                       << published.renderP99Ms << " | Max "
+                       << published.renderMaxMs << '\n'
+                       << "|  |- Ogre renderOneFrame "
+                       << published.renderer.renderFrameMs << " ms\n"
+                       << "|  `- Wrapper/driver      "
+                       << published.renderer.otherMs << " ms\n"
+                       << "|- Frame pacing           "
+                       << published.pacingMs << " ms\n"
+                       << "`- Frame unaccounted      "
+                       << published.unaccountedMs << " ms\n";
+
+                if (published.gpuSupported && published.gpuValid)
+                {
+                    output << "GPU\n|- Total frame             "
+                           << published.gpuTotalMs << " ms | P99 "
+                           << published.gpuP99Ms << " | Max "
+                           << published.gpuMaxMs << " | N "
+                           << published.gpuSamples << '\n';
+                    const char *passNames[] = {
+                        "Shadows",          "Main scene/PBS",
+                        "Sky/environment",   "Bloom extract",
+                        "Bloom downsample",  "Bloom blur H",
+                        "Bloom blur V",      "Bloom upsample",
+                        "Tone map / FXAA",   "Overlay"};
+                    for (std::size_t i = 0; i < PlagC::GpuPassCount; ++i)
+                    {
+                        const auto &pass = gpuPasses[i];
+                        output << (i + 1 == PlagC::GpuPassCount ? "`- " : "|- ")
+                               << std::left << std::setw(20) << passNames[i]
+                               << std::right << pass.averageMs << " ms | P95 "
+                               << pass.p95Ms << " | P99 " << pass.p99Ms
+                               << " | Max " << pass.maxMs << " | N "
+                               << pass.samples << '\n';
+                    }
+                }
+                else
+                {
+                    output << "GPU\n`- "
+                           << (published.gpuSupported
+                                   ? "waiting for asynchronous timestamps"
+                                   : "unsupported by active backend")
+                           << '\n';
+                }
+
+                output << "RENDER STATS | Draws "
+                       << published.render.drawCalls << " | Tri "
+                       << published.render.triangles << " | Inst "
+                       << published.render.instances << " | Obj "
+                       << published.render.objects << " | Lights "
+                       << published.render.lights;
+
+                engine.Logger().Write(
+                    PlagC::Severity::Info, "PROFILER", output.str());
+            }
+
+            const bool captureDone = capture.Frame(
+                Milliseconds(frameEnd - lastMeasurementEnd), updateMs,
+                renderStats, engine.timings.physicsMs,
+                engine.timings.animationMs, engine.timings.sceneSyncMs,
+                engine.IsFPSLocked(), engine.Graphics().Settings().vsync,
+                window ? window->Width() : 0,
+                window ? window->Height() : 0,
+                window && window->Minimized());
+            lastMeasurementEnd = frameEnd;
+
+            ++frames;
+            if (captureDone ||
+                (config.frameLimit && frames >= config.frameLimit))
+                break;
+        }
+
+        capture.Finish();
+        applicationStarted = false;
+        application->OnStop(engine);
+        return 0;
+    }
+    catch (const std::exception &error)
+    {
+        std::cerr << "PlagC fatal error: " << error.what() << '\n';
+        return 1;
+    }
+}

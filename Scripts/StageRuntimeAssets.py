@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-"""Stage the runtime data needed by Sandbox beside a selected build output.
+"""Stage engine-owned runtime data beside a selected build output.
 
 The copy is incremental: unchanged files are left alone, changed/new files are copied,
-and stale files under the staged roots are removed. This makes the staging step cheap
-enough to run on every Sandbox build, including asset-only rebuilds.
+and stale files under staged roots are removed. Client/game assets are intentionally
+outside this script and must be staged by the client project.
 """
 
 from __future__ import annotations
 
 import argparse
-import shutil
 import filecmp
+import shutil
 import sys
-from RuntimeAssetManifest import verify
 from pathlib import Path
+
+from RuntimeAssetManifest import verify
 
 
 def sync_tree(source: Path, destination: Path) -> None:
@@ -21,12 +22,15 @@ def sync_tree(source: Path, destination: Path) -> None:
     if not source.is_dir():
         raise SystemExit(f"Runtime asset source is missing: {source}")
 
+    source = source.resolve()
+    destination = destination.resolve()
     if (
-        source.resolve() == destination.resolve()
-        or source.resolve().is_relative_to(destination.resolve())
-        or destination.resolve().is_relative_to(source.resolve())
+        source == destination
+        or source.is_relative_to(destination)
+        or destination.is_relative_to(source)
     ):
         raise ValueError("Runtime source/destination trees overlap")
+
     destination.mkdir(parents=True, exist_ok=True)
     source_files: set[Path] = set()
 
@@ -44,28 +48,20 @@ def sync_tree(source: Path, destination: Path) -> None:
         if copy:
             shutil.copy2(src, dst)
 
-    if destination.exists():
-        for dst in sorted(
-            (p for p in destination.rglob("*") if p.is_file()), reverse=True
-        ):
-            relative = dst.relative_to(destination)
-            if relative not in source_files:
-                dst.unlink()
-        for directory in sorted(
-            (p for p in destination.rglob("*") if p.is_dir()), reverse=True
-        ):
-            try:
-                directory.rmdir()
-            except OSError:
-                pass
+    for dst in sorted(
+        (path for path in destination.rglob("*") if path.is_file()), reverse=True
+    ):
+        relative = dst.relative_to(destination)
+        if relative not in source_files:
+            dst.unlink()
 
-
-def sync_optional_tree(source: Path, destination: Path) -> bool:
-    """Synchronize a local-only runtime tree when present."""
-    if not source.is_dir():
-        return False
-    sync_tree(source, destination)
-    return True
+    for directory in sorted(
+        (path for path in destination.rglob("*") if path.is_dir()), reverse=True
+    ):
+        try:
+            directory.rmdir()
+        except OSError:
+            pass
 
 
 def main() -> int:
@@ -73,10 +69,6 @@ def main() -> int:
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--sentinel", type=Path)
-    parser.add_argument(
-        "--profile", choices=["base", "visual", "inspection"], default="visual"
-    )
-    parser.add_argument("--asset", action="append")
     args = parser.parse_args()
 
     root = args.root.resolve()
@@ -89,30 +81,24 @@ def main() -> int:
     ):
         raise ValueError("Output must not overlap repository asset sources")
 
-    # Preserve the paths used by RendererConfig and the default AssetManager root.
-    verify(root, args.profile, args.asset)
-    for directory in ["Cooked", "Textures", "Shaders", "Compositors", "Manifests"]:
+    verify(root)
+
+    # The Sandbox is an engine smoke client. It needs renderer resources, not cooked
+    # gameplay content. User projects own their own cooked-asset staging.
+    for directory in ["Textures", "Shaders", "Compositors"]:
         sync_tree(root / "Assets" / directory, output / "Assets" / directory)
+
     media = Path("Vendor/ogre-next/Samples/Media")
     for directory in ["Hlms", "models"]:
         sync_tree(root / media / directory, output / media / directory)
-    verify(output, args.profile, args.asset)
 
-    # Vulkan builds statically link the pinned GLSL-to-SPIR-V compiler.
+    verify(output)
+
     compiler_license = root / "Vendor/glslang/LICENSE.txt"
     if compiler_license.is_file():
         licenses = output / "Licenses"
         licenses.mkdir(parents=True, exist_ok=True)
         shutil.copy2(compiler_license, licenses / "glslang-LICENSE.txt")
-
-    # GameAssets is intentionally gitignored. The Default game's development
-    # worlds mount this staged tree as Game://. A missing tree remains valid for
-    # the stock DefaultScene; BlackDragonLab reports a clear load error when its
-    # package has not been extracted at the repository root.
-    sync_optional_tree(
-        root / "GameAssets" / "Default" / "Runtime",
-        output / "GameAssets" / "Default" / "Runtime",
-    )
 
     if args.sentinel is not None:
         sentinel = args.sentinel.resolve()

@@ -1,17 +1,17 @@
 #include "pgcpch.h"
-#include "FpsOverlay.h"
+#include <PlagC/Debug/FpsOverlay.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdlib>
 
-namespace PlagCGame
+namespace PlagC
 {
 namespace
 {
-std::array<unsigned char, 7> Glyph(char c)
+std::array<unsigned char, 7> Glyph(char value)
 {
-    switch (c)
+    switch (value)
     {
 #define G(ch, a, b, c, d, e, f, g) case ch: return {a, b, c, d, e, f, g};
         G('F', 31, 16, 16, 30, 16, 16, 16)
@@ -42,35 +42,27 @@ bool OverlayEnabled()
     return enabled;
 }
 
-PlagC::Vec3 Add(PlagC::Vec3 a, PlagC::Vec3 b)
+Vec3 Add(Vec3 a, Vec3 b) { return {a.x + b.x, a.y + b.y, a.z + b.z}; }
+Vec3 Sub(Vec3 a, Vec3 b) { return {a.x - b.x, a.y - b.y, a.z - b.z}; }
+Vec3 Scale(Vec3 a, float scale) { return {a.x * scale, a.y * scale, a.z * scale}; }
+
+float Length(Vec3 value)
 {
-    return {a.x + b.x, a.y + b.y, a.z + b.z};
-}
-PlagC::Vec3 Sub(PlagC::Vec3 a, PlagC::Vec3 b)
-{
-    return {a.x - b.x, a.y - b.y, a.z - b.z};
-}
-PlagC::Vec3 Scale(PlagC::Vec3 a, float s)
-{
-    return {a.x * s, a.y * s, a.z * s};
-}
-float Length(PlagC::Vec3 v)
-{
-    return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    return std::sqrt(value.x * value.x + value.y * value.y + value.z * value.z);
 }
 } // namespace
 
-void FpsOverlay::UpdateText(PlagC::Renderer &renderer, const std::string &text)
+void FpsOverlay::UpdateText(Renderer &renderer, const std::string &text)
 {
     if (object_ && text == text_)
         return;
 
-    PlagC::MeshData mesh;
+    MeshData mesh;
     unsigned x = 0;
     constexpr float pixel = .012f;
-    for (char c : text)
+    for (char value : text)
     {
-        const auto glyph = Glyph(c);
+        const auto glyph = Glyph(value);
         for (unsigned row = 0; row < 7; ++row)
             for (unsigned col = 0; col < 5; ++col)
                 if (glyph[row] & (1u << (4u - col)))
@@ -80,15 +72,16 @@ void FpsOverlay::UpdateText(PlagC::Renderer &renderer, const std::string &text)
                     for (auto uv : {std::pair{0.f, 0.f}, std::pair{1.f, 0.f},
                                     std::pair{1.f, 1.f}, std::pair{0.f, 1.f}})
                         mesh.vertices.push_back(
-                            {{px + uv.first * pixel, py + uv.second * pixel, 0}, {0, 0, 1}, 0, 0});
+                            {{px + uv.first * pixel, py + uv.second * pixel, 0},
+                             {0, 0, 1}, 0, 0});
                 }
         x += 6;
     }
 
     if (!material_)
     {
-        PlagC::MaterialDesc material;
-        material.model = PlagC::MaterialModel::Unlit;
+        MaterialDesc material;
+        material.model = MaterialModel::Unlit;
         material.colour = {.35f, 1.0f, .40f};
         material.overlay = true;
         material_ = renderer.CreateMaterial(material);
@@ -127,10 +120,11 @@ void FpsOverlay::UpdateText(PlagC::Renderer &renderer, const std::string &text)
         renderer.UpdateMesh(mesh_, mesh.vertices);
         renderer.SetVisible(object_, true);
     }
+
     text_ = text;
 }
 
-void FpsOverlay::Place(PlagC::Renderer &renderer, const PlagC::CameraDesc &camera, float aspect)
+void FpsOverlay::Place(Renderer &renderer, const CameraDesc &camera, float aspect)
 {
     if (!object_)
         return;
@@ -141,55 +135,51 @@ void FpsOverlay::Place(PlagC::Renderer &renderer, const PlagC::CameraDesc &camer
         return;
     forward = Scale(forward, 1.0f / length);
 
-    PlagC::Vec3 right{-forward.z, 0, forward.x};
+    Vec3 right{-forward.z, 0, forward.x};
     const float rightLength = Length(right);
-    if (rightLength <= .0001f)
-        right = {1, 0, 0};
-    else
-        right = Scale(right, 1.0f / rightLength);
-    const PlagC::Vec3 up{right.y * forward.z - right.z * forward.y,
-                         right.z * forward.x - right.x * forward.z,
-                         right.x * forward.y - right.y * forward.x};
+    right = rightLength <= .0001f ? Vec3{1, 0, 0} : Scale(right, 1.0f / rightLength);
+    const Vec3 up{right.y * forward.z - right.z * forward.y,
+                  right.z * forward.x - right.x * forward.z,
+                  right.x * forward.y - right.y * forward.x};
 
     constexpr float pi = 3.14159265358979323846f;
     constexpr float pixel = .012f;
     const float yaw = std::atan2(forward.z, forward.x) * 180.0f / pi;
-    const float pitch = std::asin(std::clamp(forward.y, -1.0f, 1.0f)) * 180.0f / pi;
+    const float pitch =
+        std::asin(std::clamp(forward.y, -1.0f, 1.0f)) * 180.0f / pi;
     const float halfHeight = 2.0f * std::tan(camera.fov * pi / 360.0f);
     const float scale = std::min(.70f, aspect / 2.4f) * halfHeight;
-    const float textWidth = static_cast<float>(std::max<std::size_t>(1u, text_.size())) * 6.0f *
-                            pixel * scale;
+    const float textWidth =
+        static_cast<float>(std::max<std::size_t>(1u, text_.size())) * 6.0f * pixel * scale;
     const float horizontal = .94f * halfHeight * aspect - textWidth;
     const float top = .90f * halfHeight;
+
     auto position = Add(camera.position, Scale(forward, 2.0f));
     position = Add(position, Scale(right, horizontal));
     position = Add(position, Scale(up, top));
     renderer.SetTransform(object_, {position, {pitch, -yaw - 90.0f, 0}, {scale, scale, scale}});
 }
 
-void FpsOverlay::Frame(PlagC::Renderer &renderer, const PlagC::CameraDesc &camera, double dt,
-                       float aspect)
+void FpsOverlay::Frame(Renderer &renderer, const CameraDesc &camera, double dt, float aspect)
 {
-    if (!OverlayEnabled())
-        return;
-    if (!std::isfinite(dt) || dt < 0)
+    if (!OverlayEnabled() || !std::isfinite(dt) || dt < 0.0)
         return;
 
     sampleSeconds_ += dt;
     ++sampleFrames_;
-    // A quarter-second window is responsive but avoids a rapidly flickering number and
-    // limits dynamic-buffer uploads to four per second.
     if (sampleSeconds_ >= .25)
     {
-        const auto fps = static_cast<unsigned>(std::lround(sampleFrames_ / sampleSeconds_));
+        const auto fps =
+            static_cast<unsigned>(std::lround(sampleFrames_ / sampleSeconds_));
         UpdateText(renderer, "FPS " + std::to_string(fps));
         sampleSeconds_ = 0.0;
         sampleFrames_ = 0;
     }
-    Place(renderer, camera, aspect > 0 ? aspect : 16.0f / 9.0f);
+
+    Place(renderer, camera, aspect > 0.0f ? aspect : 16.0f / 9.0f);
 }
 
-void FpsOverlay::Clear(PlagC::Renderer &renderer)
+void FpsOverlay::Clear(Renderer &renderer)
 {
     if (object_)
         renderer.DestroyObject(object_);
@@ -197,6 +187,7 @@ void FpsOverlay::Clear(PlagC::Renderer &renderer)
         renderer.DestroyMesh(mesh_);
     if (material_)
         renderer.DestroyMaterial(material_);
+
     object_ = {};
     mesh_ = {};
     material_ = {};
@@ -205,4 +196,4 @@ void FpsOverlay::Clear(PlagC::Renderer &renderer)
     sampleSeconds_ = 0.0;
     sampleFrames_ = 0;
 }
-} // namespace PlagCGame
+} // namespace PlagC

@@ -11,20 +11,15 @@ if not exist "%BIN%\Sandbox.exe" (
     exit /b 1
 )
 
-if not defined PC_RENDER_BENCH_OBJECTS set "PC_RENDER_BENCH_OBJECTS=2500"
-if not defined PC_RENDER_BENCH_MATERIALS set "PC_RENDER_BENCH_MATERIALS=%PC_RENDER_BENCH_OBJECTS%"
 if not defined PC_RENDER_BENCH_RUNS set "PC_RENDER_BENCH_RUNS=2"
 if not defined PC_RENDER_BENCH_COOLDOWN set "PC_RENDER_BENCH_COOLDOWN=3"
-rem Keep official captures free of the extra overlay draw/upload. Manual runs show FPS by default.
 set "PC_FPS_OVERLAY=0"
 
 pushd "%BIN%"
 if not exist Logs mkdir Logs
 
 echo ============================================================
-echo PlagC renderer benchmark
-echo Objects  : %PC_RENDER_BENCH_OBJECTS%
-echo Materials: %PC_RENDER_BENCH_MATERIALS%
+echo PlagC renderer backend benchmark
 echo Pairs    : %PC_RENDER_BENCH_RUNS%
 echo Cooldown : %PC_RENDER_BENCH_COOLDOWN% seconds between runs
 echo FPS OSD  : disabled for measurement
@@ -50,11 +45,12 @@ for /L %%R in (1,1,%PC_RENDER_BENCH_RUNS%) do (
 )
 
 echo.
-echo Complete. Compare all per-run CSV/log pairs under:
+echo Complete. Compare per-run CSV/log pairs under:
 echo   %BIN%\Logs\RendererBenchmark-OpenGL-R*.csv
 echo   %BIN%\Logs\RendererBenchmark-Vulkan-R*.csv
 echo.
-echo Use median plus P95/P99/hitch counts across runs. Alternating the order reduces
+echo Use median plus P95/P99/hitch counts across runs. Alternating order reduces
+
 echo warm-up, clock and thermal bias between APIs.
 popd
 exit /b 0
@@ -65,7 +61,7 @@ set "DISPLAY=%~2"
 set "RUN=%~3"
 echo.
 echo Running %DISPLAY% pair %RUN%...
-echo RendererBenchmark|Sandbox.exe --renderer %BACKEND% --no-audio --performance-csv "Logs\RendererBenchmark-%DISPLAY%-R%RUN%.csv" --performance-warmup 240 --performance-seconds 20 > "Logs\RendererBenchmark-%DISPLAY%-R%RUN%.log" 2>&1
+Sandbox.exe --renderer %BACKEND% --no-audio --performance-csv "Logs\RendererBenchmark-%DISPLAY%-R%RUN%.csv" --performance-warmup 240 --performance-seconds 20 > "Logs\RendererBenchmark-%DISPLAY%-R%RUN%.log" 2>&1
 if errorlevel 1 (
     echo %DISPLAY% benchmark pair %RUN% failed. See Logs\RendererBenchmark-%DISPLAY%-R%RUN%.log
     exit /b 1
