@@ -134,5 +134,26 @@ return function(source)
                                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) != 0u ) );
             }
             const size_t usablePoolSize = poolSize;]])
+
+    -- Keep delayed-free telemetry cheap and periodic. Do not lower Ogre's 512 MiB barrier
+    -- threshold blindly: first prove whether the backlog grows during gameplay or is mostly
+    -- teardown. The peak survives flushes so repeated load/unload tests remain diagnostic.
+    replace('        deallocateEmptyVbos( false );', [[        static size_t plagcDelayedPeakBytes = 0u;
+        static uint32 plagcDelayedTelemetryFrames = 0u;
+        plagcDelayedPeakBytes = std::max( plagcDelayedPeakBytes, mDelayedBlocksSize );
+        if( ++plagcDelayedTelemetryFrames >= 240u )
+        {
+            if( mDelayedBlocksSize || plagcDelayedPeakBytes )
+            {
+                LogManager::getSingleton().logMessage(
+                    "[PlagC Vulkan Memory] delayed=" +
+                    StringConverter::toString( mDelayedBlocksSize ) + " peak=" +
+                    StringConverter::toString( plagcDelayedPeakBytes ) + " threshold=" +
+                    StringConverter::toString( mDelayedBlocksFlushThreshold ) );
+            }
+            plagcDelayedTelemetryFrames = 0u;
+        }
+
+        deallocateEmptyVbos( false );]])
     return source
 end
