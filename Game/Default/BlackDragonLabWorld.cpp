@@ -18,7 +18,7 @@ constexpr unsigned ClipCrouchForward = 1;
 constexpr unsigned ClipCrouchIdle = 2;
 constexpr unsigned ClipIdle = 9;
 constexpr unsigned ClipJog = 13;
-constexpr unsigned ClipPistolIdle = 21;
+constexpr unsigned ClipPistolAim = 19;
 constexpr unsigned ClipPistolShoot = 23;
 constexpr unsigned ClipSprint = 36;
 
@@ -224,7 +224,7 @@ void BlackDragonLabWorld::Start(PlagC::Engine &engine)
         "BlackDragonLab ready | WASD move | Shift sprint | C/Ctrl crouch | RMB aim | LMB fire animation | mouse look | Esc cursor");
     engine.Logger().Write(
         PlagC::Severity::Info, "ANIMATION",
-        "BlackDragon: 1.70m authored scale, A-pose bind/rest; 43 UAL clips baked in global reference space from A_TPose; root translation disabled, pelvis translation axis-corrected");
+        "BlackDragon: 1.70m authored scale, A-pose bind/rest; 43 UAL clips baked with limb-direction-corrected retarget from A_TPose; root translation disabled, pelvis translation axis-corrected");
 }
 
 void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
@@ -238,7 +238,9 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
     if (cursorCaptured_)
     {
         const auto mouse = PlagC::Input::GetMouseDelta();
-        cameraYaw_ = WrapDegrees(cameraYaw_ + float(mouse.x) * 0.12f);
+        // Input reports screen-space delta. The lab's +Z forward orbit needs the
+        // horizontal sign inverted so dragging left rotates left and vice versa.
+        cameraYaw_ = WrapDegrees(cameraYaw_ - float(mouse.x) * 0.12f);
         cameraPitch_ = std::clamp(cameraPitch_ - float(mouse.y) * 0.10f, -25.0f, 55.0f);
     }
 
@@ -252,10 +254,12 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
 
     const float yaw = cameraYaw_ * Rad;
     const PlagC::Vec3 cameraForward{std::sin(yaw), 0.0f, std::cos(yaw)};
-    const PlagC::Vec3 cameraRight{std::cos(yaw), 0.0f, -std::sin(yaw)};
+    // With the camera looking along +Z at yaw zero, Ogre's screen-right basis is -X.
+    // Using +X here mirrored A/D and also mirrored the aim shoulder offset.
+    const PlagC::Vec3 cameraRight{-std::cos(yaw), 0.0f, std::sin(yaw)};
 
-    float inputX = float(rightPressed) - float(leftPressed);
-    float inputZ = float(forwardPressed) - float(backwardPressed);
+    const float inputX = float(rightPressed) - float(leftPressed);
+    const float inputZ = float(forwardPressed) - float(backwardPressed);
     float moveX = cameraRight.x * inputX + cameraForward.x * inputZ;
     float moveZ = cameraRight.z * inputX + cameraForward.z * inputZ;
     const float moveLength = Length2(moveX, moveZ);
@@ -275,6 +279,8 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
 
     // Phase 1 deliberately has no physics. Entity translation is authoritative so
     // animation, scale and transform correctness can be isolated before collision.
+    // While aiming the body keeps camera yaw, but the translation stays camera-relative:
+    // W/S move forward/back and A/D strafe instead of collapsing to character-forward.
     if (moving)
     {
         position_.x += moveX * targetSpeed * float(dt);
@@ -317,7 +323,7 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
     }
     else if (aiming)
     {
-        const double duration = characterAsset_->animations.at(ClipPistolIdle).duration;
+        const double duration = characterAsset_->animations.at(ClipPistolAim).duration;
         upperBodyTime_ = std::fmod(upperBodyTime_ + dt, duration);
     }
     else
@@ -330,7 +336,7 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
         PlagC::AnimationUpperBody upper;
         upper.root = "mixamorig:Spine1";
         upper.weight = aimWeight_;
-        upper.pose.clip = firing_ ? ClipPistolShoot : ClipPistolIdle;
+        upper.pose.clip = firing_ ? ClipPistolShoot : ClipPistolAim;
         upper.pose.time = upperBodyTime_;
         upper.pose.speed = 1.0f;
         upper.pose.playing = false; // The lab supplies the upper-body clock explicitly.
