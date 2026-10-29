@@ -27,6 +27,7 @@ if args.sanitize:
 compiler = os.environ.get('CXX', 'c++')
 link_sources = [
     'PlagC/src/World/World.cpp',
+    'PlagC/src/World/TransformGraph.cpp',
     'PlagC/src/Physics/PhysicsTypes.cpp',
     'PlagC/src/Editor/SceneDocument.cpp',
     'PlagC/src/Editor/SceneSerialization.cpp',
@@ -50,6 +51,7 @@ tests = [
     'EditorPlaySessionTests',
     'EditorSessionTests',
     'WorldHierarchyTests',
+    'TransformGraphTests',
     'EditorHierarchyTests',
 ]
 
