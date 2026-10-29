@@ -146,9 +146,9 @@ class EditorArchitectureTests(unittest.TestCase):
     def test_editor_session_owns_file_and_play_lifecycle(self):
         header = self.read("PlagC/include/PlagC/Editor/EditorSession.h")
         for required in (
-            "NewScene(", "Open(", "Save()", "SaveAs(",
-            "Play()", "TogglePause()", "Step()", "Stop()",
-            "ViewDocument() const",
+            "NewEmpty(", "Open(", "Save()", "SaveAs(",
+            "StartPlay()", "TogglePause()", "RequestStep()", "ConsumeStep()",
+            "StopPlay()", "ViewDocument() const",
         ):
             self.assertIn(required, header)
 
