@@ -47,6 +47,8 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'pendingMeshUploads' in renderer
     assert 'mesh.uploadQueued' in renderer
     assert 'buffer->unmap(Ogre::UO_KEEP_PERSISTENT)' in renderer
+    assert renderer.count('buffer->unmap(Ogre::UO_UNMAP_ALL)') >= 2
+    assert 'getMappingState() != Ogre::MS_UNMAPPED' in renderer
     assert 'pendingTextureUploads' in renderer
     assert 'setStagingTextureMaxBudgetBytes' in renderer
     assert 'VulkanStagingBudget = 512ull * 1024ull * 1024ull' in renderer
@@ -89,6 +91,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert 'dedicated-texture' in allocator
     assert 'buffer-pool' in allocator
     assert 'requested=' in allocator and 'reserved=' in allocator
+    assert '[PlagC Vulkan Memory] delayed=' in allocator
+    assert 'plagcDelayedPeakBytes' in allocator
+    assert 'mDelayedBlocksFlushThreshold' in allocator
 
     allocator_stage = work / 'allocator_memory.cpp'
     allocator_stage.write_text(allocator)
@@ -176,5 +181,10 @@ with tempfile.TemporaryDirectory() as tmp:
     build_vulkan = (ROOT / 'Build/Vulkan.lua').read_text()
     assert 'PlagCVulkanPresentScheduler.cpp' in build_vulkan
     assert 'PlagCVulkanPresentScheduler.h' in build_vulkan
+
+    sky = (ROOT / 'Assets/Shaders/PlagCSky_ps.glsl').read_text()
+    assert 'pow(' not in sky
+    assert 'sun512 * sun256 * sun64 * sun16 * sun2' in sky
+    assert 'const vec3 sunDir' in sky
 
 print('Vulkan performance generation patches passed.')
