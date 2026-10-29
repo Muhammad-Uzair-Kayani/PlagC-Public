@@ -13,6 +13,58 @@
 #include <ozz/base/maths/simd_math.h>
 namespace PlagC
 {
+namespace
+{
+struct NormalMatrix3
+{
+    std::array<float, 9> m{};
+};
+NormalMatrix3 BuildNormalMatrix(const Matrix4 &m)
+{
+    // Same inverse-transpose and scale-relative singularity rules as TransformNormal, but the
+    // expensive determinant/cofactor work is done once per bone instead of once per influence.
+    const double a = m.m[0], b = m.m[4], c = m.m[8];
+    const double d = m.m[1], e = m.m[5], f = m.m[9];
+    const double g = m.m[2], h = m.m[6], i = m.m[10];
+    const double magnitude = std::max({std::abs(a), std::abs(b), std::abs(c), std::abs(d),
+                                       std::abs(e), std::abs(f), std::abs(g), std::abs(h),
+                                       std::abs(i)});
+    if (!(magnitude > 0.0) || !std::isfinite(magnitude))
+        throw std::invalid_argument("singular normal transform");
+    const double na = a / magnitude, nb = b / magnitude, nc = c / magnitude;
+    const double nd = d / magnitude, ne = e / magnitude, nf = f / magnitude;
+    const double ng = g / magnitude, nh = h / magnitude, ni = i / magnitude;
+    const double relativeDet =
+        na * (ne * ni - nf * nh) - nb * (nd * ni - nf * ng) + nc * (nd * nh - ne * ng);
+    if (!(std::abs(relativeDet) > 1e-10) || !std::isfinite(relativeDet))
+        throw std::invalid_argument("singular normal transform");
+    const double det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+    if (det == 0.0 || !std::isfinite(det))
+        throw std::invalid_argument("singular normal transform");
+    const double invDet = 1.0 / det;
+    NormalMatrix3 result;
+    result.m = {float((e * i - f * h) * invDet), float((f * g - d * i) * invDet),
+                float((d * h - e * g) * invDet), float((c * h - b * i) * invDet),
+                float((a * i - c * g) * invDet), float((b * g - a * h) * invDet),
+                float((b * f - c * e) * invDet), float((c * d - a * f) * invDet),
+                float((a * e - b * d) * invDet)};
+    return result;
+}
+Vec3 ApplyNormalMatrix(const NormalMatrix3 &m, Vec3 p)
+{
+    Vec3 n{m.m[0] * p.x + m.m[1] * p.y + m.m[2] * p.z,
+           m.m[3] * p.x + m.m[4] * p.y + m.m[5] * p.z,
+           m.m[6] * p.x + m.m[7] * p.y + m.m[8] * p.z};
+    const float length = std::sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
+    if (length > 1e-8f)
+    {
+        n.x /= length;
+        n.y /= length;
+        n.z /= length;
+    }
+    return n;
+}
+} // namespace
 struct Animator::Impl
 {
     AssetHandle<ModelAsset> model;
@@ -30,6 +82,7 @@ struct Animator::Impl
     // CPU skinning hot-path scratch. These buffers are sized once per Animator and reused for
     // every frame so DeformVertices performs no heap allocation and does not copy mesh indices.
     std::vector<Matrix4> skinMatrices;
+    std::vector<NormalMatrix3> skinNormalMatrices;
     std::vector<std::vector<Vertex>> deformedVertices;
     explicit Impl(AssetHandle<ModelAsset> a) : model(std::move(a))
     {
@@ -89,6 +142,7 @@ struct Animator::Impl
         matrices.resize(joints.size());
         pose.resize(joints.size());
         skinMatrices.resize(joints.size());
+        skinNormalMatrices.resize(joints.size());
         deformedVertices.resize(model->meshes.size());
         for (unsigned i = 0; i < model->meshes.size(); ++i)
             deformedVertices[i].resize(model->meshes[i].geometry.vertices.size());
@@ -343,22 +397,29 @@ std::span<const Vertex> Animator::DeformVertices(unsigned mesh) const
     if (src.skin.empty())
     {
         const auto transform = p.pose.at(src.node);
+        const auto normalTransform = BuildNormalMatrix(transform);
         for (unsigned i = 0; i < output.size(); ++i)
         {
             const auto &original = src.geometry.vertices[i];
             auto &v = output[i];
             v = original;
             v.position = TransformPoint(transform, original.position);
-            v.normal = TransformNormal(transform, original.normal);
+            v.normal = ApplyNormalMatrix(normalTransform, original.normal);
             v.tangent = tangent(direction(transform, original.tangent), v.normal);
         }
     }
     else
     {
         if (p.skinMatrices.size() != p.pose.size())
+        {
             p.skinMatrices.resize(p.pose.size());
+            p.skinNormalMatrices.resize(p.pose.size());
+        }
         for (unsigned i = 0; i < p.skinMatrices.size(); ++i)
+        {
             p.skinMatrices[i] = Multiply(p.pose[i], src.inverseBind[i]);
+            p.skinNormalMatrices[i] = BuildNormalMatrix(p.skinMatrices[i]);
+        }
 
         for (unsigned i = 0; i < output.size(); ++i)
         {
@@ -371,9 +432,10 @@ std::span<const Vertex> Animator::DeformVertices(unsigned mesh) const
                 const float weight = src.skin[i].weights[k];
                 if (weight == 0)
                     continue;
-                const auto &m = p.skinMatrices[src.skin[i].joints[k]];
+                const unsigned joint = src.skin[i].joints[k];
+                const auto &m = p.skinMatrices[joint];
                 const auto v = TransformPoint(m, original.position);
-                const auto n = TransformNormal(m, original.normal);
+                const auto n = ApplyNormalMatrix(p.skinNormalMatrices[joint], original.normal);
                 pos.x += weight * v.x;
                 pos.y += weight * v.y;
                 pos.z += weight * v.z;
