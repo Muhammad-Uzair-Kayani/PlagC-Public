@@ -3,6 +3,7 @@
 #include "../../Game/Framework/GameRegistry.h"
 #include "../../Game/Default/DefaultGame.h"
 #include <algorithm>
+#include <iostream>
 #include <stdexcept>
 
 namespace
@@ -21,6 +22,11 @@ class Sandbox final : public PlagC::Application
                            [] { return std::make_unique<PlagCGame::DefaultGame>(); });
     }
 
+    static bool NonInteractive(const PlagC::EngineConfig &c)
+    {
+        return c.headless || c.nullPlatform || c.offscreen;
+    }
+
     std::string SelectGame() const
     {
         if (!config_.game.empty() && config_.game != "Default")
@@ -30,14 +36,41 @@ class Sandbox final : public PlagC::Application
 
     std::string SelectWorld(const PlagCGame::IGame &game) const
     {
+        const auto worlds = game.Worlds();
         if (!config_.world.empty())
         {
-            const auto worlds = game.Worlds();
             if (std::find(worlds.begin(), worlds.end(), config_.world) == worlds.end())
                 throw std::invalid_argument("game does not provide world: " + config_.world);
             return config_.world;
         }
-        return std::string(game.DefaultWorld());
+
+        if (NonInteractive(config_) || worlds.size() <= 1)
+            return std::string(game.DefaultWorld());
+
+        std::cout << "\n=== PlagC Worlds ===\n";
+        for (std::size_t i = 0; i < worlds.size(); ++i)
+            std::cout << '[' << (i + 1) << "] " << worlds[i]
+                      << (worlds[i] == game.DefaultWorld() ? " [default]" : "") << '\n';
+        std::cout << "Select world [Enter = " << game.DefaultWorld() << "]: ";
+
+        std::string input;
+        std::getline(std::cin, input);
+        if (input.empty())
+            return std::string(game.DefaultWorld());
+
+        try
+        {
+            const auto index = std::stoul(input);
+            if (index >= 1 && index <= worlds.size())
+                return std::string(worlds[index - 1]);
+        }
+        catch (...)
+        {
+        }
+
+        if (std::find(worlds.begin(), worlds.end(), input) != worlds.end())
+            return input;
+        throw std::invalid_argument("invalid world selection: " + input);
     }
 
   public:
