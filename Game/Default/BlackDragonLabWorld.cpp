@@ -1,12 +1,10 @@
 #include "pgcpch.h"
 #include "BlackDragonLabWorld.h"
-#include <PlagC/Animation/AnimationRetarget.h>
 #include <PlagC/Assets/AssetManager.h>
 #include <PlagC/Input/Input.h>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
-#include <unordered_map>
 
 namespace PlagCGame
 {
@@ -15,8 +13,7 @@ namespace
 constexpr float Pi = 3.14159265358979323846f;
 constexpr float Rad = Pi / 180.0f;
 
-// UAL1_Standard.plasset clip indices. The lab retargets with
-// preserveTargetAnimations=false, therefore these indices remain unchanged.
+// UAL1_Standard clip indices preserved in the baked BlackDragon_UAL asset.
 constexpr unsigned ClipCrouchForward = 1;
 constexpr unsigned ClipCrouchIdle = 2;
 constexpr unsigned ClipIdle = 9;
@@ -50,70 +47,6 @@ float ApproachAngle(float current, float target, float maxStep)
 {
     const float delta = WrapDegrees(target - current);
     return WrapDegrees(current + std::clamp(delta, -maxStep, maxStep));
-}
-
-std::unordered_map<std::string, std::string> BlackDragonToUAL()
-{
-    std::unordered_map<std::string, std::string> map = {
-        {"mixamorig:Hips", "pelvis"},
-        {"mixamorig:Spine", "spine_01"},
-        {"mixamorig:Spine1", "spine_02"},
-        {"mixamorig:Spine2", "spine_03"},
-        {"mixamorig:Neck", "neck_01"},
-        {"mixamorig:Head", "Head"},
-        {"mixamorig:LeftShoulder", "clavicle_l"},
-        {"mixamorig:LeftArm", "upperarm_l"},
-        {"mixamorig:LeftForeArm", "lowerarm_l"},
-        {"mixamorig:LeftHand", "hand_l"},
-        {"mixamorig:RightShoulder", "clavicle_r"},
-        {"mixamorig:RightArm", "upperarm_r"},
-        {"mixamorig:RightForeArm", "lowerarm_r"},
-        {"mixamorig:RightHand", "hand_r"},
-        {"mixamorig:LeftUpLeg", "thigh_l"},
-        {"mixamorig:LeftLeg", "calf_l"},
-        {"mixamorig:LeftFoot", "foot_l"},
-        {"mixamorig:LeftToeBase", "ball_l"},
-        {"mixamorig:LeftToe_End", "ball_leaf_l"},
-        {"mixamorig:RightUpLeg", "thigh_r"},
-        {"mixamorig:RightLeg", "calf_r"},
-        {"mixamorig:RightFoot", "foot_r"},
-        {"mixamorig:RightToeBase", "ball_r"},
-        {"mixamorig:RightToe_End", "ball_leaf_r"},
-    };
-
-    struct Finger
-    {
-        const char *mixamo;
-        const char *ual;
-    };
-    constexpr Finger fingers[] = {
-        {"Thumb", "thumb"},
-        {"Middle", "middle"},
-        {"Ring", "ring"},
-        {"Pinky", "pinky"},
-    };
-
-    for (const char *side : {"Left", "Right"})
-    {
-        const char *suffix = std::string_view(side) == "Left" ? "l" : "r";
-        for (const auto &finger : fingers)
-            for (unsigned segment = 1; segment <= 4; ++segment)
-            {
-                std::string target = "mixamorig:";
-                target += side;
-                target += "Hand";
-                target += finger.mixamo;
-                target += std::to_string(segment);
-
-                std::string source = finger.ual;
-                if (segment < 4)
-                    source += "_0" + std::to_string(segment) + "_" + suffix;
-                else
-                    source += "_04_leaf_" + std::string(suffix);
-                map.emplace(std::move(target), std::move(source));
-            }
-    }
-    return map;
 }
 
 PlagC::AnimationStateMachine BuildLocomotionGraph()
@@ -179,24 +112,11 @@ void BlackDragonLabWorld::Start(PlagC::Engine &engine)
     if (!engine.Assets().HasMount("Game"))
         engine.Assets().Mount("Game", "GameAssets/Default/Runtime");
 
-    const auto base = engine.Assets().Load<PlagC::ModelAsset>(
-        "Game://Characters/BlackDragon/BlackDragon.plasset");
-    const auto ual = engine.Assets().Load<PlagC::ModelAsset>(
-        "Game://Animations/UAL/UAL1_Standard.plasset");
-    if (!base || !ual)
-        throw std::runtime_error("BlackDragonLab assets failed to load");
-    if (ual->animations.size() != 43)
-        throw std::runtime_error("BlackDragonLab requires the 43-clip UAL1_Standard asset");
-
-    PlagC::AnimationRetargetConfig retarget;
-    retarget.rootTranslation = false;
-    retarget.pelvisTranslation = false;
-    retarget.jointMap = BlackDragonToUAL();
-    retarget.sourceReferenceClip = "A_TPose";
-    retarget.preserveTargetAnimations = false;
-    characterAsset_ = PlagC::RetargetAnimations(base, ual, retarget);
-    if (characterAsset_->animations.size() != 43)
-        throw std::runtime_error("BlackDragonLab retarget clip count mismatch");
+    characterAsset_ = engine.Assets().Load<PlagC::ModelAsset>(
+        "Game://Characters/BlackDragon/BlackDragon_UAL.plasset");
+    if (!characterAsset_ || characterAsset_->animations.size() != 43)
+        throw std::runtime_error(
+            "BlackDragonLab requires baked BlackDragon_UAL.plasset with 43 UAL clips");
 
     world_ = std::make_unique<PlagC::World>();
     assetScene_ = std::make_unique<PlagC::AssetScene>(engine.Graphics());
@@ -304,7 +224,7 @@ void BlackDragonLabWorld::Start(PlagC::Engine &engine)
         "BlackDragonLab ready | WASD move | Shift sprint | C/Ctrl crouch | RMB aim | LMB fire animation | mouse look | Esc cursor");
     engine.Logger().Write(
         PlagC::Severity::Info, "ANIMATION",
-        "BlackDragon: 1.70m authored scale, A-pose bind/rest; UAL 43 clips retargeted in global reference space with A_TPose; root/pelvis translation disabled for in-place locomotion");
+        "BlackDragon: 1.70m authored scale, A-pose bind/rest; 43 UAL clips baked in global reference space from A_TPose; root translation disabled, pelvis translation axis-corrected");
 }
 
 void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
