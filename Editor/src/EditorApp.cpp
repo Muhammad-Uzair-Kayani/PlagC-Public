@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "ImGuiInputBridge.h"
 #include <PlagC/Application.h>
 #include <PlagC/Editor/EditorSession.h>
 #include <imgui.h>
@@ -23,6 +24,7 @@ public:
         ImGuiIO &io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         ImGui::StyleColorsDark();
+        input_.Initialize(engine.Events());
 
         engine.Logger().Write(
             PlagC::Severity::Info, "EDITOR",
@@ -49,6 +51,7 @@ public:
 
     void OnStop(PlagC::Engine &engine) override
     {
+        input_.Shutdown();
         session_.reset();
         if (ImGui::GetCurrentContext())
             ImGui::DestroyContext();
@@ -59,6 +62,7 @@ public:
 
 private:
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
+    PlagC::Editor::ImGuiInputBridge input_;
 };
 } // namespace
 

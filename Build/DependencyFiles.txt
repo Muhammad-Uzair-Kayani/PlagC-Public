@@ -6,7 +6,6 @@ Vendor/spdlog/src/spdlog.cpp
 Vendor/rapidjson/include/rapidjson/document.h
 Vendor/imgui/imgui.h
 Vendor/imgui/imgui.cpp
-Vendor/imgui/backends/imgui_impl_glfw.cpp
 Vendor/ogre-next/OgreMain/include/OgreRoot.h
 Vendor/ogre-next/Components/Hlms/Pbs/include/OgreHlmsPbs.h
 Vendor/ogre-next/RenderSystems/GL3Plus/include/OgreGL3PlusRenderSystem.h
