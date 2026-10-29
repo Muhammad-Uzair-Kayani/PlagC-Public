@@ -9,7 +9,7 @@ workspace "PlagC"
     location "Build/Generated"
     configurations { "Debug", "Release", "Dist" }
     architecture "x86_64"
-    startproject "Sandbox"
+    startproject "Editor"
     flags { "MultiProcessorCompile" }
 
     filter "system:windows"
@@ -145,6 +145,58 @@ project "Sandbox"
 
     -- Always run the incremental staging pass before Sandbox builds so runtime
     -- shader/media changes are picked up even when the utility sentinel is current.
+    prebuildcommands {
+        'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root ..
+        '" --output "%{cfg.targetdir}"'
+    }
+
+    filter "system:windows"
+        links { "gdi32", "user32", "shell32", "psapi" }
+
+    filter { "system:windows", "configurations:Dist" }
+        kind "WindowedApp"
+        entrypoint "mainCRTStartup"
+        postbuildcommands {
+            'python "' .. root .. '/Scripts/PruneDistOutput.py" --output "%{cfg.targetdir}"'
+        }
+
+    filter "system:linux"
+        links { "pthread", "dl", "m" }
+
+    filter "system:macosx"
+        links { "Cocoa.framework", "IOKit.framework", "CoreFoundation.framework" }
+
+    filter {}
+
+project "Editor"
+    kind "ConsoleApp"
+    language "C++"
+    cppdialect "C++20"
+    common()
+    warnings "Extra"
+
+    filter "toolset:msc*"
+        disablewarnings { "4324" }
+    filter {}
+
+    files { "Editor/src/**.cpp", "Editor/src/**.h" }
+    enginePch("Editor/src/pgcpch.cpp")
+    includedirs {
+        "PlagC/include",
+        "Vendor/rapidjson/include",
+        "Vendor/imgui"
+    }
+    links { "PlagC", "ImGui", "GLFW", "spdlog", "Jolt", "Ozz", "OpenAL" }
+
+    filter "system:linux"
+        linkoptions { "-Wl,-rpath,'$$ORIGIN'" }
+    filter {}
+
+    ogreLinks()
+    ogreSystemLinks()
+    debugdir "%{cfg.targetdir}"
+    dependson { "RuntimeAssets" }
+
     prebuildcommands {
         'python "' .. root .. '/Scripts/StageRuntimeAssets.py" --root "' .. root ..
         '" --output "%{cfg.targetdir}"'
