@@ -311,7 +311,7 @@ public:
     }
 
     void Revert() override {
-        if (!entity_ || !world_.Alive(entity_)
+        if (!entity_ || !world_.Alive(entity_))
             throw std::logic_error("Duplicated entity no longer exists");
         if (selection_ == entity_)
             selection_ = previousSelection_ && world_.Alive(previousSelection_)
