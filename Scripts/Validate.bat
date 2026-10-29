@@ -34,11 +34,19 @@ for %%C in (Debug Release Dist) do (
         echo Full log: !VALIDATION_LOG!
         exit /b 1
     )
+
     Bin\windows-x86_64\%%C\Sandbox.exe --headless --frames 120 --workers 1
     if errorlevel 1 exit /b 1
     Bin\windows-x86_64\%%C\Sandbox.exe --null --frames 120 --workers 4
     if errorlevel 1 exit /b 1
+
+    echo Running %%C editor offscreen OpenGL smoke test.
+    Bin\windows-x86_64\%%C\Editor.exe --offscreen --renderer opengl --frames 3 --workers 1 --no-audio
+    if errorlevel 1 (
+        echo Editor smoke test failed for %%C.
+        exit /b 1
+    )
 )
 
-echo Automated engine validation passed.
+echo Automated engine and editor validation passed.
 exit /b 0
