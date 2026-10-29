@@ -44,6 +44,10 @@ class Sandbox final : public PlagC::Application
             return config_.world;
         }
 
+#ifdef PC_DIST
+        // Dist is a WindowedApp on Windows and must not block waiting on stdin.
+        return std::string(game.DefaultWorld());
+#else
         if (NonInteractive(config_) || worlds.size() <= 1)
             return std::string(game.DefaultWorld());
 
@@ -71,6 +75,7 @@ class Sandbox final : public PlagC::Application
         if (std::find(worlds.begin(), worlds.end(), input) != worlds.end())
             return input;
         throw std::invalid_argument("invalid world selection: " + input);
+#endif
     }
 
   public:
