@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 
 set "ROOT=%~dp0.."
 set "BIN=%ROOT%\Bin\windows-x86_64\Release"
@@ -13,6 +13,8 @@ if not exist "%BIN%\Sandbox.exe" (
 
 if not defined PC_RENDER_BENCH_OBJECTS set "PC_RENDER_BENCH_OBJECTS=2500"
 if not defined PC_RENDER_BENCH_MATERIALS set "PC_RENDER_BENCH_MATERIALS=%PC_RENDER_BENCH_OBJECTS%"
+if not defined PC_RENDER_BENCH_RUNS set "PC_RENDER_BENCH_RUNS=2"
+if not defined PC_RENDER_BENCH_COOLDOWN set "PC_RENDER_BENCH_COOLDOWN=3"
 rem Keep official captures free of the extra overlay draw/upload. Manual runs show FPS by default.
 set "PC_FPS_OVERLAY=0"
 
@@ -23,30 +25,57 @@ echo ============================================================
 echo PlagC renderer benchmark
 echo Objects  : %PC_RENDER_BENCH_OBJECTS%
 echo Materials: %PC_RENDER_BENCH_MATERIALS%
+echo Pairs    : %PC_RENDER_BENCH_RUNS%
+echo Cooldown : %PC_RENDER_BENCH_COOLDOWN% seconds between runs
 echo FPS OSD  : disabled for measurement
+echo Order    : GL/VK, then VK/GL, alternating each pair
 echo ============================================================
 
-echo Running OpenGL...
-echo RendererBenchmark|Sandbox.exe --renderer opengl --no-audio --performance-csv Logs\RendererBenchmark-OpenGL.csv --performance-warmup 240 --performance-seconds 20 > Logs\RendererBenchmark-OpenGL.log 2>&1
-if errorlevel 1 (
-    echo OpenGL benchmark failed. See Logs\RendererBenchmark-OpenGL.log
-    popd
-    exit /b 1
-)
-
-echo Running Vulkan...
-echo RendererBenchmark|Sandbox.exe --renderer vulkan --no-audio --performance-csv Logs\RendererBenchmark-Vulkan.csv --performance-warmup 240 --performance-seconds 20 > Logs\RendererBenchmark-Vulkan.log 2>&1
-if errorlevel 1 (
-    echo Vulkan benchmark failed. See Logs\RendererBenchmark-Vulkan.log
-    popd
-    exit /b 1
+for /L %%R in (1,1,%PC_RENDER_BENCH_RUNS%) do (
+    set /a ODD=%%R %% 2
+    if !ODD! EQU 1 (
+        call :RunBackend opengl OpenGL %%R
+        if errorlevel 1 goto :Failed
+        call :Cooldown
+        call :RunBackend vulkan Vulkan %%R
+        if errorlevel 1 goto :Failed
+    ) else (
+        call :RunBackend vulkan Vulkan %%R
+        if errorlevel 1 goto :Failed
+        call :Cooldown
+        call :RunBackend opengl OpenGL %%R
+        if errorlevel 1 goto :Failed
+    )
+    if not %%R==%PC_RENDER_BENCH_RUNS% call :Cooldown
 )
 
 echo.
-echo Complete. Compare:
-echo   %BIN%\Logs\RendererBenchmark-OpenGL.log
-echo   %BIN%\Logs\RendererBenchmark-Vulkan.log
-echo   %BIN%\Logs\RendererBenchmark-OpenGL.csv
-echo   %BIN%\Logs\RendererBenchmark-Vulkan.csv
+echo Complete. Compare all per-run CSV/log pairs under:
+echo   %BIN%\Logs\RendererBenchmark-OpenGL-R*.csv
+echo   %BIN%\Logs\RendererBenchmark-Vulkan-R*.csv
+echo.
+echo Use median plus P95/P99/hitch counts across runs. Alternating the order reduces
+echo warm-up, clock and thermal bias between APIs.
 popd
 exit /b 0
+
+:RunBackend
+set "BACKEND=%~1"
+set "DISPLAY=%~2"
+set "RUN=%~3"
+echo.
+echo Running %DISPLAY% pair %RUN%...
+echo RendererBenchmark|Sandbox.exe --renderer %BACKEND% --no-audio --performance-csv "Logs\RendererBenchmark-%DISPLAY%-R%RUN%.csv" --performance-warmup 240 --performance-seconds 20 > "Logs\RendererBenchmark-%DISPLAY%-R%RUN%.log" 2>&1
+if errorlevel 1 (
+    echo %DISPLAY% benchmark pair %RUN% failed. See Logs\RendererBenchmark-%DISPLAY%-R%RUN%.log
+    exit /b 1
+)
+exit /b 0
+
+:Cooldown
+if %PC_RENDER_BENCH_COOLDOWN% GTR 0 timeout /t %PC_RENDER_BENCH_COOLDOWN% /nobreak >nul
+exit /b 0
+
+:Failed
+popd
+exit /b 1
