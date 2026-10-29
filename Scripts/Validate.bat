@@ -6,6 +6,8 @@ python Scripts\Tests\EngineBoundaryTests.py
 if errorlevel 1 exit /b 1
 python Scripts\Tests\RuntimeStagingTests.py
 if errorlevel 1 exit /b 1
+python Scripts\Tests\EditorArchitectureTests.py
+if errorlevel 1 exit /b 1
 
 where msbuild >nul 2>nul
 if errorlevel 1 (

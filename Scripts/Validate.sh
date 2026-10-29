@@ -4,6 +4,8 @@ cd "$(dirname "$0")/.."
 
 python3 Scripts/Tests/EngineBoundaryTests.py
 python3 Scripts/Tests/RuntimeStagingTests.py
+python3 Scripts/Tests/EditorArchitectureTests.py
+python3 Scripts/Tests/EditorBackendTests.py
 
 ./GenerateProjects.sh gmake2 --null-platform
 for config in debug release dist; do
