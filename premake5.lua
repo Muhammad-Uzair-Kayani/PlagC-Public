@@ -79,7 +79,7 @@ project "PlagC"
     assetRuntimeIncludes()
     dependson { "Ozz", "OpenAL" }
     enginePch("PlagC/src/pgcpch.cpp")
-    includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include", "Vendor/entt/src" }
+    includedirs { "PlagC/include", "Vendor/glfw/include", "Vendor/spdlog/include", "Vendor/entt/src", "Vendor/rapidjson/include" }
     dependson { "EnTT", "Jolt" }
     defines { "SPDLOG_COMPILED_LIB" }
     ogreIncludes()

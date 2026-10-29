@@ -27,6 +27,8 @@ SceneDocument::SceneDocument(std::unique_ptr<World> world, std::size_t capacity)
     : world_(std::move(world)), history_(capacity) {
     Thread::RequireMain();
     if (!world_) throw std::invalid_argument("Scene document requires a world");
+    std::uint64_t next = 1;
+    for (const auto &record : world_->Snapshot()) persistentIDs_.emplace(record.entity.value, next++);
 }
 SceneDocument::~SceneDocument() = default;
 const World& SceneDocument::Scene() const { Thread::RequireMain(); return *world_; }
@@ -52,4 +54,9 @@ bool SceneDocument::Dirty() const { Thread::RequireMain(); return history_.Dirty
 void SceneDocument::MarkSaved() { Thread::RequireMain(); history_.MarkSaved(); }
 std::string_view SceneDocument::UndoLabel() const { Thread::RequireMain(); return history_.UndoLabel(); }
 std::string_view SceneDocument::RedoLabel() const { Thread::RequireMain(); return history_.RedoLabel(); }
+std::uint64_t SceneDocument::PersistentID(Entity entity) const {
+    Thread::RequireMain();
+    if (!world_->Alive(entity)) throw std::invalid_argument("Invalid persistent entity reference");
+    return persistentIDs_.at(entity.value);
+}
 }
