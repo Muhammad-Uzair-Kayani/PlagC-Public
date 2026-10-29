@@ -26,13 +26,8 @@ void TransformSystem::Bind(World& world,std::span<const Entity> entities) {
         auto raw=w.Get(e);
         if(auto* pc=w.registry.try_get<PhysicsComponent>(raw);pc&&pc->body.motion==MotionType::Dynamic)
             throw std::invalid_argument("dynamic transforms are physics-owned");
-        if(w.parentByChild.contains(e.value))
+        if(w.parentByChild.contains(e.value) || w.childrenByParent.contains(e.value))
             throw std::invalid_argument("hierarchical transforms require World transform APIs");
-        for(const auto& [child,parent]:w.parentByChild) {
-            (void)child;
-            if(parent==e.value)
-                throw std::invalid_argument("hierarchical transforms require World transform APIs");
-        }
         if(!seen.insert(e.value).second)throw std::invalid_argument("duplicate transform system entity");
         auto local=w.localByEntity.find(e.value);
         if(local==w.localByEntity.end())throw std::logic_error("world lost an entity local transform");

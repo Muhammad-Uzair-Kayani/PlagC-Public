@@ -31,25 +31,34 @@ template <class ImplT> Entity ParentOf(const ImplT &p, Entity child)
 }
 template <class ImplT> bool HasChildren(const ImplT &p, Entity parent)
 {
-    for (const auto &[child, candidate] : p.parentByChild)
-    {
-        (void)child;
-        if (candidate == parent.value)
-            return true;
-    }
-    return false;
+    const auto it = p.childrenByParent.find(parent.value);
+    return it != p.childrenByParent.end() && !it->second.empty();
+}
+template <class ImplT> void RemoveChildIndex(ImplT &p, std::uint64_t parent, std::uint64_t child)
+{
+    const auto it = p.childrenByParent.find(parent);
+    if (it == p.childrenByParent.end())
+        throw std::logic_error("world hierarchy child index is inconsistent");
+    std::erase(it->second, child);
+    if (it->second.empty())
+        p.childrenByParent.erase(it);
 }
 template <class ImplT>
 std::unordered_set<std::uint64_t> DescendantClosure(const ImplT &p,
                                                      std::unordered_set<std::uint64_t> roots)
 {
-    bool changed = true;
-    while (changed)
+    std::vector<std::uint64_t> pending;
+    pending.reserve(roots.size());
+    for (const auto id : roots)
+        pending.push_back(id);
+    for (std::size_t i = 0; i < pending.size(); ++i)
     {
-        changed = false;
-        for (const auto &[child, parent] : p.parentByChild)
-            if (roots.contains(parent) && roots.insert(child).second)
-                changed = true;
+        const auto children = p.childrenByParent.find(pending[i]);
+        if (children == p.childrenByParent.end())
+            continue;
+        for (const auto child : children->second)
+            if (roots.insert(child).second)
+                pending.push_back(child);
     }
     return roots;
 }
@@ -120,19 +129,24 @@ void World::Destroy(Entity e)
     if (p.registry.all_of<PhysicsComponent>(raw))
         ++p.physicsStructure;
 
-    // Relationship deletion is non-recursive. Children are promoted to roots while
-    // preserving their current resolved world transforms.
-    p.parentByChild.erase(e.value);
-    for (auto it = p.parentByChild.begin(); it != p.parentByChild.end();)
+    if (const Entity parent = ParentOf(p, e))
     {
-        if (it->second == e.value)
+        RemoveChildIndex(p, parent.value, e.value);
+        p.parentByChild.erase(e.value);
+    }
+
+    // Relationship deletion is non-recursive. Direct children are promoted to roots while
+    // preserving their current resolved world transforms.
+    if (const auto children = p.childrenByParent.find(e.value); children != p.childrenByParent.end())
+    {
+        const auto promoted = children->second;
+        for (const auto child : promoted)
         {
-            const auto childRaw = p.entities.at(it->first);
-            p.localByEntity.at(it->first) = p.registry.get<Transform>(childRaw);
-            it = p.parentByChild.erase(it);
+            const auto childRaw = p.entities.at(child);
+            p.localByEntity.at(child) = p.registry.get<Transform>(childRaw);
+            p.parentByChild.erase(child);
         }
-        else
-            ++it;
+        p.childrenByParent.erase(e.value);
     }
 
     p.localByEntity.erase(e.value);
@@ -155,6 +169,7 @@ void World::Clear()
     impl_->entities.clear();
     impl_->localByEntity.clear();
     impl_->parentByChild.clear();
+    impl_->childrenByParent.clear();
     impl_->active = {};
 }
 bool World::Alive(Entity e) const
@@ -233,6 +248,7 @@ void World::SetLocalTransform(Entity e, const Transform &local)
 
     auto affected = DescendantClosure(p, {e.value});
     std::unordered_map<std::uint64_t, Transform> resolved;
+    resolved.reserve(affected.size());
     std::function<Transform(Entity)> resolve = [&](Entity current) -> Transform {
         if (const auto found = resolved.find(current.value); found != resolved.end())
             return found->second;
@@ -278,46 +294,44 @@ std::vector<Entity> World::Children(Entity parent) const
 {
     impl_->Get(parent);
     std::vector<Entity> result;
-    for (const auto &[child, candidate] : impl_->parentByChild)
-        if (candidate == parent.value)
-        {
-            if (!impl_->entities.contains(child))
-                throw std::logic_error("world hierarchy contains a stale child");
-            result.push_back(Entity{child});
-        }
-    std::sort(result.begin(), result.end(),
-              [](Entity a, Entity b) { return a.value < b.value; });
+    const auto it = impl_->childrenByParent.find(parent.value);
+    if (it == impl_->childrenByParent.end())
+        return result;
+    result.reserve(it->second.size());
+    for (const auto child : it->second)
+    {
+        if (!impl_->entities.contains(child))
+            throw std::logic_error("world hierarchy contains a stale child");
+        const auto upward = impl_->parentByChild.find(child);
+        if (upward == impl_->parentByChild.end() || upward->second != parent.value)
+            throw std::logic_error("world hierarchy indices disagree");
+        result.push_back(Entity{child});
+    }
     return result;
 }
 void World::SetParent(Entity child, Entity parent)
 {
     auto &p = *impl_;
-    const auto childRaw = p.Get(child);
-    const auto parentRaw = p.Get(parent);
+    p.Get(child);
+    p.Get(parent);
     Require(child != parent, "entity cannot parent itself");
 
-    if (const auto current = Parent(child); current == parent)
+    const Entity current = Parent(child);
+    if (current == parent)
         return;
 
     // Hierarchy propagation and physics body ownership are intentionally disjoint until
     // authored rigid-body/local-transform semantics are defined together.
     Require(!SubtreeHasPhysics(p, child), "physics entity cannot participate in hierarchy");
-    Entity physicsCursor = parent;
-    while (physicsCursor)
-    {
-        Require(!p.registry.all_of<PhysicsComponent>(p.Get(physicsCursor)),
-                "physics entity cannot participate in hierarchy");
-        physicsCursor = ParentOf(p, physicsCursor);
-    }
-    (void)childRaw;
-    (void)parentRaw;
 
-    // Walk the proposed parent's chain before mutation. A repeated node indicates
-    // existing corruption; reaching child would introduce a cycle.
+    // Validate ancestry, physics ownership and cycle safety before any mutation.
     std::unordered_set<std::uint64_t> seen;
     Entity cursor = parent;
     while (cursor)
     {
+        const auto cursorRaw = p.Get(cursor);
+        Require(!p.registry.all_of<PhysicsComponent>(cursorRaw),
+                "physics entity cannot participate in hierarchy");
         Require(seen.insert(cursor.value).second, "world hierarchy is cyclic");
         Require(cursor != child, "world hierarchy cycle");
         cursor = ParentOf(p, cursor);
@@ -326,7 +340,13 @@ void World::SetParent(Entity child, Entity parent)
     const Transform world = p.registry.get<Transform>(p.Get(child));
     const Transform parentWorld = p.registry.get<Transform>(p.Get(parent));
     const Transform local = RelativeTransform(parentWorld, world);
+
+    if (current)
+        RemoveChildIndex(p, current.value, child.value);
     p.parentByChild[child.value] = parent.value;
+    auto &children = p.childrenByParent[parent.value];
+    children.push_back(child.value);
+    std::sort(children.begin(), children.end());
     p.localByEntity.at(child.value) = local;
     ++p.topology;
 }
@@ -334,11 +354,13 @@ void World::ClearParent(Entity child)
 {
     auto &p = *impl_;
     const auto raw = p.Get(child);
-    if (p.parentByChild.erase(child.value))
-    {
-        p.localByEntity.at(child.value) = p.registry.get<Transform>(raw);
-        ++p.topology;
-    }
+    const Entity parent = ParentOf(p, child);
+    if (!parent)
+        return;
+    p.localByEntity.at(child.value) = p.registry.get<Transform>(raw);
+    RemoveChildIndex(p, parent.value, child.value);
+    p.parentByChild.erase(child.value);
+    ++p.topology;
 }
 void World::SetPhysics(Entity e, const PhysicsComponent &c)
 {
@@ -483,6 +505,7 @@ void World::ApplyTransforms(std::span<const TransformUpdate> updates)
     // Resolve the world each entity would have if explicit updates override inherited motion.
     // This gives the final parent world used to derive local values for explicit children.
     std::unordered_map<std::uint64_t, Transform> targetWorld;
+    targetWorld.reserve(affected.size());
     std::function<Transform(Entity)> resolveTarget = [&](Entity entity) -> Transform {
         if (const auto found = targetWorld.find(entity.value); found != targetWorld.end())
             return found->second;
@@ -511,6 +534,7 @@ void World::ApplyTransforms(std::span<const TransformUpdate> updates)
     }
 
     std::unordered_map<std::uint64_t, Transform> finalWorld;
+    finalWorld.reserve(affected.size());
     std::function<Transform(Entity)> resolveFinal = [&](Entity entity) -> Transform {
         if (const auto found = finalWorld.find(entity.value); found != finalWorld.end())
             return found->second;
