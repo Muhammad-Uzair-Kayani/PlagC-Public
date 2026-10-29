@@ -36,6 +36,7 @@ link_sources = [
 ]
 compile_only = [
     'PlagC/src/Editor/ViewportTarget.cpp',
+    'PlagC/src/Editor/ScenePicking.cpp',
     'Scripts/Tests/EditorBridgeCompile.cpp',
 ]
 tests = [

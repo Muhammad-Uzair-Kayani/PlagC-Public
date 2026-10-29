@@ -70,6 +70,26 @@ class EditorArchitectureTests(unittest.TestCase):
         ):
             self.assertIn(required, bridge)
 
+    def test_scene_renderer_exposes_object_identity_bridge(self):
+        header = self.read("PlagC/include/PlagC/World/SceneRenderer.h")
+        source = self.read("PlagC/src/World/SceneRenderer.cpp")
+        for required in (
+            "ObjectHandle ObjectFor(Entity) const",
+            "Entity EntityForObject(ObjectHandle) const",
+            "entityByObject",
+        ):
+            self.assertIn(required, header + source)
+        self.assertIn("p.entityByObject.erase", source)
+        self.assertIn("p.entityByObject.emplace", source)
+
+    def test_scene_pick_resolves_renderer_objects_to_persistent_ids(self):
+        header = self.read("PlagC/include/PlagC/Editor/ScenePicking.h")
+        source = self.read("PlagC/src/Editor/ScenePicking.cpp")
+        self.assertIn("ResolveSceneObjectPick", header)
+        self.assertIn("sceneRenderer.EntityForObject(object)", source)
+        self.assertIn("document.PersistentID(entity)", source)
+        self.assertIn("document.Scene().Alive(entity)", source)
+
     def test_viewport_contract_is_renderer_backend_neutral(self):
         header = self.read("PlagC/include/PlagC/Editor/ViewportTarget.h")
         source = self.read("PlagC/src/Editor/ViewportTarget.cpp")

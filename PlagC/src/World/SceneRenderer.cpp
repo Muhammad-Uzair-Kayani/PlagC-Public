@@ -47,6 +47,7 @@ struct SceneRenderer::Impl
         std::uint64_t transform = 0, property = 0, seen = 0;
     };
     std::unordered_map<std::uint64_t, Object> objects;
+    std::unordered_map<std::uint64_t, std::uint64_t> entityByObject;
     std::unordered_map<std::uint64_t, Light> lights;
     std::vector<Object *> objectBindings;
     std::vector<Light *> lightBindings;
@@ -79,6 +80,7 @@ void SceneRenderer::Clear()
     p.objectBindings.clear();
     p.lightBindings.clear();
     p.objects.clear();
+    p.entityByObject.clear();
     p.lights.clear();
     p.world = p.structure = p.cameraSelection = p.cameraTransform = p.cameraProperty = 0;
 }
@@ -97,6 +99,22 @@ std::size_t SceneRenderer::Lights() const
     for (auto &[id, l] : impl_->lights)
         n += bool(l.handle);
     return n;
+}
+ObjectHandle SceneRenderer::ObjectFor(Entity entity) const
+{
+    Thread::RequireMain();
+    if (!entity)
+        return {};
+    const auto it = impl_->objects.find(entity.value);
+    return it == impl_->objects.end() ? ObjectHandle{} : it->second.handle;
+}
+Entity SceneRenderer::EntityForObject(ObjectHandle object) const
+{
+    Thread::RequireMain();
+    if (!object)
+        return {};
+    const auto it = impl_->entityByObject.find(object.value);
+    return it == impl_->entityByObject.end() ? Entity{} : Entity{it->second};
 }
 void SceneRenderer::SetProfiling(bool value)
 {
@@ -159,6 +177,7 @@ void SceneRenderer::Sync(const World &world, std::span<const TransformUpdate> pr
             {
                 if (it->second.handle)
                 {
+                    p.entityByObject.erase(it->second.handle.value);
                     p.renderer.DestroyObject(it->second.handle);
                     ++s.destroyed;
                 }
@@ -208,8 +227,22 @@ void SceneRenderer::Sync(const World &world, std::span<const TransformUpdate> pr
                 // Create first: an invalid borrowed resource leaves the existing object alive.
                 auto handle =
                     p.renderer.CreateObject(c.mesh, c.material, registry.get<Transform>(o->raw));
+                const auto entityID = registry.get<Entity>(o->raw).value;
+                try
+                {
+                    const auto [entry, inserted] = p.entityByObject.emplace(handle.value, entityID);
+                    if (!inserted)
+                        throw std::logic_error("renderer object handle is already bound to a scene entity");
+                    (void)entry;
+                }
+                catch (...)
+                {
+                    p.renderer.DestroyObject(handle);
+                    throw;
+                }
                 if (o->handle)
                 {
+                    p.entityByObject.erase(o->handle.value);
                     p.renderer.DestroyObject(o->handle);
                     ++s.destroyed;
                 }
