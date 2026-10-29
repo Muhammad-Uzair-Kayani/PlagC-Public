@@ -36,6 +36,7 @@ immutable/read-only presentation data:
 
 - `SceneDocument` owns the authoring `World`.
 - `CommandHistory` owns undo/redo history.
+- `EditorSession` owns scene-file lifecycle and transport policy.
 - persistent scene-local entity IDs survive runtime-handle replacement.
 - `AuthoringEntity` snapshots feed hierarchy/Inspector panels.
 - transform transactions make one continuous drag one undo operation.
@@ -56,12 +57,12 @@ The separate Editor executable and Dear ImGui/Ogre integration own:
 - dockspace, menus, toolbar and visual styling.
 - hierarchy, Inspector, Console, Content Browser and Statistics panel drawing.
 - keyboard shortcuts and focus/modal routing.
+- file-dialog presentation and unsaved-change modal presentation.
 - presenting the Ogre render target inside ImGui.
 - concrete OpenGL/Vulkan-compatible ImGui renderer integration.
 - a concrete picking provider (normally renderer ID-buffer; physics raycast may
   be an optional fallback for entities that own collision).
 - gizmo rendering/manipulation.
-- file dialogs.
 - material/animation/profiler panels.
 
 The backend deliberately does not include or call Dear ImGui.
@@ -75,6 +76,7 @@ model instead of adding locks around the ECS.
 | --- | --- |
 | `World` structural/component mutation | main/owner thread only |
 | `SceneDocument` selection/history/mutation | main/owner thread only |
+| `EditorSession` lifecycle/transport operations | main/owner thread only |
 | Dear ImGui | main thread only |
 | renderer resource/target operations | renderer owner/main thread |
 | filesystem discovery | worker allowed |
@@ -126,7 +128,10 @@ That is sufficient for the recovered wireframe's current `Main Scene` entity lis
 
 Parenting/reparenting, local/world transform inheritance and hierarchy ordering are
 a separate scene-graph phase. They should be added to `World`/authoring data first,
-not simulated only inside ImGui.
+not simulated only inside ImGui. Current renderer, camera, light, physics and
+`TransformSystem` code all interpret `Transform` as world-space, so introducing
+parent-relative transforms requires an explicit engine scene-graph design rather
+than an editor-only shortcut.
 
 ## Undo/redo and continuous edits
 
@@ -179,6 +184,69 @@ invalid transforms, malformed UTF-8 and dangling active cameras are rejected.
 
 Raw renderable, physics and animator components remain explicitly unsupported by
 scene v1 serialization. They are never silently dropped.
+
+## Editor session lifecycle
+
+`EditorSession` is the UI-facing controller for scene lifecycle. Panels and menu
+callbacks should not independently replace the active `SceneDocument`, track the
+current file path, or decide whether authoring is writable during Play.
+
+It owns:
+
+- the current authoring `SceneDocument`.
+- current scene path / untitled state.
+- New/Open/Save/Save As policy.
+- dirty-scene replacement checks.
+- the `PlaySession` transport state.
+- selection of the document currently shown in the viewport/hierarchy.
+
+### File commands
+
+The intended UI binding is:
+
+| UI command | Backend action |
+| --- | --- |
+| New Scene | `EditorSession::NewScene(...)` |
+| Open Scene | `EditorSession::Open(...)` |
+| Save | `EditorSession::Save()` |
+| Save As | `EditorSession::SaveAs(...)` |
+| Undo/Redo | authoring document `CommandHistory` while not playing |
+
+New/Open are replacement operations. If the authoring document is dirty, the UI
+first presents its modal and then passes the resulting replacement policy to the
+session. Cancellation leaves the existing document, path, selection and history
+untouched.
+
+Open is transactional: a candidate scene must fully deserialize and resolve its
+references before it replaces the current document. A failed Open therefore does
+not partially mutate the active scene.
+
+Save writes to the current path and is unavailable for an untitled scene until a
+path has been supplied. Save As updates the session path only after a successful
+save. File-dialog rendering remains UI work; path/lifecycle state remains backend
+work.
+
+### Transport commands
+
+The intended toolbar/menu binding is:
+
+| UI command | Backend action |
+| --- | --- |
+| Play | `EditorSession::Play()` |
+| Pause/Resume | `EditorSession::TogglePause()` / equivalent session call |
+| Step | `EditorSession::Step()` while paused |
+| Stop | `EditorSession::Stop()` |
+
+While stopped, `ViewDocument()` is the authoring document and authoring mutation
+is enabled. While playing or paused, `ViewDocument()` is the runtime document and
+`AuthoringDocument()` remains protected from editor mutation. The runtime document
+is deliberately exposed read-only to normal editor panels so hierarchy,
+statistics, picking and diagnostics can continue to resolve persistent IDs during
+Play without allowing accidental runtime-to-authoring leakage.
+
+Scene New/Open/Save/Save As and authoring Undo/Redo must be disabled while a play
+session owns the viewport. Stop destroys the runtime copy and returns the viewport
+to the unchanged authoring document.
 
 ## Runtime isolation / play mode
 
@@ -276,12 +344,13 @@ renderer and runtime never share transient EnTT handles.
 
 The UI engineer can depend on these narrow pieces instead of engine internals:
 
-- `SceneDocument` / `CommandHistory`
+- `EditorSession` for New/Open/Save/Save As and transport lifecycle.
+- `SceneDocument` / `CommandHistory` for authoring and undo/redo.
 - `EditorModels` (`MainThreadMailbox`, `GenerationGate`, asset/console/telemetry,
-  viewport/input/picking data)
-- `EngineEditorBridge`
-- `ViewportTarget`
-- `PlaySession`
+  viewport/input/picking data).
+- `EngineEditorBridge` for snapshots from existing engine services.
+- `ViewportTarget` for backend-neutral target lifecycle.
+- `PlaySession` for the isolated runtime clone and paused/step state.
 
 No additional third-party dependency is required by these backend modules.
 
@@ -301,6 +370,8 @@ The backend now provides:
 - one-drag/one-undo transform transactions.
 - isolated complete in-memory play-world cloning.
 - play/pause/stop/step session state.
+- `EditorSession` New/Open/Save/Save As and dirty-replacement policy.
+- read-only runtime document viewing while authoring mutation is locked during Play.
 - worker-to-main editor mailbox.
 - stale async result rejection.
 - filesystem/registry asset-browser model.
@@ -310,7 +381,7 @@ The backend now provides:
 - backend-neutral picking contract.
 - source-level architecture regressions.
 
-No recovered wireframe/UI source is modified by this milestone.
+No recovered wireframe/UI source is modified by these backend milestones.
 
 ## Remaining implementation
 
@@ -318,13 +389,15 @@ The next work is primarily integration, not rebuilding these backend services:
 
 1. engineer: separate runnable Editor executable, pinned ImGui docking and Ogre
    OpenGL/Vulkan integration.
-2. wire hierarchy/Inspector to `SceneDocument::Snapshot` and command methods.
-3. wire File/Edit/transport shortcuts to persistence/history/`PlaySession`.
+2. wire hierarchy/Inspector to `EditorSession::ViewDocument()` snapshots and
+   authoring command methods while stopped.
+3. wire File/Edit/transport shortcuts to `EditorSession`; the UI owns dialogs and
+   modal presentation, not scene lifecycle state.
 4. wire Console/Statistics/Content Browser to real editor models.
 5. implement renderer-target presentation inside ImGui.
 6. implement concrete renderer picking provider.
 7. connect gizmo drag lifecycle to `BeginTransformEdit`.
-8. scene graph/parenting and transform inheritance.
+8. scene graph/parenting and transform inheritance as an explicit engine phase.
 9. persistence v2 schemas for authored physics/animation and persistent asset GUIDs.
 10. thumbnail/import/reimport workflows.
 11. material and animation editor backends/panels.
@@ -345,9 +418,9 @@ python3 Scripts/Tests/EditorBackendTests.py --sanitize
 ```
 
 The backend runner compiles current `World`, physics validation, scene
-serialization, authoring operations, editor models and play session. It also
-compile-checks the engine bridge and viewport target without requiring a renderer
-link.
+serialization, authoring operations, editor models, play session and editor
+session. It also compile-checks the engine bridge and viewport target without
+requiring a renderer link.
 
 Windows acceptance is covered by building the complete PlagC static library in
 `Scripts\Validate.bat`; that exercises all new `PlagC/src/Editor/*.cpp` under
