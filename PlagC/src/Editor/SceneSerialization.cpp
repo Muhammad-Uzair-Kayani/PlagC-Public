@@ -1,6 +1,16 @@
 #include "pgcpch.h"
 #include <PlagC/Editor/SceneDocument.h>
 #include <PlagC/Thread.h>
+
+#if defined(_MSC_VER)
+// Pinned RapidJSON still derives iterators from std::iterator and performs
+// cross-enum bitwise operations internally. Keep those vendor compatibility
+// diagnostics local to this translation unit rather than suppressing engine warnings.
+#ifndef _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
+#define _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
+#endif
+#pragma warning(disable : 5054)
+#endif
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -19,6 +29,9 @@ namespace PlagC::Editor {
 namespace {
 constexpr std::size_t MaxBytes = 64 * 1024 * 1024;
 constexpr std::size_t MaxEntities = 100000;
+constexpr unsigned SceneParseFlags =
+    static_cast<unsigned>(rapidjson::kParseValidateEncodingFlag) |
+    static_cast<unsigned>(rapidjson::kParseIterativeFlag);
 using Value = rapidjson::Value;
 using Writer = rapidjson::Writer<rapidjson::StringBuffer, rapidjson::UTF8<>, rapidjson::UTF8<>,
                                 rapidjson::CrtAllocator, rapidjson::kWriteValidateEncodingFlag>;
@@ -164,7 +177,7 @@ std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text,
     if(text.size()>MaxBytes) Fail("Scene exceeds size limit");
     if(text.find('\0')!=std::string_view::npos) Fail("Unexpected NUL byte in scene JSON");
     rapidjson::Document json;
-    json.Parse<rapidjson::kParseValidateEncodingFlag | rapidjson::kParseIterativeFlag>(text.data(),text.size());
+    json.Parse<SceneParseFlags>(text.data(),text.size());
     if(json.HasParseError()) Fail("Invalid scene JSON");
     Fields(json,{"format","version","activeCamera","entities"});
     if(String(Get(json,"format"))!="PlagC.Scene") Fail("Unknown scene format");
