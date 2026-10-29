@@ -145,6 +145,37 @@ return function(source)
     p.pendingMeshUploads.clear();
     if (!p.root->renderOneFrame())]])
 
+    -- UO_KEEP_PERSISTENT intentionally leaves Ogre's MappingState persistent even though no
+    -- map range is active. Ogre's BufferPacked destructor treats that as a bad lifetime and
+    -- emits the "Deleting mapped buffer" warning. Final-unmap engine-owned dynamic meshes
+    -- before releasing their MeshPtr, matching Ogre's own persistent-buffer destruction code.
+    replace([[            objects.clear();
+            lights.clear();
+            meshes.clear();
+            materials.clear();]], [[            objects.clear();
+            lights.clear();
+            for (auto &[id, mesh] : meshes)
+            {
+                if (!mesh.dynamic || !mesh.value || mesh.value->getNumSubMeshes() == 0u)
+                    continue;
+                auto *buffer =
+                    mesh.value->getSubMesh(0)->mVao[Ogre::VpNormal][0]->getVertexBuffers()[0];
+                if (buffer && buffer->getMappingState() != Ogre::MS_UNMAPPED)
+                    buffer->unmap(Ogre::UO_UNMAP_ALL);
+            }
+            meshes.clear();
+            materials.clear();]])
+
+    replace([[    Ogre::MeshManager::getSingleton().remove(m.value->getHandle());
+    p.meshes.erase(h.value);]], [[    if (m.dynamic && m.value && m.value->getNumSubMeshes() != 0u)
+    {
+        auto *buffer = m.value->getSubMesh(0)->mVao[Ogre::VpNormal][0]->getVertexBuffers()[0];
+        if (buffer && buffer->getMappingState() != Ogre::MS_UNMAPPED)
+            buffer->unmap(Ogre::UO_UNMAP_ALL);
+    }
+    Ogre::MeshManager::getSingleton().remove(m.value->getHandle());
+    p.meshes.erase(h.value);]])
+
     replace([[        texture->scheduleTransitionTo(Ogre::GpuResidency::Resident, image.release(), true);
         tm->waitForStreamingCompletion();
         impl_->textures.emplace(id, texture);]], [[        texture->scheduleTransitionTo(Ogre::GpuResidency::Resident, image.release(), true);
