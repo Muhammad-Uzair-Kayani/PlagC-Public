@@ -81,6 +81,14 @@ class World
     std::vector<EntityRecord> Snapshot() const;
     void Rename(Entity, std::string);
     void SetTransform(Entity, const Transform &);
+
+    // Scene-graph relationship metadata. Transform remains world-space in this phase;
+    // parenting does not implicitly modify or propagate transforms.
+    Entity Parent(Entity) const;
+    std::vector<Entity> Children(Entity) const;
+    void SetParent(Entity child, Entity parent);
+    void ClearParent(Entity child);
+
     // Dynamic transforms belong to physics; use PhysicsSystem::Teleport after attachment.
     void SetPhysics(Entity, const PhysicsComponent &);
     void RemovePhysics(Entity);

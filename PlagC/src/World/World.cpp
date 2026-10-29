@@ -77,6 +77,17 @@ void World::Destroy(Entity e)
     ++p.topology;
     if (p.registry.all_of<PhysicsComponent>(raw))
         ++p.physicsStructure;
+
+    // Relationship deletion is non-recursive. Children are promoted to roots.
+    p.parentByChild.erase(e.value);
+    for (auto it = p.parentByChild.begin(); it != p.parentByChild.end();)
+    {
+        if (it->second == e.value)
+            it = p.parentByChild.erase(it);
+        else
+            ++it;
+    }
+
     p.registry.destroy(raw);
     p.entities.erase(e.value);
     if (p.active == e)
@@ -94,6 +105,7 @@ void World::Clear()
     ++impl_->physicsStructure;
     impl_->registry.clear();
     impl_->entities.clear();
+    impl_->parentByChild.clear();
     impl_->active = {};
 }
 bool World::Alive(Entity e) const
@@ -135,7 +147,10 @@ std::vector<EntityRecord> World::Snapshot() const
     std::vector<EntityRecord> result;
     result.reserve(Size());
     for (auto [id, raw] : impl_->entities)
+    {
+        (void)raw;
         result.push_back(Read({id}));
+    }
     std::sort(result.begin(), result.end(),
               [](const auto &a, const auto &b) { return a.entity.value < b.entity.value; });
     return result;
@@ -155,6 +170,62 @@ void World::SetTransform(Entity e, const Transform &t)
         ValidateWorldCamera(*c, t);
     impl_->registry.replace<Transform>(raw, t);
     ++impl_->registry.get<WorldChanges>(raw).transform;
+}
+Entity World::Parent(Entity child) const
+{
+    impl_->Get(child);
+    const auto it = impl_->parentByChild.find(child.value);
+    if (it == impl_->parentByChild.end())
+        return {};
+    if (!impl_->entities.contains(it->second))
+        throw std::logic_error("world hierarchy contains a stale parent");
+    return Entity{it->second};
+}
+std::vector<Entity> World::Children(Entity parent) const
+{
+    impl_->Get(parent);
+    std::vector<Entity> result;
+    for (const auto &[child, candidate] : impl_->parentByChild)
+        if (candidate == parent.value)
+        {
+            if (!impl_->entities.contains(child))
+                throw std::logic_error("world hierarchy contains a stale child");
+            result.push_back(Entity{child});
+        }
+    std::sort(result.begin(), result.end(),
+              [](Entity a, Entity b) { return a.value < b.value; });
+    return result;
+}
+void World::SetParent(Entity child, Entity parent)
+{
+    auto &p = *impl_;
+    p.Get(child);
+    p.Get(parent);
+    Require(child != parent, "entity cannot parent itself");
+
+    if (const auto current = Parent(child); current == parent)
+        return;
+
+    // Walk the proposed parent's chain before mutation. A repeated node indicates
+    // existing corruption; reaching child would introduce a cycle.
+    std::unordered_set<std::uint64_t> seen;
+    Entity cursor = parent;
+    while (cursor)
+    {
+        Require(seen.insert(cursor.value).second, "world hierarchy is cyclic");
+        Require(cursor != child, "world hierarchy cycle");
+        cursor = Parent(cursor);
+    }
+
+    p.parentByChild[child.value] = parent.value;
+    ++p.topology;
+}
+void World::ClearParent(Entity child)
+{
+    auto &p = *impl_;
+    p.Get(child);
+    if (p.parentByChild.erase(child.value))
+        ++p.topology;
 }
 void World::SetPhysics(Entity e, const PhysicsComponent &c)
 {

@@ -12,6 +12,8 @@ struct WorldLifetime {};
 struct World::Impl {
     entt::registry registry;
     std::unordered_map<std::uint64_t, entt::entity> entities;
+    // child public Entity value -> parent public Entity value. Values are session-unique.
+    std::unordered_map<std::uint64_t, std::uint64_t> parentByChild;
     Entity active;
     std::uint64_t identity, structure=1, topology=1, cameraSelection=1, physicsStructure=1;
     bool physicsAttached=false;
