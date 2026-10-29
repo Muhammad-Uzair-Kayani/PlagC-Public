@@ -44,10 +44,20 @@ void RendererBenchmarkGame::Start(PlagC::Engine &engine, const PlagC::EngineConf
     const unsigned objectCount = ReadCount("PC_RENDER_BENCH_OBJECTS", 2500u, 128u, 8000u);
     const unsigned materialCount = std::min(
         objectCount, ReadCount("PC_RENDER_BENCH_MATERIALS", objectCount, 1u, 8000u));
+    const unsigned benchmarkWidth = ReadCount("PC_RENDER_BENCH_WIDTH", 1280u, 320u, 7680u);
+    const unsigned benchmarkHeight = ReadCount("PC_RENDER_BENCH_HEIGHT", 720u, 240u, 4320u);
 
     previousFpsLocked_ = engine.IsFPSLocked();
     previousSettings_ = renderer.Settings();
     previousEnvironment_ = renderer.Environment();
+    if (auto *window = engine.MainWindow())
+    {
+        previousWidth_ = window->Width();
+        previousHeight_ = window->Height();
+        if (previousWidth_ != static_cast<int>(benchmarkWidth) ||
+            previousHeight_ != static_cast<int>(benchmarkHeight))
+            window->Resize(static_cast<int>(benchmarkWidth), static_cast<int>(benchmarkHeight));
+    }
     started_ = true;
 
     try
@@ -138,7 +148,8 @@ void RendererBenchmarkGame::Start(PlagC::Engine &engine, const PlagC::EngineConf
             std::string("Renderer DriverStress ready: backend=") +
                 PlagC::BackendName(renderer.Backend()) + " objects=" +
                 std::to_string(objectCount) + " uniqueMeshes=" + std::to_string(meshes_.size()) +
-                " materials=" + std::to_string(materials_.size()) +
+                " materials=" + std::to_string(materials_.size()) + " resolution=" +
+                std::to_string(benchmarkWidth) + "x" + std::to_string(benchmarkHeight) +
                 " | fixed camera, FPS unlocked, VSync/shadows/HDR/bloom/environment disabled. "
                 "Live FPS overlay enabled unless PC_FPS_OVERLAY=0. Compare Renderer submit + "
                 "Ogre renderOneFrame at equal RENDER STATS.");
@@ -194,6 +205,11 @@ void RendererBenchmarkGame::Stop(PlagC::Engine &engine)
     renderer.SetSettings(previousSettings_);
     renderer.SetVSync(previousSettings_.vsync);
     engine.SetFPSLocked(previousFpsLocked_);
+    if (auto *window = engine.MainWindow())
+        if (previousWidth_ > 0 && previousHeight_ > 0 &&
+            (window->Width() != previousWidth_ || window->Height() != previousHeight_))
+            window->Resize(previousWidth_, previousHeight_);
+    previousWidth_ = previousHeight_ = 0;
     started_ = false;
 }
 } // namespace PlagCGame
