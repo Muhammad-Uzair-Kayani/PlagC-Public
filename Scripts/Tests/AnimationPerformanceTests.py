@@ -12,9 +12,13 @@ scene = (ROOT / 'PlagC/src/Assets/AssetScene.cpp').read_text()
 
 assert 'std::span<const Vertex> DeformVertices(unsigned mesh) const;' in header
 assert 'std::vector<Matrix4> skinMatrices;' in animator
+assert 'std::vector<NormalMatrix3> skinNormalMatrices;' in animator
 assert 'std::vector<std::vector<Vertex>> deformedVertices;' in animator
 assert 'std::span<const Vertex> Animator::DeformVertices(unsigned mesh) const' in animator
 assert 'std::vector<Matrix4> skin(p.pose.size())' not in animator
+assert 'TransformNormal(m, original.normal)' not in animator
+assert 'BuildNormalMatrix(p.skinMatrices[i])' in animator
+assert 'ApplyNormalMatrix(p.skinNormalMatrices[joint], original.normal)' in animator
 assert 'auto data=instance.animator->Deform(i)' not in scene
 assert 'auto vertices=instance.animator->DeformVertices(i)' in scene
 assert 'UpdateMesh(instance.deformed[i],vertices)' in scene
