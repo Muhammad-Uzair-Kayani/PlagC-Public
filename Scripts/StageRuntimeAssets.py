@@ -61,12 +61,7 @@ def sync_tree(source: Path, destination: Path) -> None:
 
 
 def sync_optional_tree(source: Path, destination: Path) -> bool:
-    """Synchronize a local-only runtime tree when present.
-
-    Missing optional sources are not an error because Default game builds do not
-    require external GameAssets. If present, the tree is staged beside Sandbox.exe
-    so game mounts resolve consistently from Visual Studio's output working directory.
-    """
+    """Synchronize a local-only runtime tree when present."""
     if not source.is_dir():
         return False
     sync_tree(source, destination)
@@ -94,8 +89,7 @@ def main() -> int:
     ):
         raise ValueError("Output must not overlap repository asset sources")
 
-    # Preserve the paths used by RendererConfig and AssetManager so Sandbox can
-    # run with its working directory set to the configuration output folder.
+    # Preserve the paths used by RendererConfig and the default AssetManager root.
     verify(root, args.profile, args.asset)
     for directory in ["Cooked", "Textures", "Shaders", "Compositors", "Manifests"]:
         sync_tree(root / "Assets" / directory, output / "Assets" / directory)
@@ -111,24 +105,15 @@ def main() -> int:
         licenses.mkdir(parents=True, exist_ok=True)
         shutil.copy2(compiler_license, licenses / "glslang-LICENSE.txt")
 
-    # Game definitions are tracked source and must always be staged because the
-    # runtime host loads world manifests relative to the executable working directory.
-    sync_tree(
-        root / "Game" / "SurvivalGame" / "Config",
-        output / "Game" / "SurvivalGame" / "Config",
-    )
-
-    # GameAssets is intentionally gitignored. Developers may place cooked game
-    # content here; when present it is staged beside the binary without ever being
-    # added to the repository.
+    # GameAssets is intentionally gitignored. The Default game's development
+    # worlds mount this staged tree as Game://. A missing tree remains valid for
+    # the stock DefaultScene; BlackDragonLab reports a clear load error when its
+    # package has not been extracted at the repository root.
     sync_optional_tree(
-        root / "GameAssets" / "SurvivalGame" / "Runtime",
-        output / "GameAssets" / "SurvivalGame" / "Runtime",
+        root / "GameAssets" / "Default" / "Runtime",
+        output / "GameAssets" / "Default" / "Runtime",
     )
 
-    # Visual Studio's custom-build rule declares this file as its output. Create
-    # it only after staging and verification succeed, so MSBuild never reports a
-    # successful command with a missing declared output.
     if args.sentinel is not None:
         sentinel = args.sentinel.resolve()
         sentinel.parent.mkdir(parents=True, exist_ok=True)
