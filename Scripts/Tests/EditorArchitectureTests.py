@@ -90,6 +90,18 @@ class EditorArchitectureTests(unittest.TestCase):
         self.assertIn("document.PersistentID(entity)", source)
         self.assertIn("document.Scene().Alive(entity)", source)
 
+    def test_physics_picker_is_a_collider_backed_fallback(self):
+        math_header = self.read("PlagC/include/PlagC/Editor/PickingMath.h")
+        math_source = self.read("PlagC/src/Editor/PickingMath.cpp")
+        header = self.read("PlagC/include/PlagC/Editor/PhysicsPicking.h")
+        source = self.read("PlagC/src/Editor/PhysicsPicking.cpp")
+        self.assertIn("PickRay BuildPickRay", math_header)
+        self.assertIn("class PhysicsPickingProvider final : public PickingProvider", header)
+        self.assertIn("physics_.Raycast", source)
+        self.assertIn("physics_.EntityFor", source)
+        self.assertIn("document_.PersistentID", source)
+        self.assertIn("camera.farClip - camera.nearClip", math_source)
+
     def test_viewport_contract_is_renderer_backend_neutral(self):
         header = self.read("PlagC/include/PlagC/Editor/ViewportTarget.h")
         source = self.read("PlagC/src/Editor/ViewportTarget.cpp")

@@ -31,12 +31,14 @@ link_sources = [
     'PlagC/src/Editor/SceneDocument.cpp',
     'PlagC/src/Editor/SceneSerialization.cpp',
     'PlagC/src/Editor/EditorModels.cpp',
+    'PlagC/src/Editor/PickingMath.cpp',
     'PlagC/src/Editor/PlaySession.cpp',
     'PlagC/src/Editor/EditorSession.cpp',
 ]
 compile_only = [
     'PlagC/src/Editor/ViewportTarget.cpp',
     'PlagC/src/Editor/ScenePicking.cpp',
+    'PlagC/src/Editor/PhysicsPicking.cpp',
     'Scripts/Tests/EditorBridgeCompile.cpp',
 ]
 tests = [
@@ -44,6 +46,7 @@ tests = [
     'EditorDocumentTests',
     'EditorSerializationTests',
     'EditorModelTests',
+    'EditorPickingMathTests',
     'EditorPlaySessionTests',
     'EditorSessionTests',
     'WorldHierarchyTests',
