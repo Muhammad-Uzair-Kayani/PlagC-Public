@@ -39,12 +39,21 @@ void LogEditorError(Engine& engine, const std::exception& error)
 
 void EditorLayer::Initialize(Engine& engine, EditorSession&)
 {
+    seenDocumentGeneration_ = files_.DocumentGeneration();
     engine.Logger().Write(Severity::Info, "EDITOR", "Docked editor workspace initialized.");
 }
 
 void EditorLayer::Frame(Engine& engine, EditorSession& session)
 {
     DrawDockHost(engine, session);
+
+    if (seenDocumentGeneration_ != files_.DocumentGeneration())
+    {
+        FinishTransformEdit(engine, false);
+        seenDocumentGeneration_ = files_.DocumentGeneration();
+        inspectorPersistentID_ = 0;
+        inspectorRevision_ = 0;
+    }
 
     DrawViewport(session);
     if (showInspector_)
@@ -99,31 +108,7 @@ void EditorLayer::DrawDockHost(Engine& engine, EditorSession& session)
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("File"))
-        {
-            if (ImGui::MenuItem("New", "Ctrl+N", false, session.EditingEnabled()))
-            {
-                try
-                {
-                    session.NewEmpty();
-                    inspectorPersistentID_ = inspectorRevision_ = 0;
-                }
-                catch (const std::exception& error) { LogEditorError(engine, error); }
-            }
-            ImGui::MenuItem("Open...", "Ctrl+O", false, false);
-            if (ImGui::MenuItem("Save", "Ctrl+S", false,
-                                session.EditingEnabled() && session.HasPath()))
-            {
-                try { session.Save(); }
-                catch (const std::exception& error) { LogEditorError(engine, error); }
-            }
-            ImGui::MenuItem("Save As...", "Ctrl+Shift+S", false, false);
-            ImGui::Separator();
-            if (ImGui::MenuItem("Exit"))
-                if (auto* window = engine.MainWindow())
-                    window->RequestClose();
-            ImGui::EndMenu();
-        }
+        files_.DrawMenu(engine, session);
 
         if (ImGui::BeginMenu("Edit"))
         {
@@ -201,6 +186,7 @@ void EditorLayer::DrawDockHost(Engine& engine, EditorSession& session)
         ImGui::EndMenuBar();
     }
 
+    files_.DrawUnsavedModal(engine, session);
     ImGui::DockSpace(dockspaceID, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
     ImGui::End();
 }

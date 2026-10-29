@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EditorFileController.h"
 #include <PlagC/Editor/EditorModels.h>
 #include <PlagC/Editor/EditorSession.h>
 #include <array>
@@ -33,6 +34,8 @@ private:
     void PreviewInspectorTransform(Engine&, EditorSession&, const AuthoringEntity&);
     void FinishTransformEdit(Engine&, bool commit);
 
+    EditorFileController files_;
+    std::uint64_t seenDocumentGeneration_ = 1;
     ViewportState viewport_{};
     bool showHierarchy_ = true;
     bool showInspector_ = true;
