@@ -43,3 +43,8 @@
     path = Vendor/glslang
     url = https://github.com/KhronosGroup/glslang.git
     shallow = true
+
+[submodule "Vendor/imgui"]
+    path = Vendor/imgui
+    url = https://github.com/ocornut/imgui.git
+    shallow = true
