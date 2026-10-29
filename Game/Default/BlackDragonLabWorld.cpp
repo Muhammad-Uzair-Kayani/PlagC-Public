@@ -2,6 +2,7 @@
 #include "BlackDragonLabWorld.h"
 #include <PlagC/Assets/AssetManager.h>
 #include <PlagC/Input/Input.h>
+#include <PlagC/LatencyProfiler.h>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -76,10 +77,10 @@ PlagC::AnimationStateMachine BuildLocomotionGraph()
 
     constexpr float stop = 0.15f;
     constexpr float sprint = 4.0f;
-    constexpr float fade = 0.18f;
+    // State selection reacts to raw input intent. Crossfade only hides pose pops;
+    // it must never become a noticeable control delay.
+    constexpr float fade = 0.07f;
 
-    // Stand locomotion. Crouch transitions are listed first so posture changes
-    // win over speed changes in the same frame.
     graph.transitions.push_back(T{0, 3, fade, {crouchOn}});
     graph.transitions.push_back(T{0, 2, fade, {crouchOff, speedGreater(sprint)}});
     graph.transitions.push_back(T{0, 1, fade, {crouchOff, speedGreater(stop)}});
@@ -127,7 +128,7 @@ void BlackDragonLabWorld::Start(PlagC::Engine &engine)
 
     character_ = world_->Create("BlackDragon");
     position_ = {0.0f, 0.0f, 0.0f};
-    characterYaw_ = 0.0f; // BlackDragon's authored face direction is +Z.
+    characterYaw_ = 0.0f;
     world_->SetTransform(character_, {position_, {0.0f, characterYaw_, 0.0f}, {1.0f, 1.0f, 1.0f}});
     world_->SetModel(character_, {characterAsset_, true});
 
@@ -135,7 +136,6 @@ void BlackDragonLabWorld::Start(PlagC::Engine &engine)
     animator.controller.emplace(BuildLocomotionGraph(), unsigned(characterAsset_->animations.size()));
     world_->SetAnimator(character_, animator);
 
-    // Neutral visual floor only. No PhysicsComponent is attached in this phase.
     groundMesh_ = engine.Graphics().CreateMesh(PlagC::MakePrimitive(PlagC::Primitive::Plane));
     PlagC::MaterialDesc groundMaterial;
     groundMaterial.colour = {0.11f, 0.12f, 0.14f};
@@ -221,10 +221,10 @@ void BlackDragonLabWorld::Start(PlagC::Engine &engine)
 
     engine.Logger().Write(
         PlagC::Severity::Info, "GAME",
-        "BlackDragonLab ready | WASD move | Shift sprint | C/Ctrl crouch | RMB aim | LMB fire animation | mouse look | Esc cursor");
+        "BlackDragonLab ready | low-latency owner-thread input | WASD move | Shift sprint | C/Ctrl crouch | RMB aim | LMB fire | mouse look | Esc cursor");
     engine.Logger().Write(
         PlagC::Severity::Info, "ANIMATION",
-        "BlackDragon: 1.70m authored scale, A-pose bind/rest; 43 UAL clips baked with limb-direction-corrected retarget from A_TPose; root translation disabled, pelvis translation axis-corrected");
+        "Locomotion state selection uses raw input intent with 70ms pose crossfades; no speed filter delays key release");
 }
 
 void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
@@ -238,8 +238,6 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
     if (cursorCaptured_)
     {
         const auto mouse = PlagC::Input::GetMouseDelta();
-        // Input reports screen-space delta. The lab's +Z forward orbit needs the
-        // horizontal sign inverted so dragging left rotates left and vice versa.
         cameraYaw_ = WrapDegrees(cameraYaw_ - float(mouse.x) * 0.12f);
         cameraPitch_ = std::clamp(cameraPitch_ - float(mouse.y) * 0.10f, -25.0f, 55.0f);
     }
@@ -254,8 +252,6 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
 
     const float yaw = cameraYaw_ * Rad;
     const PlagC::Vec3 cameraForward{std::sin(yaw), 0.0f, std::cos(yaw)};
-    // With the camera looking along +Z at yaw zero, Ogre's screen-right basis is -X.
-    // Using +X here mirrored A/D and also mirrored the aim shoulder offset.
     const PlagC::Vec3 cameraRight{-std::cos(yaw), 0.0f, std::sin(yaw)};
 
     const float inputX = float(rightPressed) - float(leftPressed);
@@ -274,25 +270,24 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
                            (PlagC::Input::IsKeyPressed(PlagC::KeyCode::LeftShift) ||
                             PlagC::Input::IsKeyPressed(PlagC::KeyCode::RightShift));
     const float targetSpeed = !moving ? 0.0f : (crouching ? 1.35f : (sprinting ? 5.2f : 2.6f));
-    const float response = targetSpeed > locomotionSpeed_ ? 12.0f : 16.0f;
-    locomotionSpeed_ = Approach(locomotionSpeed_, targetSpeed, response * float(dt));
+    // Movement and animation state are both driven by current input. Crossfade handles
+    // visual continuity; an additional speed low-pass here only creates control latency.
+    locomotionSpeed_ = targetSpeed;
+    PlagC::LatencyProfiler::OnMovementIntent({moveX * targetSpeed, 0.0f, moveZ * targetSpeed});
 
-    // Phase 1 deliberately has no physics. Entity translation is authoritative so
-    // animation, scale and transform correctness can be isolated before collision.
-    // While aiming the body keeps camera yaw, but the translation stays camera-relative:
-    // W/S move forward/back and A/D strafe instead of collapsing to character-forward.
     if (moving)
     {
         position_.x += moveX * targetSpeed * float(dt);
         position_.z += moveZ * targetSpeed * float(dt);
     }
 
-    float desiredYaw = characterYaw_;
     if (aiming)
-        desiredYaw = cameraYaw_;
+        characterYaw_ = cameraYaw_;
     else if (moving)
-        desiredYaw = std::atan2(moveX, moveZ) / Rad;
-    characterYaw_ = ApproachAngle(characterYaw_, desiredYaw, 720.0f * float(dt));
+    {
+        const float desiredYaw = std::atan2(moveX, moveZ) / Rad;
+        characterYaw_ = ApproachAngle(characterYaw_, desiredYaw, 1440.0f * float(dt));
+    }
     world_->SetTransform(character_,
                          {position_, {0.0f, characterYaw_, 0.0f}, {1.0f, 1.0f, 1.0f}});
 
@@ -300,7 +295,7 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
     auto animator = record.animator.value();
     if (!animator.controller)
         throw std::logic_error("BlackDragonLab animator controller missing");
-    animator.controller->SetFloat("Speed", locomotionSpeed_);
+    animator.controller->SetFloat("Speed", targetSpeed);
     animator.controller->SetBool("Crouch", crouching);
 
     const bool fireDown = PlagC::Input::IsMouseButtonPressed(PlagC::MouseCode::Left);
@@ -330,7 +325,7 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
         upperBodyTime_ = 0.0;
 
     const float upperTarget = (aiming || firing_) ? 1.0f : 0.0f;
-    aimWeight_ = Approach(aimWeight_, upperTarget, float(dt) / 0.12f);
+    aimWeight_ = Approach(aimWeight_, upperTarget, float(dt) / 0.06f);
     if (aimWeight_ > 0.001f)
     {
         PlagC::AnimationUpperBody upper;
@@ -339,7 +334,7 @@ void BlackDragonLabWorld::Frame(PlagC::Engine &engine, double dt)
         upper.pose.clip = firing_ ? ClipPistolShoot : ClipPistolAim;
         upper.pose.time = upperBodyTime_;
         upper.pose.speed = 1.0f;
-        upper.pose.playing = false; // The lab supplies the upper-body clock explicitly.
+        upper.pose.playing = false;
         upper.pose.loop = !firing_;
         if (firing_)
         {
