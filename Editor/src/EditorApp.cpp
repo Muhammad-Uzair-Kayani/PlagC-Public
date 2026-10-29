@@ -4,6 +4,8 @@
 #include "ImGuiRendererBridge.h"
 #include <PlagC/Application.h>
 #include <PlagC/Editor/EditorSession.h>
+#include <PlagC/Editor/ViewportTarget.h>
+#include <PlagC/World/SceneRenderer.h>
 #include <imgui.h>
 
 namespace
@@ -20,6 +22,10 @@ public:
         session_ = std::make_unique<PlagC::Editor::EditorSession>(
             std::make_unique<PlagC::Editor::SceneDocument>(
                 std::make_unique<PlagC::World>()));
+        sceneRenderer_ = std::make_unique<PlagC::SceneRenderer>(engine.Graphics());
+        viewportTarget_ = std::make_unique<PlagC::Editor::ViewportTarget>(engine.Graphics());
+        if (auto *window = engine.MainWindow(); window && window->Width() && window->Height())
+            viewportTarget_->Resize(window->Width(), window->Height());
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -37,8 +43,15 @@ public:
 
     void OnFrame(PlagC::Engine &engine, double dt) override
     {
-        if (!ImGui::GetCurrentContext() || !session_)
+        if (!ImGui::GetCurrentContext() || !session_ || !sceneRenderer_ || !viewportTarget_)
             return;
+
+        sceneRenderer_->Sync(session_->ViewWorld());
+        engine.timings.sceneSyncMs = sceneRenderer_->Statistics().totalMs;
+
+        const PlagC::Editor::ViewportState &viewport = layer_.Viewport();
+        if (viewport.width > 1 && viewport.height > 1)
+            viewportTarget_->Resize(viewport.width, viewport.height);
 
         ImGuiIO &io = ImGui::GetIO();
         if (auto *window = engine.MainWindow())
@@ -56,6 +69,10 @@ public:
     {
         layer_.Shutdown();
         renderer_.Shutdown(engine.Graphics());
+        if (sceneRenderer_)
+            sceneRenderer_->Clear();
+        viewportTarget_.reset();
+        sceneRenderer_.reset();
         input_.Shutdown();
         session_.reset();
         if (ImGui::GetCurrentContext())
@@ -67,6 +84,8 @@ public:
 
 private:
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
+    std::unique_ptr<PlagC::SceneRenderer> sceneRenderer_;
+    std::unique_ptr<PlagC::Editor::ViewportTarget> viewportTarget_;
     PlagC::Editor::ImGuiInputBridge input_;
     PlagC::Editor::ImGuiRendererBridge renderer_;
     PlagC::Editor::EditorLayer layer_;
