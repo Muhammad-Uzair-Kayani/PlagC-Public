@@ -66,7 +66,7 @@ template <class ImplT> bool SubtreeHasPhysics(const ImplT &p, Entity root)
 {
     const auto subtree = DescendantClosure(p, {root.value});
     for (const auto id : subtree)
-        if (p.registry.all_of<PhysicsComponent>(p.entities.at(id)))
+        if (p.registry.template all_of<PhysicsComponent>(p.entities.at(id)))
             return true;
     return false;
 }
