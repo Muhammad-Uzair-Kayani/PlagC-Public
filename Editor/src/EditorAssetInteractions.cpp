@@ -16,13 +16,24 @@ constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL";
 std::string CookedAssetKey(std::string path)
 {
     std::replace(path.begin(), path.end(), '\\', '/');
-    const std::string marker = "Assets/Cooked/";
-    if (path.starts_with(marker))
-        return path.substr(marker.size());
-    const auto found = path.find("/" + marker);
+
+    constexpr std::string_view mountedPrefix = "Assets://Cooked/";
+    constexpr std::string_view filesystemPrefix = "Assets/Cooked/";
+    constexpr std::string_view cookedPrefix = "Cooked/";
+
+    if (path.starts_with(mountedPrefix))
+        return path.substr(mountedPrefix.size());
+    if (path.starts_with(filesystemPrefix))
+        return path.substr(filesystemPrefix.size());
+    if (path.starts_with(cookedPrefix))
+        return path.substr(cookedPrefix.size());
+
+    const auto found = path.find("/Assets/Cooked/");
     if (found != std::string::npos)
-        return path.substr(found + marker.size() + 1u);
-    throw std::invalid_argument("Only files under Assets/Cooked can be assigned as runtime models");
+        return path.substr(found + std::string_view("/Assets/Cooked/").size());
+
+    throw std::invalid_argument(
+        "Only cooked assets under Assets://Cooked (Assets/Cooked on disk) can be assigned as runtime models");
 }
 
 AssetHandle<ModelAsset> LoadModel(Engine& engine, const char* payloadPath)
