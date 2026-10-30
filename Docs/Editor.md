@@ -1,506 +1,304 @@
-# PlagC Editor architecture and implementation plan
-
-## Current integration checkpoint
-
-The standalone Editor now includes docking, hierarchy/transform authoring, scene
-file dialogs, console/content/statistics panels, backend-neutral ImGui submission,
-and Ogre viewport target presentation. Older roadmap sections below describe the
-original backend handoff; their executable/UI items are no longer all outstanding.
-
-Authoring controls:
-
-- Hold right mouse over the focused viewport: look around.
-- While holding right mouse: WASD moves, Q/E moves down/up, Shift increases speed.
-- Ctrl+N/Open with Ctrl+O; Ctrl+S saves; Ctrl+Shift+S opens Save As.
-- Ctrl+Z undoes; Ctrl+Y or Ctrl+Shift+Z redoes.
-- Ctrl+D duplicates the selection; Delete removes it through command history.
-
-Navigation uses a separate editor camera and never changes saved scene cameras.
-Shortcuts are disabled during text entry and modal dialogs; authoring commands and
-editor-camera control are disabled during Play. Focus loss clears modifier tracking.
-
-Validation for this checkpoint: 14 architecture checks and all 11 portable backend
-executables pass. Changed UI translation units pass GCC C++20 syntax compilation
-against pinned ImGui. A real ImGui/EventBus regression covers Ctrl released outside
-the editor window; run it with a GCC/Clang-compatible CXX:
-
-```sh
-python3 Scripts/Tests/EditorInputTests.py
-```
-
-These checks do not establish Windows runtime or Vulkan rendering acceptance.
-Still verify actual viewport rendering, resizing, camera navigation, dialog/input
-routing, and shortcuts in the native Editor on both graphics backends. Remaining
-integration includes viewport picking/gizmos, runtime simulation transport wiring,
-OS-close unsaved prompts, and richer component/material/animation authoring.
-
-
-The Editor is a PlagC client. It does not own engine rendering, gameplay policy,
-physics, asset lifetime, job scheduling or ECS storage. The recovered ImGui
-wireframe defines the intended experience: a central scene viewport, Scene
-Hierarchy on the left, Inspector on the right, Content Browser / Console /
-Statistics tooling below, renderer controls, and Play/Pause/Stop/Step transport.
-The UI can evolve without changing the backend contracts in this document.
-
-The Editor backend must remain renderer-backend neutral so the same authoring
-workflow can run over Ogre OpenGL and Ogre Vulkan. Dear ImGui is a presentation
-integration dependency, not an engine-core dependency.
-
-## Ownership boundaries
-
-### Engine
-
-The engine owns reusable runtime services:
-
-- `World` / EnTT entity storage, validation and relationship metadata.
-- renderer resources, render targets, settings and statistics.
-- `AssetManager`, asset mounts, immutable handles and async CPU loading.
-- `JobSystem`.
-- `Log` and its bounded multi-producer record buffer.
-- `Profiler` / GPU / renderer statistics.
-- input, window and event delivery.
-- physics, animation and audio runtime systems.
-
-Engine hot paths do not depend on Dear ImGui. Editor panels must not retain or
-expose Ogre, OpenGL, Vulkan, Jolt or EnTT implementation objects.
-
-### Editor backend
-
-`PlagC::Editor` translates engine state into stable authoring operations and
-copied/read-only presentation data:
-
-- `EditorSession` owns scene-file lifecycle and Play transport policy.
-- `SceneDocument` owns the authoring `World`.
-- `CommandHistory` owns bounded undo/redo history.
-- persistent scene-local entity IDs survive runtime-handle replacement.
-- `AuthoringEntity` snapshots feed Hierarchy and Inspector panels.
-- transform transactions make one continuous drag one undo entry.
-- hierarchy operations are persistent-ID based and undoable.
-- `MainThreadMailbox` is the low-frequency worker-to-owner-thread commit gateway.
-- `GenerationGate` rejects stale async results.
-- `AssetBrowserModel` publishes generation-checked asset snapshots.
-- console filtering consumes real `LogRecord` snapshots.
-- telemetry consumes real profiler, renderer, asset and job statistics.
-- `ViewportState` contains editor camera/input/gizmo presentation state.
-- `ViewportTarget` owns only engine render-target lifecycle.
-- `PickingProvider` is the backend-neutral selection contract.
-- `PlaySession` owns the isolated runtime copy used by transport controls.
-
-### Editor UI / integration
-
-The separate Editor executable and Dear ImGui/Ogre integration own:
-
-- dockspace, menus, toolbar, icons, fonts and styling.
-- Hierarchy, Inspector, Console, Content Browser and Statistics drawing.
-- keyboard shortcuts and focus/modal routing.
-- file-dialog and unsaved-change modal presentation.
-- presenting an engine render target inside ImGui.
-- OpenGL/Vulkan-compatible ImGui renderer integration.
-- concrete renderer picking implementation.
-- gizmo rendering/manipulation.
-- material, animation and profiler panel presentation.
-
-The UI calls backend contracts; it does not duplicate scene lifecycle, undo,
-runtime-isolation or ECS policy.
-
-## Threading model
-
-PlagC remains a multithreaded engine. Editor authoring uses owner-thread mutation
-rather than adding locks around the ECS.
-
-| Operation | Threading rule |
-| --- | --- |
-| `World` structural/component/relationship mutation | main/owner thread only |
-| `SceneDocument` selection/history/mutation | main/owner thread only |
-| `EditorSession` lifecycle/transport operations | main/owner thread only |
-| Dear ImGui | main thread only |
-| renderer resource/target operations | renderer owner/main thread |
-| filesystem discovery | worker allowed |
-| import/cook preparation | worker allowed |
-| thumbnail CPU preparation | worker allowed |
-| log production | any engine thread |
-| profiler production | existing engine rules |
-| UI consumption | copied/snapshotted data on main thread |
-
-Workers produce owned results. They do not retain ECS references or mutate
-`SceneDocument`. A worker may post a small result through `MainThreadMailbox`.
-Long-running editor work receives a `GenerationGate` epoch; completion from an
-older request is discarded instead of replacing newer UI state.
+# PlagC Editor — architecture, usable-authoring roadmap, and execution log
 
-This keeps editor synchronization out of the simulation/render hot path.
+## Purpose
 
-## Authoring document
+This document is the source of truth for PlagC Editor work on `prototype`.
+Every editor milestone is designed, implemented, tested, pushed, and then recorded here before work moves to the next milestone.
 
-`SceneDocument` owns the authoring world. Public scene reads return engine copies
-or `AuthoringEntity` snapshots; panels do not retain EnTT references.
+The next product target is deliberately concrete:
 
-Implemented authoring operations include:
+> Build a small illuminated 3D scene entirely inside PlagC Editor, save it, reopen it, press Play, and test it without leaving the editor.
 
-- select by runtime or persistent ID.
-- create entity.
-- delete entity.
-- duplicate entity.
-- rename.
-- set transform.
-- reparent / clear parent.
-- add/edit/remove camera.
-- add/edit/remove light.
-- add/edit/remove model and model visibility.
-- set/clear active camera.
-
-Commands identify targets by persistent ID rather than a runtime `Entity` handle.
-This is required because undoing deletion recreates an entity with a new session
-handle; older commands must still resolve the recreated entity correctly.
-
-Persistent IDs use a document high-water mark and are not intentionally reused
-after deletion or undo-history branching within the document session.
+A milestone is not complete because a backend API exists. It is complete when the authoring workflow exposed to the user is usable and regression-protected.
 
-## Scene graph / hierarchy
-
-`World` now owns first-class parent/child relationship metadata:
+## Execution rules
 
-- `Parent(Entity)`.
-- `Children(Entity)`.
-- `SetParent(child, parent)`.
-- `ClearParent(child)`.
-
-Relationships are main-thread owned, cycle-safe and validated against stale or
-foreign entities. `Children()` returns a deterministic ordering. Relationship
-changes invalidate topology-dependent bindings conservatively.
-
-Deleting a parent is non-recursive in this phase: its direct children are promoted
-to roots. This avoids hidden cascading destruction and gives authoring commands a
-well-defined restoration path.
-
-`SceneDocument` exposes each entity's `parentPersistentID` and command-backed
-reparenting. Reparent commands store persistent IDs, not transient runtime handles.
-Consequently hierarchy survives:
+1. `prototype` is the source of truth. Do not restart completed work on parallel `fix/*` branches.
+2. Work on one numbered milestone at a time unless a prerequisite is strictly required by that milestone.
+3. Before implementation, write/confirm the design and acceptance criteria.
+4. Implement against existing engine/editor contracts instead of duplicating systems in the UI.
+5. Add focused regression coverage for every milestone.
+6. Run source regressions, project generation, and the Windows Editor build gate where applicable.
+7. Push the milestone to `prototype`.
+8. Update this document in the same milestone commit with status, tests, files, and commit evidence.
+9. Stop after each milestone and wait for approval before starting the next one.
 
-- delete -> undo with runtime handle recreation.
-- redo -> undo sequences.
-- duplicate.
-- save/load.
-- authoring -> Play runtime cloning.
-
-Delete/undo restores both the deleted entity's parent and its direct children.
-Duplicate currently duplicates one entity as a sibling under the same parent; it
-does not recursively duplicate a subtree.
+## Status legend
 
-### Transform contract
-
-Parenting is relationship metadata only in the current phase. `Transform` remains
-world-space everywhere in the engine. Reparenting therefore does **not** implicitly
-move an entity or propagate parent transforms into children.
-
-This is deliberate because the renderer, camera, light, physics and
-`TransformSystem` currently interpret `Transform` as world-space. Local transforms,
-world-transform propagation and preserve-world reparenting require an explicit
-engine transform-graph phase rather than an editor-only shortcut.
-
-Future scene-graph work:
-
-- authored local transform plus resolved world transform.
-- deterministic parent-before-child transform evaluation.
-- dirty-subtree propagation.
-- preserve-world reparenting for drag/drop hierarchy edits.
-- optional sibling ordering for manual tree reordering.
-- multi-selection reparenting rules.
-
-## Undo/redo and continuous edits
-
-`CommandHistory` is bounded (default 256), branch-aware and saved-state aware.
-Failed Apply/Revert operations leave the history cursor unchanged. Command
-callbacks cannot recursively mutate history.
-
-A continuous Inspector or gizmo transform edit is a transaction:
-
-1. `BeginTransformEdit` captures the starting transform.
-2. `Preview` may update the authoring world repeatedly for interactive feedback.
-3. `Commit` records exactly one command using the initial and final values.
-4. `Cancel` restores the initial transform and records nothing.
-
-While a transform transaction is active, other document/history mutations are
-rejected. The UI should disable New/Open/Save/Play until the gesture is committed
-or cancelled.
-
-Dynamic physics transforms remain physics-owned and cannot enter an editor
-transform transaction.
-
-## Scene persistence v2
-
-The current writer emits versioned `PlagC.Scene` **v2**.
+- `DONE` — implemented, regression-protected, pushed.
+- `IN PROGRESS` — current milestone only.
+- `FOUNDATION` — meaningful backend support already exists, but the milestone's usable authoring experience is incomplete.
+- `NOT STARTED` — milestone has not entered implementation.
+- `BLOCKED` — requires an external prerequisite and must state it explicitly.
 
-Version 2 serializes:
-
-- persistent IDs.
-- parent persistent ID or `null`.
-- names.
-- world-space transforms.
-- cameras.
-- lights.
-- active-camera selection.
-- model references and visibility.
-
-The loader remains backward compatible with scene v1. V1 files contain no parent
-field and load all entities as roots. V2 relationship validation occurs before
-asset resolution and rejects:
-
-- missing parent IDs.
-- self-parenting.
-- hierarchy cycles.
+## Architecture contract
 
-Model references remain `AssetManager`-relative/mounted paths rather than GPU or
-renderer handles. This is not yet an asset-GUID database, so asset renames still
-require reference repair.
+### Engine ownership
 
-`Deserialize` / `Load` construct and validate a replacement document before the
-caller replaces the current scene. Model resolution may call
-`AssetManager::Load<ModelAsset>`. Missing or mismatched model assets fail rather
-than silently disappearing.
+The engine owns runtime truth: `World`/EnTT storage, renderer resources and targets, `AssetManager`, `JobSystem`, logging/profiling, input/window/events, physics, animation and audio. Engine hot paths do not depend on Dear ImGui.
 
-Save stages beside the destination and then replaces the destination. The dirty
-flag clears only after successful replacement. Files remain limited to 64 MiB and
-100,000 entities. Unsupported versions, duplicate fields/IDs, unsafe paths,
-invalid transforms, malformed UTF-8, invalid hierarchy and dangling active
-cameras are rejected.
+### Editor backend ownership
 
-Raw renderable, physics and animator components are still intentionally unsupported
-by persisted scenes. They are never silently dropped.
+`PlagC::Editor` owns stable authoring operations and copied presentation data: `EditorSession`, `SceneDocument`, `CommandHistory`, persistent entity IDs, hierarchy operations, transform transactions, asset-browser models, console filtering, telemetry, viewport state, picking contracts, and isolated `PlaySession` runtime copies.
 
-## Editor session lifecycle
+### Editor frontend ownership
 
-`EditorSession` is the UI-facing controller for scene lifecycle. Panels and menu
-callbacks must not independently replace the active `SceneDocument`, track the
-current path, or decide whether authoring is writable during Play.
+The Editor executable owns docking, menus, toolbars, hierarchy/inspector/content/console/statistics presentation, shortcuts, dialogs, viewport presentation, gizmos, renderer picking integration, material/animation authoring UI, icons/fonts/theme and editor-only visualization.
 
-It owns:
+### Non-negotiable invariants
 
-- the current authoring `SceneDocument`.
-- current scene path / untitled state.
-- New/Open/Save/Save As policy.
-- dirty-scene replacement checks.
-- the `PlaySession` transport state.
-- selection of the document currently shown by viewport/hierarchy panels.
+- Authoring `World` mutation remains owner/main-thread only.
+- Runtime Play never simulates the authoring world directly.
+- Persistent scene IDs, not transient EnTT handles, cross editor subsystem boundaries.
+- Ogre/OpenGL/Vulkan/Jolt/EnTT implementation objects do not leak into editor-facing contracts.
+- The same authoring workflow must work over Ogre OpenGL and Ogre Vulkan.
+- Continuous transform gestures produce one undo record.
+- Worker-produced editor data uses owned results and generation rejection; workers do not mutate `SceneDocument`.
 
-### File commands
+## Current baseline already present
 
-| UI command | Backend action |
-| --- | --- |
-| New Scene | `EditorSession::NewScene(...)` |
-| Open Scene | `EditorSession::Open(...)` |
-| Save | `EditorSession::Save()` |
-| Save As | `EditorSession::SaveAs(...)` |
-| Undo/Redo | authoring document history while stopped |
+The repository already contains substantial foundations that the milestones below build on:
 
-New/Open are replacement operations. If the authoring document is dirty, the UI
-presents its modal and then passes the resulting replacement policy to the
-session. Cancellation leaves document, path, selection and history untouched.
+- docked standalone Editor executable and backend-neutral ImGui submission;
+- hierarchy snapshots and persistent-ID selection;
+- create/delete/duplicate/rename and reparent authoring commands;
+- scene save/open/save-as and unsaved-change handling;
+- bounded undo/redo and transform transactions;
+- camera/light/model/physics/animator authoring APIs;
+- cooked model drag/drop into the viewport;
+- transform gizmos and editor RMB/WASD/QE navigation;
+- renderer-backed viewport picking for normal renderables and `ModelComponent` instances (`5c35f66`);
+- isolated Play/Pause/Stop/Step runtime world with physics and animation;
+- Play mode runtime active camera with editor-camera fallback (`3262faf`);
+- Content Browser filesystem/registry model;
+- Console filtering and engine telemetry;
+- persistent renderer preferences and restart flow;
+- standalone ImGui font texture path and UI-rendering regressions;
+- MSVC/OpenGL Editor validation workflow with hosted-runner WGL limitation handled explicitly.
 
-Open is transactional: the candidate scene must fully deserialize and resolve its
-references before replacing the current document. A failed Open does not partially
-mutate the active scene.
+These foundations do **not** mark the product milestones below complete by themselves.
 
-Save writes to the current path and is unavailable for an untitled scene until a
-path is supplied. Save As updates the session path only after successful save.
-File-dialog rendering remains UI work; path/lifecycle state remains backend work.
+# Usable Editor Roadmap — 43 Milestones
 
-### Transport commands
+## 1. Viewport / Scene View — `NEXT`
 
-| UI command | Backend action |
-| --- | --- |
-| Play | `EditorSession::Play()` |
-| Pause/Resume | `EditorSession::TogglePause()` |
-| Step | `EditorSession::Step()` while paused |
-| Stop | `EditorSession::Stop()` |
+Deliver a scene view suitable for day-to-day authoring rather than a raw render target.
 
-While stopped, `ViewDocument()` is the authoring document and authoring mutation
-is enabled. During Play/Pause, `ViewDocument()` is the runtime document while the
-authoring document remains protected from editor mutation. Runtime hierarchy,
-statistics, picking and diagnostics can still resolve the same persistent IDs.
+Acceptance scope:
 
-New/Open/Save/Save As and authoring Undo/Redo must be disabled while a play
-session owns the viewport. Stop destroys the runtime copy and returns to the
-unchanged authoring document.
+- readable editor preview lighting independent of scene lighting;
+- editor background/environment presentation and exposure control;
+- infinite/adaptive ground grid and world-axis visualization;
+- reliable renderer-backed object picking and empty-space deselection;
+- selection feedback in the scene view;
+- translate/rotate/scale gizmo mode controls;
+- local/world transform-space control;
+- translation/rotation/scale snap controls;
+- perspective/orthographic camera modes;
+- front/back/left/right/top/bottom camera presets;
+- focus-selected (`F`) and frame-all behavior;
+- adjustable editor camera speed;
+- viewport orientation indicator;
+- viewport toolbar;
+- shaded/wireframe controls and grid/gizmo visibility toggles;
+- viewport resize/DPI correctness on OpenGL and Vulkan.
 
-## Runtime isolation / play mode
+Required tests: source architecture regression for viewport state/UI wiring, camera projection/picking regression, Windows Editor build validation, native runtime acceptance on the available backend.
 
-`PlaySession` never simulates the authoring `World`.
+## 2. Scene Hierarchy — `FOUNDATION`
 
-On Play:
+Replace the functional tree/debug presentation with a real hierarchy workflow: search/filter, type icons, expand/collapse, inline rename, context menu, visibility/lock controls, drag reparent/root drop, selection synchronization, stable expansion state and useful empty-scene presentation.
 
-1. finish/cancel transient editor edits.
-2. clone the complete in-memory authoring world into a new `SceneDocument`.
-3. preserve persistent IDs and hierarchy relationships.
-4. clear runtime undo history and authoring selection.
-5. start runtime physics/animation/game systems against the clone.
+## 3. Entity Creation — `FOUNDATION`
 
-Pause stops normal simulation updates. Step grants one paused simulation frame.
-Stop destroys the runtime document. Runtime transforms, destruction, physics and
-gameplay mutations cannot leak back into the authoring scene.
+Provide Create workflows for Empty, Model, Camera, Directional/Point/Spot Light, physics objects and basic primitives. New entities receive sensible required components and model drops create at a meaningful scene position.
 
-The in-memory clone copies currently supported `World` components, including
-components the persistence format cannot yet save. Play is therefore not coupled
-to scene persistence.
+## 4. Inspector — `FOUNDATION`
 
-"Apply runtime changes" is intentionally not automatic. If added later, it must
-be an explicit authoring command.
+Turn the raw component/debug view into component cards with aligned property rows, add/remove/reset actions, validation, tooltips, read-only states and undo/redo-backed editing.
 
-## Content Browser backend
+## 5. Transform Inspector — `FOUNDATION`
 
-`AssetBrowserModel` has two data sources:
+Professional X/Y/Z position/rotation/scale controls, color-coded axes, reset actions, uniform scaling option, local/world awareness, immediate viewport feedback, and one-gesture/one-undo behavior.
 
-1. worker-safe filesystem discovery from configured project roots/mounts.
-2. owner-thread `AssetManager::Registry()` state.
+## 6. Model / Mesh Inspector — `FOUNDATION`
 
-Entries contain path, editor asset kind, optional runtime asset type/state, bytes,
-generation and error text. Registry data can be merged into filesystem results.
-Publication is immutable and generation-checked.
+Model asset field, browse/drop/replace, visibility, shadow controls, mesh/submesh information, material slots, bounds, reload and locate-in-browser actions.
 
-The Content Browser must not recursively scan disk every ImGui frame.
+## 7. Material System + Inspector — `NOT STARTED`
 
-Future work:
+Authorable material assets and Ogre PBS mapping for base color, base-color texture, normal, metallic, roughness, AO, emissive, alpha/cutout, double-sided state, material slots, save/load and immediate viewport preview with correct color-space handling.
 
-- persistent asset GUID database.
-- import settings and reimport metadata.
-- thumbnail cache and generation jobs.
-- asset move/rename reference repair.
-- material and animation asset schemas.
+## 8. Lighting Inspector — `FOUNDATION`
 
-## Console and statistics
+Directional/Point/Spot editing, color, intensity, range, cones, shadows, and viewport light visualization with immediate scene updates.
 
-The Console consumes `Engine::Logger().Snapshot()` rather than hardcoded rows.
-`ConsoleFilter` filters trace/debug/info/warning/error/critical records and search
-text without exposing spdlog.
+## 9. Camera Inspector — `FOUNDATION`
 
-`CaptureEngineEditorSnapshot` supplies the UI with:
+FOV/clip/aspect editing, active-camera controls, frustum visualization, camera preview, align-camera-to-view and align-view-to-camera actions.
 
-- filtered log records.
-- `AssetManager` registry state.
-- latest frame/GPU/renderer statistics.
-- job-system counters.
-- entity count.
+## 10. Physics Inspector — `FOUNDATION`
 
-The Statistics panel reads the same data used by runtime profiling rather than
-maintaining a second profiler.
+Static/Kinematic/Dynamic body authoring, collider type and dimensions, mass/friction/restitution, layers/masks/triggers, validation, and collider debug visualization.
 
-## Viewport and renderer contract
+## 11. Animator Inspector — `FOUNDATION`
 
-`ViewportTarget` wraps `Renderer::CreateTarget`, `ResizeTarget` and
-`DestroyTarget`, and tracks extent/aspect/revision. The authoring model never
-exposes `GLuint`, `VkImage`, `VkImageView` or backend-specific ImGui calls.
+Skeleton/clip/controller assignment, playback controls, loop/speed, state and parameter editing, animation preview and skeleton diagnostics.
 
-Actual target presentation remains an Ogre/ImGui integration responsibility. The
-renderer integration must provide a safe backend-specific presentation bridge for
-both OpenGL and Vulkan without leaking that representation into scene authoring.
+## 12. Animation State Machine Editor — `NOT STARTED`
 
-`ViewportState` owns editor-facing gizmo mode, grid/snap settings, extent and
-focus/capture state. The UI adapter reports whether chrome/modal/gizmo interaction
-blocks scene input; it must not blindly use Dear ImGui's global
-`WantCaptureMouse`, because the viewport itself is an ImGui window.
+Node-based states, entry state, transitions, conditions, parameters, transition duration/blending, state inspector, runtime active-state visualization and controller asset persistence.
 
-## Picking
+## 13. Content Browser — `FOUNDATION`
 
-`PickingProvider` accepts viewport-relative pixel coordinates, viewport extent and
-the active editor camera, and returns a persistent entity ID.
+Replace the registry-table presentation with folders, breadcrumbs, grid/list views, asset cards, search/filter/sort, context menus, drag/drop, double-click behavior, details, source-vs-cooked presentation and sensible filtering of internal files.
 
-Preferred concrete implementation order:
+## 14. Thumbnail / Preview System — `NOT STARTED`
 
-1. renderer object-ID / ID-buffer picking so visible non-physics objects are
-   selectable.
-2. optional physics-ray fallback for collision-only tooling.
+Preview scene/camera/lighting, model/material/texture thumbnails, cache and invalidation, asynchronous generation and non-blocking placeholders.
 
-Selection ultimately enters `SceneDocument::SelectPersistent`, so panels,
-renderer and runtime do not share transient EnTT handles.
+## 15. Asset Import Workflow — `FOUNDATION`
 
-## Small backend modules for the Editor executable
+Import/reimport UI for supported model/texture formats, source-to-cooked relationship, scale/coordinate/normal/tangent/material/animation options and surfaced import errors.
 
-The UI engineer can depend on these narrow pieces rather than engine internals:
+## 16. Scene File Workflow — `FOUNDATION`
 
-- `EditorSession` — New/Open/Save/Save As and transport lifecycle.
-- `SceneDocument` / `CommandHistory` — authoring and undo/redo.
-- `EditorModels` — mailbox, generations, assets, console, telemetry,
-  viewport/input/picking data.
-- `EngineEditorBridge` — snapshots from existing engine services.
-- `ViewportTarget` — backend-neutral target lifecycle.
-- `PlaySession` — isolated runtime clone and pause/step state.
+New/Open/Save/Save As/Recent scenes, dirty indicator, transactional replacement, unsaved prompts, scene-version validation, persistent hierarchy/components/material assignments and useful load/save errors.
 
-No additional third-party dependency is required by these backend modules.
+## 17. Play Toolbar — `FOUNDATION`
 
-The separate UI executable still needs the pinned Dear ImGui docking dependency
-and Ogre-compatible UI rendering integration selected by the engineer. Icons and
-fonts are presentation dependencies, not engine dependencies.
+Professional Play/Pause/Step/Stop transport, clear runtime visual state, shortcuts, authoring lock policy, runtime camera, physics/animation lifecycle and clean return to the unchanged authoring world.
 
-## Implemented backend milestones
+## 18. Runtime / Game Logic — `FOUNDATION`
 
-The backend now provides:
+Define gameplay update/lifecycle hooks, editor-vs-game input routing, physics step callbacks, animation/audio ordering, trigger/collision routing and correct Pause/Step semantics.
 
-- bounded, re-entry-safe undo/redo plus transaction recording.
-- persistent-ID-safe commands across delete/restore.
-- undoable create/delete/duplicate.
-- undoable camera/light/model authoring.
-- one-drag/one-undo transform transactions.
-- first-class cycle-safe world parent/child metadata.
-- deterministic parent/children queries.
-- undoable persistent-ID reparenting.
-- exact hierarchy restoration across delete/undo and Play cloning.
-- duplicate-as-sibling hierarchy behavior.
-- scene v2 hierarchy persistence with v1 loading compatibility.
-- isolated complete in-memory Play-world cloning.
-- Play/Pause/Stop/Step session state.
-- `EditorSession` New/Open/Save/Save As and dirty-replacement policy.
-- read-only runtime document viewing during Play.
-- worker-to-main editor mailbox and stale-result rejection.
-- filesystem/registry asset-browser model.
-- real engine log filtering and telemetry.
-- backend-neutral viewport-target lifecycle.
-- backend-neutral picking contract.
-- architecture and portable backend regression tests.
+## 19. Console — `FOUNDATION`
 
-No recovered wireframe/UI source is modified by these backend milestones.
+Severity styling/icons, compact entries, expandable details, category/search filtering, repeated-message collapsing, copy/context actions and separation of giant profiler dumps from normal logs.
 
-## Remaining implementation
+## 20. Statistics / Profiler — `FOUNDATION`
 
-The remaining work is primarily integration plus deeper editor/runtime tooling:
+Frame/FPS graphs, CPU/GPU/scene/physics/animation/asset/UI timings, job utilization, draw calls, triangles, counts, backend/GPU info, history and profiler freeze controls.
 
-1. engineer: separate runnable Editor executable, pinned ImGui docking and Ogre
-   OpenGL/Vulkan integration.
-2. wire Hierarchy/Inspector to `EditorSession::ViewDocument()` snapshots and
-   stopped-mode authoring commands.
-3. wire drag/drop hierarchy to `SceneDocument::SetParent/ClearParent`.
-4. wire File/Edit/transport shortcuts to `EditorSession` and history.
-5. wire Console/Statistics/Content Browser to real editor models.
-6. implement renderer-target presentation inside ImGui.
-7. implement concrete renderer picking provider.
-8. connect gizmo drag lifecycle to `BeginTransformEdit`.
-9. add local/world transform inheritance and preserve-world reparenting.
-10. add authored physics/animation persistence and persistent asset GUIDs.
-11. add thumbnail/import/reimport workflows.
-12. add material and animation editor backends/panels.
+## 21. Editor Toolbar — `FOUNDATION`
 
-## Verification
+Save/undo/redo, transform tools, local/world, pivot/center, snap, Play transport, settings and icon-based presentation.
 
-Fast source-level architecture checks:
+## 22. Menu Bar — `FOUNDATION`
 
-```sh
-python Scripts/Tests/EditorArchitectureTests.py
-```
+Complete File/Edit/Entity/Assets/View/Window/Debug/Help menus, shortcuts and context-sensitive enable/disable behavior.
 
-Portable GCC/Clang backend tests after pinned dependencies are fetched:
+## 23. Editor Theme / Visual System — `NOT STARTED`
 
-```sh
-python3 Scripts/Tests/EditorBackendTests.py
-python3 Scripts/Tests/EditorBackendTests.py --sanitize
-```
+A deliberate PlagC visual language: typography, spacing, component cards, headers, selection/hover/disabled colors, padding, borders, toolbar/dock styling and strong contrast instead of raw ImGui defaults.
 
-The backend runner includes world hierarchy and editor hierarchy tests in addition
-to the existing history, document, persistence, model, Play and session tests.
+## 24. Icons / Fonts — `NOT STARTED`
 
-Windows acceptance remains the complete PlagC MSVC build through:
+Consistent embedded icon/font assets for entities, folders, assets, cameras, lights, physics, transport and transform tools without shipping raw font source files.
 
-```bat
-Scripts\Validate.bat
-```
+## 25. Docking / Workspace — `FOUNDATION`
 
-That compiles all `PlagC/src/Editor/*.cpp` and the modified world code in Debug,
-Release and Dist. The runnable Editor executable remains a separate integration
-acceptance item owned by the engineer's UI milestone.
+Strong default layout, save/restore/reset workspace, sane panel locations and support for useful detached/docked workflows.
+
+## 26. Selection System — `FOUNDATION`
+
+Hierarchy↔viewport synchronization, independent asset selection, Inspector tracking, safe deletion behavior and later Ctrl/Shift multi-selection.
+
+## 27. Undo / Redo — `FOUNDATION`
+
+Cover transform, rename, create/delete/duplicate, reparent, component add/remove/edit, model/material/light/camera/physics changes with correct command labels and transaction coalescing.
+
+## 28. Drag & Drop — `FOUNDATION`
+
+Asset→viewport, asset→Inspector, hierarchy reparenting, material→slot, animation→animator, validation and visible drop feedback.
+
+## 29. Editor Preview Rendering — `NOT STARTED`
+
+Explicit editor-vs-game visualization policy: preview lighting, grid, icons, selection, colliders, camera/light gizmos and debug views never leak into game output.
+
+## 30. Rendering Quality — `FOUNDATION`
+
+Validate PBS materials, texture color spaces, normal/metallic/roughness, HDR/tone mapping, shadows, environment/IBL, MSAA, Vulkan/OpenGL parity, resizing, DPI and UI compositing.
+
+## 31. Asset Manager Integration — `FOUNDATION`
+
+Loading states/failures, missing assets, reload, dependencies, stable asset references, move/rename behavior and background loading surfaced cleanly to editor workflows.
+
+## 32. Prefab-like Reusable Objects — `NOT STARTED`
+
+Reusable scene-object templates, hierarchy instantiation, overrides, apply/revert and later nested reusable objects. Not required for the first usable-editor acceptance target.
+
+## 33. Audio Editor Integration — `FOUNDATION`
+
+Audio source/listener authoring, clip fields, preview playback, volume/pitch/loop/spatialization/range and OpenAL-backed runtime preview.
+
+## 34. Debug Visualization — `NOT STARTED`
+
+Physics colliders, bounds, skeletons, camera frustums, light ranges, wireframe and later normals/tangents/navigation overlays.
+
+## 35. Keyboard Shortcuts — `FOUNDATION`
+
+Save/Save As/Undo/Redo/Delete/Duplicate/Focus/W-E-R/Play/Pause/Escape and context-safe routing that does not fire while typing or inside modal UI.
+
+## 36. Editor Settings — `FOUNDATION`
+
+Renderer backend, theme, camera speed, grid/snap values, asset paths, defaults and persisted settings with clear restart gating.
+
+## 37. Performance — `FOUNDATION`
+
+Responsive hierarchy/content browser at scale, async thumbnails/assets, minimal scene rebuilds, SceneRenderer sync improvements and editor responsiveness under large scene workloads.
+
+## 38. Error Handling — `FOUNDATION`
+
+No silent failures: actionable asset/scene/renderer/physics/save/import errors with safe rollback behavior.
+
+## 39. Notifications / Feedback — `NOT STARTED`
+
+Non-blocking editor toasts/status feedback for save/import/failure/restart-required/invalid-action events instead of relying exclusively on Console output.
+
+## 40. Testing — `FOUNDATION`
+
+Automated coverage for authoring workflows, persistence, drag/drop, transforms, materials, lighting, camera, physics, animation, transport, picking, gizmos, backend compilation, native runtime, DPI/resize and Release/Dist acceptance.
+
+## 41. CI / Build — `FOUNDATION`
+
+MSVC Editor gate, OpenGL compile validation, Vulkan compile validation, source regressions, architecture/persistence/play/picking/UI tests and dependency-pin checks without false failures from unavailable hosted GPU contexts.
+
+## 42. Repository Cleanup — `FOUNDATION`
+
+Audit old `fix/*` branches, preserve unique work, merge only genuinely missing commits, delete obsolete branches and keep `prototype` authoritative.
+
+## 43. First Usable Editor Acceptance Target — `NOT STARTED`
+
+Definition of done for the product milestone:
+
+1. launch PlagC Editor;
+2. create a new scene;
+3. drag in a floor and several models;
+4. select them from viewport and hierarchy;
+5. move/rotate/scale them;
+6. organize hierarchy;
+7. add/edit lights;
+8. assign/edit materials;
+9. add and activate a camera;
+10. add physics to an object;
+11. save the scene;
+12. close and reopen it with properties intact;
+13. press Play and view through the game camera;
+14. physics and animation run;
+15. Pause and Step work;
+16. Stop returns to the unchanged authoring scene.
+
+# Milestone Execution Log
+
+## Roadmap baseline — `DONE`
+
+- Date: 2026-10-30
+- Purpose: replace the obsolete integration-only remaining-work list with the 43-milestone usable-editor roadmap.
+- Next milestone: **1. Viewport / Scene View**.
+- Policy: every future editor milestone updates this file in the same implementation commit.
+
+## Historical architecture note
+
+Earlier revisions of this document contained a much longer backend handoff description. Its important contracts are condensed above and remain binding: owner-thread authoring, persistent IDs, command-backed edits, isolated Play runtime, renderer-neutral editor contracts, generation-safe asynchronous data, and no ImGui dependency in engine hot paths.
