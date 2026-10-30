@@ -80,12 +80,23 @@ TextureHandle CreateUiTexture(Renderer& renderer, unsigned width, unsigned heigh
         Ogre::TextureTypes::Type2D);
     try
     {
+        // Immediate-mode UI binds this resource directly as sampler2D. Ogre automatic
+        // batching can replace a Type2D texture's display SRV with its shared Type2DArray
+        // pool owner, which is incompatible with that shader contract.
+        if (texture->hasAutomaticBatching() ||
+            texture->getTextureType() != Ogre::TextureTypes::Type2D)
+            throw std::logic_error(
+                "editor UI texture must be a standalone Ogre Type2D resource");
+
         // Standalone programmatic textures do not have AutomaticBatching's metadata path.
         // Define the resource shape explicitly before asking Ogre to upload the Image2.
         texture->setResolution(width, height);
         texture->setPixelFormat(format);
         texture->scheduleTransitionTo(Ogre::GpuResidency::Resident, image.release(), true);
         manager.waitForStreamingCompletion();
+
+        if (!texture->isDataReady())
+            throw std::runtime_error("editor UI texture upload did not become ready");
     }
     catch (...)
     {
