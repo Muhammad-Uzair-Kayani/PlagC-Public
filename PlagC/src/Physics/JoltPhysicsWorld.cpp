@@ -146,13 +146,19 @@ std::vector<PhysicsBodyHandle> PhysicsWorld::CreateBatch(std::span<const Physics
    settings.mOverrideMassProperties=JPH::EOverrideMassProperties::CalculateInertia;settings.mMassPropertiesOverride.mMass=c.body.mass;
    const auto handle=nextHandle.fetch_add(1);settings.mUserData=handle;
    auto* body=bi.CreateBody(settings);if(!body)throw std::runtime_error("Jolt body pool exhausted");
-   try{auto it=p.records.emplace(handle,Impl::Record{body->GetID(),d,V(d.transform.position),V(d.transform.position),Rotation(d.transform.rotationDegrees),Rotation(d.transform.rotationDegrees)}).first;
+   try{
+    auto it=p.records.emplace(handle,Impl::Record{body->GetID(),d,V(d.transform.position),V(d.transform.position),Rotation(d.transform.rotationDegrees),Rotation(d.transform.rotationDegrees)}).first;
     p.slots[body->GetID().GetIndex()]={handle,&it->second};
-   }catch(...){bi.DestroyBody(body->GetID());throw;}
+    p.contacts.RegisterBody(handle,c.body.layer,c.body.collisionMask);
+   }catch(...){
+    p.contacts.UnregisterBody(handle);
+    auto record=p.records.find(handle);if(record!=p.records.end()){p.slots[record->second.id.GetIndex()]={};p.records.erase(record);}
+    bi.DestroyBody(body->GetID());throw;
+   }
    result.push_back({handle});ids.push_back(body->GetID());
   }
   if(!ids.empty()){auto state=bi.AddBodiesPrepare(ids.data(),int(ids.size()));bi.AddBodiesFinalize(ids.data(),int(ids.size()),state,JPH::EActivation::Activate);}
- }catch(...){for(auto h:result){auto& r=p.records.at(h.value);p.slots[r.id.GetIndex()]={};bi.DestroyBody(r.id);p.records.erase(h.value);}throw;}
+ }catch(...){for(auto h:result){auto& r=p.records.at(h.value);p.slots[r.id.GetIndex()]={};p.contacts.UnregisterBody(h.value);bi.DestroyBody(r.id);p.records.erase(h.value);}throw;}
  for(auto h:result){p.stats.sensors+=p.records.at(h.value).desc.component.body.sensor;switch(p.records.at(h.value).desc.component.body.motion){case MotionType::Static:++p.stats.statics;break;case MotionType::Dynamic:++p.stats.dynamics;break;case MotionType::Kinematic:++p.stats.kinematics;break;}}
  return result;
 }
@@ -225,7 +231,7 @@ void PhysicsWorld::DestroyBatch(std::span<const PhysicsBodyHandle> bodies){
  for(auto h:bodies){auto& r=p.Get(h);Require(seen.insert(h.value).second,"duplicate body in removal batch");ids.push_back(r.id);}
  if(ids.empty())return;
  for(auto it=p.constraints.begin();it!=p.constraints.end();){const auto& d=it->second.description;if(seen.contains(d.a.value)||seen.contains(d.b.value)){p.physics.RemoveConstraint(it->second.constraint);it=p.constraints.erase(it);}else ++it;}
- auto& bi=p.physics.GetBodyInterface();bi.RemoveBodies(ids.data(),int(ids.size()));bi.DestroyBodies(ids.data(),int(ids.size()));
+ auto& bi=p.physics.GetBodyInterface();bi.RemoveBodies(ids.data(),int(ids.size()));for(auto h:bodies)p.contacts.UnregisterBody(h.value);bi.DestroyBodies(ids.data(),int(ids.size()));
  for(auto h:bodies){const auto& r=p.records.at(h.value);p.slots[r.id.GetIndex()]={};p.stats.sensors-=r.desc.component.body.sensor;switch(r.desc.component.body.motion){case MotionType::Static:--p.stats.statics;break;case MotionType::Dynamic:--p.stats.dynamics;break;case MotionType::Kinematic:--p.stats.kinematics;break;}p.records.erase(h.value);}
  std::erase_if(p.changed,[&](const auto& c){return seen.contains(c.body.value);});std::erase_if(p.teleports,[&](auto h){return seen.contains(h.value);});
 }
