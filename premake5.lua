@@ -100,6 +100,15 @@ project "PlagC"
         -- stb_image is intentionally compiled with internal linkage in this translation unit;
         -- MSVC C4505 reports the unused portions of stb's public API after optimization.
         disablewarnings { "4505" }
+    filter { "toolset:msc*", "files:PlagC/src/Renderer/OgreUiBackend.cpp" }
+        -- These diagnostics originate in the pinned Ogre/Win32 adapter surface used by the
+        -- immediate-mode UI backend: generated GL headers redefine WIN32_LEAN_AND_MEAN and
+        -- Ogre narrows its MsaaPatterns enum to the byte-sized PSO field by design.
+        disablewarnings { "4005", "4244" }
+    filter { "toolset:msc*", "files:PlagC/src/Renderer/OgreRenderer.cpp" }
+        -- A local texture-handle loop variable in the Ogre adapter shadows its handle parameter.
+        -- Keep this scoped to the adapter translation unit rather than weakening project warnings.
+        disablewarnings { "4457" }
     filter {}
 
     files { "PlagC/include/**.h", "PlagC/src/**.h", "PlagC/src/**.cpp" }
