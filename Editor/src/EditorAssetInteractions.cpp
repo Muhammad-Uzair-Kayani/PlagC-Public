@@ -569,8 +569,21 @@ void EditorLayer::CreateCookedModelEntity(Engine& engine, EditorSession& session
 
 void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session)
 {
+    const std::string activation = dataPanels_.ConsumeCookedModelActivation();
     if (!session.EditingEnabled())
         return;
+
+    if (!activation.empty())
+    {
+        try
+        {
+            CreateCookedModelEntity(engine, session, activation.c_str(), Vec3{});
+        }
+        catch (const std::exception& error)
+        {
+            LogAssetError(engine, error);
+        }
+    }
 
     const auto content = dataPanels_.ContentSnapshot();
 
@@ -584,52 +597,6 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
             if (ImGui::Button("+ Create...", ImVec2(-1.0f, 0.0f)))
                 ImGui::OpenPopup("PlagC.CreateEntity");
             DrawCreateEntityPopup(engine, session, content);
-        }
-        ImGui::End();
-    }
-
-    if (showContentBrowser_)
-    {
-        if (ImGui::Begin("Content Browser"))
-        {
-            ImGui::SeparatorText("Cooked runtime assets");
-            ImGui::TextDisabled(
-                "Drag a cooked ModelAsset onto Inspector to assign it, drag it into Viewport to place it, or double-click to create it at the origin.");
-
-            if (content)
-            {
-                for (const auto& entry : *content)
-                {
-                    if (entry.kind != EditorAssetKind::Cooked)
-                        continue;
-
-                    const std::filesystem::path path(entry.path);
-                    const std::string label = path.filename().string() + "##CookedDrag" + entry.path;
-                    ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick);
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("%s", entry.path.c_str());
-
-                    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-                    {
-                        try
-                        {
-                            CreateCookedModelEntity(engine, session, entry.path.c_str(), Vec3{});
-                        }
-                        catch (const std::exception& error)
-                        {
-                            LogAssetError(engine, error);
-                        }
-                    }
-
-                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
-                    {
-                        ImGui::SetDragDropPayload(CookedModelPayload,
-                                                  entry.path.c_str(), entry.path.size() + 1u);
-                        ImGui::Text("Assign model: %s", path.filename().string().c_str());
-                        ImGui::EndDragDropSource();
-                    }
-                }
-            }
         }
         ImGui::End();
     }

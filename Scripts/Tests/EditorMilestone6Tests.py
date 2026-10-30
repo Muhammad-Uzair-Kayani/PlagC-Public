@@ -69,7 +69,8 @@ class EditorMilestone6Tests(unittest.TestCase):
 
     def test_locate_in_browser_is_a_real_reveal_action(self):
         self.assertIn("void EditorDataPanels::RevealAsset", self.browser)
-        self.assertIn("ImGui::TableSetBgColor", self.browser)
+        self.assertIn("selectedAsset_ = found->path", self.browser)
+        self.assertIn("browserFolder_ = ParentFolder(found->path)", self.browser)
         self.assertIn("ImGui::SetScrollHereY(0.5f)", self.browser)
 
 

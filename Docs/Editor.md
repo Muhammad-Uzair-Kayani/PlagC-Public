@@ -151,7 +151,7 @@ Skeleton/clip/controller assignment, playback controls, loop/speed, state and pa
 
 Node-based states, entry state, transitions, conditions, parameters, transition duration/blending, state inspector, runtime active-state visualization and controller asset persistence.
 
-## 13. Content Browser — `FOUNDATION`
+## 13. Content Browser — `DONE`
 
 Replace the registry-table presentation with folders, breadcrumbs, grid/list views, asset cards, search/filter/sort, context menus, drag/drop, double-click behavior, details, source-vs-cooked presentation and sensible filtering of internal files.
 
@@ -412,6 +412,16 @@ Definition of done for the product milestone:
 - Architecture: runtime transition evaluation and crossfading continue through the engine animation controller/animator path; Play-mode graph authoring is locked and the editor does not expose renderer implementation objects.
 - Regression: `Scripts/Tests/EditorMilestone12Tests.py` covers controller persistence/validation, graph authoring, parameters, transitions/conditions, duration, runtime compilation/crossfade execution, active-state presentation, Play locking and Save/Load/Apply; it is wired into `ValidateEditor.bat` and Windows CI.
 - Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 12.
+
+## 13. Content Browser — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 13 implementation commit on `prototype`.
+- Delivered: hierarchical folders with Up and clickable breadcrumb navigation; grid/list asset-card views; subtree search; Source/Cooked/Project origin filtering; model/texture/audio/material/scene/controller/shader/cooked/other type filtering; name/type/size sorting; explicit internal-file visibility control with manifests, shaders, compositor/support/import-receipt files hidden by default; selected-asset details with runtime type/state/generation/errors; source↔cooked relationships from the existing import receipts; context actions for select/copy/reveal/reload/refresh; canonical filesystem/registry path deduplication; and preserved cooked-model double-click creation plus the existing Inspector/Viewport drag payload.
+- Architecture: the browser consumes the existing `AssetBrowserModel` snapshot, `AssetManager` registry and Milestone 15 import receipts instead of duplicating asset/import systems. Model Inspector reveal, Inspector assignment, viewport placement and Milestone 3 model creation continue through their existing editor/document contracts.
+- Scope boundary: asset cards remain textual placeholders; no thumbnail/preview cache or generation (14), no new import/reimport processing (15), no scene open/save workflow (16), and no Play Toolbar work (17) is included.
+- Regression: `Scripts/Tests/EditorMilestone13ContentBrowserTests.py` plus updated `EditorAssetInteractionTests.py` and Milestone 6 reveal coverage; `ValidateEditor.bat` and Windows Editor CI run the focused gate.
+- Next step: stop here and wait for explicit approval before starting Milestone 17.
 
 ## 15. Asset Import Workflow — `DONE`
 

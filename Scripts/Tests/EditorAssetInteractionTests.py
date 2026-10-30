@@ -29,20 +29,24 @@ class EditorAssetInteractionTests(unittest.TestCase):
         self.assertIn("for (const auto& entry : *content)", source)
         self.assertNotIn("entry.directory", source)
 
-    def test_content_browser_can_create_model_entities(self):
+    def test_content_browser_double_click_creates_model_entities(self):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
-        self.assertIn("entry.kind != EditorAssetKind::Cooked", source)
-        self.assertIn("ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)", source)
-        self.assertIn("CreateCookedModelEntity(engine, session, entry.path.c_str(), Vec3{})", source)
+        panels = self.read("Editor/src/EditorDataPanels.cpp")
+        panel_header = self.read("Editor/src/EditorDataPanels.h")
+        self.assertIn("cookedModelActivation_ = item.path", panels)
+        self.assertIn("ConsumeCookedModelActivation()", panel_header)
+        self.assertIn("dataPanels_.ConsumeCookedModelActivation()", source)
+        self.assertIn("CreateCookedModelEntity(engine, session, activation.c_str(), Vec3{})", source)
         self.assertIn("entity.model = ModelComponent{model, true, true}", source)
         self.assertIn("session.EditDocument().Create(std::move(entity))", source)
 
     def test_inspector_model_drop_is_undoable_and_preserves_instance_flags(self):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
+        panels = self.read("Editor/src/EditorDataPanels.cpp")
         app = self.read("Editor/src/EditorApp.cpp")
         header = self.read("Editor/src/EditorLayer.h")
-        self.assertIn('constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL"', source)
-        self.assertIn("ImGui::SetDragDropPayload(CookedModelPayload", source)
+        self.assertIn('constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL"', panels)
+        self.assertIn("ImGui::SetDragDropPayload(CookedModelPayload", panels)
         self.assertIn("ImGui::AcceptDragDropPayload(CookedModelPayload)", source)
         self.assertIn("session.EditDocument().SetModel(selected->entity", source)
         self.assertIn("ReplacementModel(*selected, std::move(model))", source)
