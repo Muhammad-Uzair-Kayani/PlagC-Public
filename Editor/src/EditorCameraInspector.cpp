@@ -89,8 +89,6 @@ void DrawFrustum(ImDrawList* draw,const ImRect& rect,const CameraDesc& view,
     const Basis basis=CameraBasis(camera);
     const float aspect=camera.aspect>0?camera.aspect:std::max(0.001f,rect.GetWidth()/rect.GetHeight());
     const float nearD=std::max(0.01f,camera.nearClip);
-    // Use the authored clip range, with a practical editor display cap so kilometre-scale cameras
-    // remain inspectable instead of producing an unusable overlay.
     const float farD=std::min(std::max(nearD*1.01f,camera.farClip),std::max(20.0f,nearD*200.0f));
     const float tanHalf=std::tan(std::clamp(camera.fov,1.0f,179.0f)*0.5f*Pi/180.0f);
 
@@ -130,12 +128,11 @@ void LogCameraError(Engine& engine,const std::exception& error)
 
 void EditorLayer::AppendCameraInspector(Engine& engine,EditorSession& session,CameraDesc& editorCamera)
 {
+    AppendAnimationStateMachine(engine, session);
+
     const auto snapshot=session.ViewDocument().Snapshot();
     const AuthoringEntity* selected=SelectedCamera(snapshot);
 
-    // Camera preview deliberately uses the existing Scene View target and renderer camera rather
-    // than creating an Ogre-specific secondary camera. It is a backend-neutral "look through"
-    // preview and restores the editor view when disabled or when selection changes.
     if(cameraPreview_)
     {
         if(!selected||selected->persistentID!=cameraPreviewPersistentID_||session.Playing())

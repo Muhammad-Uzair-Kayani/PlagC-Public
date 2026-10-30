@@ -3,6 +3,7 @@
 #include "EditorDataPanels.h"
 #include "EditorFileController.h"
 #include "EditorSceneHierarchy.h"
+#include <PlagC/Animation/AnimationControllerAsset.h>
 #include <PlagC/Editor/EditorModels.h>
 #include <PlagC/Editor/EditorSession.h>
 #include <array>
@@ -30,6 +31,7 @@ public:
     void AppendComponentInspector(Engine&, EditorSession&);
     void AppendAssetInteractions(Engine&, EditorSession&);
     void AppendCameraInspector(Engine&, EditorSession&, CameraDesc& editorCamera);
+    void AppendAnimationStateMachine(Engine&, EditorSession&);
     void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);
     void AppendViewportExperience(Engine&, EditorSession&, CameraDesc& editorCamera);
     // Draws and drives a world-space/local-space transform gizmo on the existing Viewport window.
@@ -80,6 +82,13 @@ private:
     bool cameraPreview_ = false;
     std::uint64_t cameraPreviewPersistentID_ = 0;
     std::optional<CameraDesc> cameraPreviewRestore_;
+
+    bool showAnimationStateMachine_ = true;
+    std::uint64_t animationGraphPersistentID_ = 0;
+    AnimationControllerAsset animationGraph_{};
+    std::array<char, 260> animationControllerPath_{"Assets/Controllers/Controller.pgcontroller"};
+    int animationSelectedState_ = -1;
+    int animationSelectedTransition_ = -1;
 
     std::unique_ptr<SceneDocument::TransformEdit> gizmoEdit_;
     std::uint64_t gizmoPersistentID_ = 0;

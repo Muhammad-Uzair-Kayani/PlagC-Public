@@ -18,6 +18,7 @@ for %%T in (
     EditorMilestone3Tests.py
     EditorMilestone6Tests.py
     EditorMilestone9Tests.py
+    EditorMilestone12Tests.py
     EditorSceneHierarchyMilestoneTests.py
     EditorGizmoTests.py
     EditorUiTextureTests.py
