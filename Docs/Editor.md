@@ -151,7 +151,7 @@ Skeleton/clip/controller assignment, playback controls, loop/speed, state and pa
 
 Node-based states, entry state, transitions, conditions, parameters, transition duration/blending, state inspector, runtime active-state visualization and controller asset persistence.
 
-## 13. Content Browser — `FOUNDATION`
+## 13. Content Browser — `DONE`
 
 Replace the registry-table presentation with folders, breadcrumbs, grid/list views, asset cards, search/filter/sort, context menus, drag/drop, double-click behavior, details, source-vs-cooked presentation and sensible filtering of internal files.
 
@@ -412,6 +412,18 @@ Definition of done for the product milestone:
 - Architecture: runtime transition evaluation and crossfading continue through the engine animation controller/animator path; Play-mode graph authoring is locked and the editor does not expose renderer implementation objects.
 - Regression: `Scripts/Tests/EditorMilestone12Tests.py` covers controller persistence/validation, graph authoring, parameters, transitions/conditions, duration, runtime compilation/crossfade execution, active-state presentation, Play locking and Save/Load/Apply; it is wired into `ValidateEditor.bat` and Windows CI.
 - Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 12.
+
+## Milestone 13 — Content Browser — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 13 completion commit on `prototype`.
+- Delivered: virtual folder navigation derived from the existing asset filesystem/registry snapshot; Assets-root breadcrumbs, Back and Up navigation; global asset search; type filters; name/size/type sorting; grid and list views; typed asset cards without taking over the future thumbnail system; asset selection/details; explicit SOURCE/COOKED presentation; internal-file filtering with an opt-in reveal toggle; context actions; cooked ModelAsset double-click creation; and the existing cooked-model Inspector/Viewport drag/drop payload integrated directly into the primary browser surface.
+- Registry reconciliation: runtime `AssetManager` entries such as `Foo.plasset` are matched back to mounted filesystem entries such as `Assets://Cooked/Foo.plasset`, preventing duplicate cooked cards while preserving runtime type/state/generation/error information. Standalone `.pgmaterial` files are recognized as material assets in the browser model.
+- Integration: `RevealAsset` now navigates to and selects the matching browser entry, and Content Browser activation is handed to the existing `AppendAssetInteractions` command-backed model-entity creation path instead of duplicating scene mutation inside the data panel.
+- Architecture: `AssetBrowserModel` and `AssetManager::Registry()` remain the source of asset truth; M13 adds presentation/navigation state only. No renderer resource or scene-world object is owned by the browser, and no Ogre/EnTT implementation type leaks into the browser contract.
+- Scope boundary: Milestone 14 still owns actual rendered thumbnails/preview caching; Milestone 16 still owns scene open/save workflow and scene double-click behavior; Milestone 31 still owns generalized asset move/rename/dependency/loading workflows. M13 does not implement filesystem mutation or a parallel asset database.
+- Regression: `Scripts/Tests/EditorMilestone13Tests.py` plus the existing `EditorAssetInteractionTests.py`; `ValidateEditor.bat` and Windows Editor CI cover folder/navigation state, grid/list/search/filter/sort, details/source-cooked presentation, internal filtering, registry reconciliation, drag/drop/double-click handoff and scope boundaries.
+- Next assigned milestone: **16. Scene File Workflow** — do not begin until explicitly requested.
 
 ## 15. Asset Import Workflow — `DONE`
 
