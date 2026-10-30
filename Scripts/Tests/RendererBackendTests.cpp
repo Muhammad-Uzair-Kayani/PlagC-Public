@@ -35,10 +35,13 @@ int main()
     Reject([] { ParseRendererBackend("invalid"); });
     assert(ResolveRendererBackend(RendererBackend::Vulkan, {true, true, true}, false, true) == RendererBackend::Vulkan);
     Reject([] { ResolveRendererBackend(RendererBackend::Vulkan, {true, true, true}, true); });
-    // Capability policy is independent of hardware availability.
+    // Capability policy is independent of hardware availability. Auto prefers Vulkan,
+    // but retains OpenGL as the fallback for builds that do not include Vulkan.
     assert(ResolveRendererBackend(RendererBackend::Auto, {false, true, true}) ==
            RendererBackend::Vulkan);
     assert(ResolveRendererBackend(RendererBackend::Auto, {true, true, true}) ==
+           RendererBackend::Vulkan);
+    assert(ResolveRendererBackend(RendererBackend::Auto, {true, false, true}) ==
            RendererBackend::OpenGL);
     std::cout << "Renderer backend policy checks passed\n";
 }
