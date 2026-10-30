@@ -10,6 +10,45 @@ namespace
 {
 using Clock = std::chrono::steady_clock;
 double Ms(Clock::time_point t) { return std::chrono::duration<double, std::milli>(Clock::now() - t).count(); }
+
+bool SameAnimationState(const AnimationState& a, const AnimationState& b)
+{
+    return a.clip == b.clip && a.time == b.time && a.speed == b.speed &&
+           a.playing == b.playing && a.loop == b.loop;
+}
+
+bool SameUpperBody(const std::optional<AnimationUpperBody>& a,
+                   const std::optional<AnimationUpperBody>& b)
+{
+    if (bool(a) != bool(b)) return false;
+    if (!a) return true;
+    return SameAnimationState(a->pose, b->pose) && a->root == b->root &&
+           a->weight == b->weight && a->recoilRadians == b->recoilRadians;
+}
+
+bool SameController(const std::optional<AnimationController>& a,
+                    const std::optional<AnimationController>& b)
+{
+    if (bool(a) != bool(b)) return false;
+    if (!a) return true;
+    if (&a->Graph() != &b->Graph() || a->CurrentIndex() != b->CurrentIndex()) return false;
+    const auto& parameters = a->Graph().parameters;
+    if (parameters.size() != b->Graph().parameters.size()) return false;
+    for (const auto& parameter : parameters)
+        if (a->Value(parameter.name) != b->Value(parameter.name)) return false;
+    return true;
+}
+
+bool SameAnimatorAuthoring(const AnimatorComponent& a, const AnimatorComponent& b)
+{
+    return a.animationSource.Shared() == b.animationSource.Shared() &&
+           SameAnimationState(a.state, b.state) &&
+           SameController(a.controller, b.controller) &&
+           SameUpperBody(a.upperBody, b.upperBody) &&
+           SameAnimationState(a.previous, b.previous) &&
+           a.fadeElapsed == b.fadeElapsed && a.fadeDuration == b.fadeDuration &&
+           a.controllerStarted == b.controllerStarted;
+}
 }
 
 struct AssetScene::Impl
@@ -83,6 +122,9 @@ struct AssetScene::Impl
         std::vector<MaterialHandle> overrideMaterials;
         std::vector<std::shared_ptr<const MaterialAsset>> overrideAssets;
         std::unique_ptr<Animator> animator;
+        std::shared_ptr<const ModelAsset> animationSource;
+        std::optional<AnimatorComponent> previewAuthoring;
+        std::optional<AnimatorComponent> previewState;
         std::uint64_t seen = 0, transform = 0;
         bool visible = true, castShadows = true, shadowStateApplied = false;
 
@@ -105,9 +147,14 @@ struct AssetScene::Impl
             return true;
         }
 
-        void Build(const ModelComponent& model, bool animate)
+        void Build(const ModelComponent& model, const AnimatorComponent* animation)
         {
-            if (animate) animator = std::make_unique<Animator>(resources->asset);
+            if (animation)
+            {
+                const auto source = animation->animationSource ? animation->animationSource : resources->asset;
+                animationSource = source.Shared();
+                animator = std::make_unique<Animator>(resources->asset, source);
+            }
             overrideAssets.reserve(model.materialOverrides.size());
             overrideMaterials.resize(model.materialOverrides.size());
 
@@ -132,7 +179,6 @@ struct AssetScene::Impl
                 d.normalScale = handle->normalScale;
                 d.alphaCutoff = handle->alphaCutoff;
                 d.doubleSided = handle->doubleSided;
-                // Colour textures are decoded as sRGB. Data maps remain linear.
                 d.baseColourTexture = loadTexture(handle->baseColourTexturePath, true);
                 d.normalTexture = loadTexture(handle->normalTexturePath, false);
                 d.metallicTexture = loadTexture(handle->metallicTexturePath, false);
@@ -145,7 +191,7 @@ struct AssetScene::Impl
             for (unsigned i = 0; i < resources->meshes.size(); ++i)
             {
                 auto mesh = resources->meshes[i];
-                if (animate)
+                if (animation)
                 {
                     mesh = renderer.CreateMesh(animator->Deform(i), true);
                     deformed.push_back(mesh);
@@ -219,7 +265,7 @@ Entity AssetScene::EntityForObject(ObjectHandle object) const
     return {};
 }
 
-void AssetScene::Update(World &world, double dt)
+void AssetScene::Update(World &world, double dt, Entity animationOnly, bool presentationOnly)
 {
     Thread::RequireMain();
     if (!std::isfinite(dt) || dt < 0) throw std::invalid_argument("invalid animation delta");
@@ -231,12 +277,17 @@ void AssetScene::Update(World &world, double dt)
         auto entity=w.registry.get<Entity>(raw);
         auto &model=w.registry.get<ModelComponent>(raw);
         auto *animation=w.registry.try_get<AnimatorComponent>(raw);
+        const std::shared_ptr<const ModelAsset> desiredAnimationSource = animation
+            ? (animation->animationSource ? animation->animationSource.Shared() : model.asset.Shared())
+            : std::shared_ptr<const ModelAsset>{};
         auto it=p.instances.find(entity.value);
         if(it==p.instances.end() || it->second->resources->asset.Shared()!=model.asset.Shared() ||
-           bool(it->second->animator)!=bool(animation) || !it->second->OverridesMatch(model))
+           bool(it->second->animator)!=bool(animation) ||
+           (animation && it->second->animationSource!=desiredAnimationSource) ||
+           !it->second->OverridesMatch(model))
         {
             auto replacement=std::make_unique<Impl::Instance>(p.renderer,p.Acquire(model.asset));
-            replacement->Build(model,animation!=nullptr);
+            replacement->Build(model,animation);
             p.instances[entity.value]=std::move(replacement);
             it=p.instances.find(entity.value);
         }
@@ -245,7 +296,43 @@ void AssetScene::Update(World &world, double dt)
         if(instance.transform!=version){for(auto h:instance.objects)p.renderer.SetTransform(h,w.registry.get<Transform>(raw));instance.transform=version;}
         if(instance.visible!=model.visible){for(auto h:instance.objects)p.renderer.SetVisible(h,model.visible);instance.visible=model.visible;}
         if(!instance.shadowStateApplied||instance.castShadows!=model.castShadows){for(auto h:instance.objects)p.renderer.SetCastShadows(h,model.castShadows);instance.castShadows=model.castShadows;instance.shadowStateApplied=true;}
-        if(animation){auto start=Clock::now();instance.animator->Update(*animation,dt);const double pose=Ms(start);p.stats.poseMs+=pose;p.stats.animationMs+=pose;for(unsigned i=0;i<instance.deformed.size();++i){start=Clock::now();auto vertices=instance.animator->DeformVertices(i);const double skin=Ms(start);p.stats.skinningMs+=skin;p.stats.animationMs+=skin;start=Clock::now();p.renderer.UpdateMesh(instance.deformed[i],vertices);p.stats.uploadMs+=Ms(start);}++p.stats.animated;}
+        if(animation)
+        {
+            auto start=Clock::now();
+            if (presentationOnly)
+            {
+                if (animationOnly && animationOnly == entity)
+                {
+                    if (!instance.previewAuthoring || !SameAnimatorAuthoring(*instance.previewAuthoring, *animation))
+                    {
+                        instance.previewAuthoring = *animation;
+                        instance.previewState = *animation;
+                    }
+                    instance.animator->Update(*instance.previewState, dt);
+                }
+                else
+                {
+                    instance.previewAuthoring.reset();
+                    instance.previewState.reset();
+                    auto sample = *animation;
+                    instance.animator->Update(sample, 0.0);
+                }
+            }
+            else
+            {
+                instance.previewAuthoring.reset();
+                instance.previewState.reset();
+                instance.animator->Update(*animation,dt);
+            }
+            const double pose=Ms(start);p.stats.poseMs+=pose;p.stats.animationMs+=pose;
+            for(unsigned i=0;i<instance.deformed.size();++i)
+            {
+                start=Clock::now();auto vertices=instance.animator->DeformVertices(i);
+                const double skin=Ms(start);p.stats.skinningMs+=skin;p.stats.animationMs+=skin;
+                start=Clock::now();p.renderer.UpdateMesh(instance.deformed[i],vertices);p.stats.uploadMs+=Ms(start);
+            }
+            ++p.stats.animated;
+        }
     }
     std::erase_if(p.instances,[&](const auto&item){return item.second->seen!=p.frame;});
     std::erase_if(p.resources,[](const auto&item){return item.second.expired();});

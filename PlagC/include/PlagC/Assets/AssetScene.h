@@ -18,7 +18,9 @@ class AssetScene
     ~AssetScene();
     AssetScene(const AssetScene &) = delete;
     AssetScene &operator=(const AssetScene &) = delete;
-    void Update(World &, double dt);
+    // animationOnly restricts positive-delta animation to one entity. presentationOnly samples
+    // editor-owned copies so Scene View preview never mutates authoring AnimatorComponent state.
+    void Update(World &, double dt, Entity animationOnly = {}, bool presentationOnly = false);
     std::optional<Vec3> AnimatedNodePoint(const World &, Entity, const std::string &,
                                           Vec3 local = {}) const;
     // Owner-thread identity bridge for editor/tooling picking. Objects not owned by a

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <string_view>
 #include <vector>
 #include <memory>
 #include <unordered_map>
@@ -97,6 +98,14 @@ class AnimationController
                 }
         throw std::invalid_argument("unknown animation parameter");
     }
+    std::size_t Parameter(std::string_view name) const
+    {
+        if (graph_)
+            for (std::size_t i = 0; i < graph_->parameters.size(); ++i)
+                if (graph_->parameters[i].name == name)
+                    return i;
+        throw std::invalid_argument("unknown animation parameter");
+    }
 
   public:
     explicit AnimationController(const AnimationStateMachine &graph, unsigned clips)
@@ -123,6 +132,17 @@ class AnimationController
     void ResetTrigger(const std::string &name)
     {
         values_.at(Parameter(name, AnimationParameterType::Trigger)) = 0;
+    }
+    float Value(std::string_view name) const
+    {
+        return values_.at(Parameter(name));
+    }
+    unsigned CurrentIndex() const noexcept { return current_; }
+    void SetState(unsigned state)
+    {
+        if (!graph_ || state >= graph_->states.size())
+            throw std::invalid_argument("animation state out of range");
+        current_ = state;
     }
     const AnimationNode &Current() const
     {

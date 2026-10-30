@@ -143,7 +143,7 @@ FOV/clip/aspect editing, active-camera controls, frustum visualization, camera p
 
 Static/Kinematic/Dynamic body authoring, collider type and dimensions, mass/friction/restitution, layers/masks/triggers, validation, and collider debug visualization.
 
-## 11. Animator Inspector — `FOUNDATION`
+## 11. Animator Inspector — `DONE`
 
 Skeleton/clip/controller assignment, playback controls, loop/speed, state and parameter editing, animation preview and skeleton diagnostics.
 
@@ -380,6 +380,17 @@ Definition of done for the product milestone:
 - Architecture: camera authoring remains in `CameraComponent`/`CameraDesc` and `SceneDocument`; no Ogre camera implementation object is exposed to editor-facing code. Preview state is restored when selection changes or Play begins.
 - Regression: `Scripts/Tests/EditorMilestone9Tests.py` covers projection fields, active-camera controls, frustum overlay, preview, bidirectional alignment, Scene View integration and the renderer-neutral boundary; it is wired into `ValidateEditor.bat` and Windows CI.
 - Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 9.
+
+## 11. Animator Inspector — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 11 implementation commit on `prototype`.
+- Delivered: cooked `ModelAsset` animation-source assignment by path or drag/drop with skeleton-layout compatibility checks; fallback to the rendered model's embedded skeleton/clips; named clip selection with duration; Play/Pause/Restart/Stop, loop, speed and time scrubbing; selected-entity-only edit-mode Scene View animation preview; existing `.pgcontroller` assignment/clear; controller state selection and typed Float/Bool/Trigger parameter editing; and clip, skeleton hierarchy and import-warning diagnostics.
+- Runtime integration: `Animator` now samples clips from an optional compatible animation-source asset while the rendered model continues to own the target skeleton, mesh geometry, inverse-bind data and skinning output. `AssetScene` rebuilds animated instances when that source changes and can advance only one selected authoring animator during editor preview; normal Play still advances the isolated runtime world as before.
+- Architecture: Animator authoring remains command-backed through `SceneDocument::SetAnimator`; M12 remains the owner of graph topology/state-machine asset authoring and M11 only assigns/operates those controller assets. No Ogre/Ozz implementation object is exposed through editor-facing contracts.
+- Persistence boundary: scene-format support for Animator components remains Milestone 16 work; M11 does not broaden scene serialization merely to claim persistence.
+- Scope boundary: no Animation State Machine graph redesign (12), Thumbnail/Preview System (14), Scene File Workflow (16), or general skeleton Debug Visualization (34) is included.
+- Regression: `Scripts/Tests/EditorMilestone11Tests.py`; `ValidateEditor.bat` and Windows Editor CI run the focused milestone gate.
 
 ## 12. Animation State Machine Editor — `DONE`
 

@@ -84,7 +84,13 @@ public:
 
         sceneRenderer_->Sync(session_->ViewWorld(), presentation);
         engine.timings.sceneSyncMs = sceneRenderer_->Statistics().totalMs;
-        assetScene_->Update(session_->SystemWorld(), session_->Playing() ? playRuntime_.SimulationDelta() : 0.0);
+        const PlagC::Entity animationPreview = session_->Playing()
+            ? PlagC::Entity{}
+            : layer_.AnimatorPreviewEntity(*session_);
+        const double animationDelta = session_->Playing()
+            ? playRuntime_.SimulationDelta()
+            : (animationPreview ? dt : 0.0);
+        assetScene_->Update(session_->SystemWorld(), animationDelta, animationPreview, !session_->Playing());
         engine.timings.animationMs = assetScene_->Statistics().animationMs;
         try
         {
@@ -120,7 +126,11 @@ public:
 
         layer_.Frame(engine, *session_);
         layer_.AppendAssetInteractions(engine, *session_);
-        if (layer_.InspectorVisible()) layer_.AppendComponentInspector(engine, *session_);
+        if (layer_.InspectorVisible())
+        {
+            layer_.AppendComponentInspector(engine, *session_);
+            layer_.AppendAnimatorInspector(engine, *session_);
+        }
 
         const auto& viewport = layer_.Viewport();
         const bool popupBlocksGame = ImGui::IsPopupOpen(nullptr,

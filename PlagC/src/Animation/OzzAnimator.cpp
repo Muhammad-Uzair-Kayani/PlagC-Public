@@ -21,8 +21,6 @@ struct NormalMatrix3
 };
 NormalMatrix3 BuildNormalMatrix(const Matrix4 &m)
 {
-    // Same inverse-transpose and scale-relative singularity rules as TransformNormal, but the
-    // expensive determinant/cofactor work is done once per bone instead of once per influence.
     const double a = m.m[0], b = m.m[4], c = m.m[8];
     const double d = m.m[1], e = m.m[5], f = m.m[9];
     const double g = m.m[2], h = m.m[6], i = m.m[10];
@@ -64,10 +62,21 @@ Vec3 ApplyNormalMatrix(const NormalMatrix3 &m, Vec3 p)
     }
     return n;
 }
+void RequireCompatibleSkeleton(const ModelAsset &target, const ModelAsset &source)
+{
+    const auto &a = target.skeleton.joints;
+    const auto &b = source.skeleton.joints;
+    if (a.size() != b.size())
+        throw std::invalid_argument("animation source skeleton joint count does not match model");
+    for (std::size_t i = 0; i < a.size(); ++i)
+        if (a[i].name != b[i].name || a[i].parent != b[i].parent)
+            throw std::invalid_argument("animation source skeleton layout does not match model");
+}
 } // namespace
 struct Animator::Impl
 {
     AssetHandle<ModelAsset> model;
+    AssetHandle<ModelAsset> animationSource;
     ozz::unique_ptr<ozz::animation::Skeleton> skeleton;
     std::vector<ozz::unique_ptr<ozz::animation::Animation>> clips;
     ozz::animation::SamplingJob::Context context;
@@ -79,14 +88,15 @@ struct Animator::Impl
     double upperFade = .12;
     std::vector<ozz::math::Float4x4> matrices;
     std::vector<Matrix4> pose;
-    // CPU skinning hot-path scratch. These buffers are sized once per Animator and reused for
-    // every frame so DeformVertices performs no heap allocation and does not copy mesh indices.
     std::vector<Matrix4> skinMatrices;
     std::vector<NormalMatrix3> skinNormalMatrices;
     std::vector<std::vector<Vertex>> deformedVertices;
-    explicit Impl(AssetHandle<ModelAsset> a) : model(std::move(a))
+    Impl(AssetHandle<ModelAsset> modelAsset, AssetHandle<ModelAsset> sourceAsset)
+        : model(std::move(modelAsset)), animationSource(sourceAsset ? std::move(sourceAsset) : model)
     {
         Validate(*model);
+        Validate(*animationSource);
+        RequireCompatibleSkeleton(*model, *animationSource);
         const auto &joints = model->skeleton.joints;
         ozz::animation::offline::RawSkeleton raw;
         std::function<ozz::animation::offline::RawSkeleton::Joint(unsigned)> build =
@@ -113,7 +123,7 @@ struct Animator::Impl
             if (skeleton->joint_parents()[i] != joints[i].parent ||
                 joints[i].name != skeleton->joint_names()[i])
                 throw std::runtime_error("skeleton nodes must be depth-first ordered");
-        for (auto &src : model->animations)
+        for (auto &src : animationSource->animations)
         {
             ozz::animation::offline::RawAnimation rawClip;
             rawClip.name = src.name.c_str();
@@ -164,7 +174,8 @@ struct Animator::Impl
                 ozz::math::StorePtrU(matrices[i].cols[c], pose[i].m.data() + c * 4);
     }
 };
-Animator::Animator(AssetHandle<ModelAsset> model) : impl_(std::make_unique<Impl>(std::move(model)))
+Animator::Animator(AssetHandle<ModelAsset> model, AssetHandle<ModelAsset> animationSource)
+    : impl_(std::make_unique<Impl>(std::move(model), std::move(animationSource)))
 {
 }
 Animator::~Animator() = default;
@@ -290,7 +301,6 @@ void Animator::ApplyUpperBody(AnimatorComponent &component, double dt)
     }
     const unsigned rootIndex = unsigned(root - joints.begin());
     p.blendSource = p.locals;
-    // The caller supplies the weapon clock (held aim or normalized reload).
     Update(layer.pose, 0);
     p.blendTarget = p.locals;
     std::vector<ozz::math::SimdFloat4> mask(p.locals.size());
@@ -321,8 +331,6 @@ void Animator::ApplyUpperBody(AnimatorComponent &component, double dt)
             ozz::math::simd_float4::zero(), ozz::math::simd_float4::LoadPtrU(rw));
         p.blendTarget[block].rotation = p.blendTarget[block].rotation * recoil;
     }
-    // Snapshot the displayed weapon pose when changing actions, including when
-    // interrupting an existing fade. Never blend reload through an Idle state.
     if (!p.lastUpper.empty() && p.upperClip != layer.pose.clip)
     {
         p.upperSource = p.lastUpper;
@@ -352,7 +360,6 @@ void Animator::ApplyUpperBody(AnimatorComponent &component, double dt)
     ozz::animation::BlendingJob::Layer layers[2];
     layers[0].weight = 1;
     layers[0].transform = ozz::make_span(p.blendSource);
-    // Complementary per-joint weights preserve the base exactly below the mask.
     std::vector<ozz::math::SimdFloat4> baseMask(mask.size());
     for (unsigned i = 0; i < mask.size(); ++i)
     {
@@ -420,7 +427,6 @@ std::span<const Vertex> Animator::DeformVertices(unsigned mesh) const
             p.skinMatrices[i] = Multiply(p.pose[i], src.inverseBind[i]);
             p.skinNormalMatrices[i] = BuildNormalMatrix(p.skinMatrices[i]);
         }
-
         for (unsigned i = 0; i < output.size(); ++i)
         {
             const auto &original = src.geometry.vertices[i];
