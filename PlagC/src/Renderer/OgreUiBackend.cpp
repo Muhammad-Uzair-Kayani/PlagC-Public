@@ -19,6 +19,7 @@
 #include <OgreVertexIndexData.h>
 #include <OgreHlmsManager.h>
 #include <OgreIdString.h>
+#include <OgreLogManager.h>
 #include <OgreMaterialManager.h>
 #include <OgreMatrix4.h>
 #include <OgrePass.h>
@@ -41,6 +42,7 @@
 #include <memory>
 #include <stdexcept>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace PlagC::Detail {
 namespace {
@@ -236,9 +238,31 @@ public:
         }
     }
 
+    void SetOutput(const Renderer* renderer, Ogre::TextureGpu* target)
+    {
+        if (renderers_.count(renderer)) outputs_[renderer] = target;
+        presented_.erase(renderer);
+    }
+
+    void CheckOutput(const Renderer* renderer)
+    {
+        const auto* frame = PendingUIFrame(renderer);
+        if (frame && !frame->commands.empty() && !presented_.count(renderer))
+        {
+            if (reportedMissing_.insert(renderer).second)
+                Ogre::LogManager::getSingleton().logMessage(
+                    "[PlagC UI] ERROR: submitted UI was not presented; check main workspace/output registration",
+                    Ogre::LML_CRITICAL);
+        }
+        else reportedMissing_.erase(renderer);
+    }
+
     void Unregister(const Renderer* renderer) noexcept
     {
         renderers_.erase(renderer);
+        outputs_.erase(renderer);
+        presented_.erase(renderer);
+        reportedMissing_.erase(renderer);
         if (renderers_.empty())
             Shutdown();
     }
@@ -259,18 +283,16 @@ public:
         const UiDrawData* frame = nullptr;
         for (const Renderer* candidate : renderers_)
         {
+            const auto output = outputs_.find(candidate);
+            if (output == outputs_.end() || output->second != target)
+                continue;
             const UiDrawData* pending = PendingUIFrame(candidate);
             if (!pending || pending->commands.empty())
                 continue;
 
-            const auto width = static_cast<unsigned>(std::lround(pending->width));
-            const auto height = static_cast<unsigned>(std::lround(pending->height));
-            if (width == target->getWidth() && height == target->getHeight())
-            {
-                renderer = candidate;
-                frame = pending;
-                break;
-            }
+            renderer = candidate;
+            frame = pending;
+            break;
         }
         if (!renderer || !frame)
             return;
@@ -282,8 +304,24 @@ public:
         if (lastRenderedFrame_ == frameNumber && lastTarget_ == target)
             return;
 
+        const std::string dimensions = std::to_string(frame->width) + "x" +
+            std::to_string(frame->height) + " -> " + std::to_string(target->getWidth()) +
+            "x" + std::to_string(target->getHeight());
+        if (dimensions != lastDimensions_)
+        {
+            lastDimensions_ = dimensions;
+            const bool mismatch = std::lround(frame->width) != target->getWidth() ||
+                                  std::lround(frame->height) != target->getHeight();
+            Ogre::LogManager::getSingleton().logMessage(
+                std::string("[PlagC UI] explicit output=") + target->getNameStr() +
+                " pixels=" + dimensions + " vertices=" + std::to_string(frame->vertices.size()) +
+                " indices=" + std::to_string(frame->indices.size()) +
+                " commands=" + std::to_string(frame->commands.size()) +
+                (mismatch ? " SIZE MISMATCH: scaling UI to output" : " drawing"));
+        }
         EnsureResources(renderer->Backend());
         Render(*frame, target, renderer->Backend());
+        presented_.insert(renderer);
         lastRenderedFrame_ = frameNumber;
         lastTarget_ = target;
     }
@@ -525,6 +563,9 @@ private:
     }
 
     std::unordered_set<const Renderer*> renderers_;
+    std::unordered_map<const Renderer*, Ogre::TextureGpu*> outputs_;
+    std::string lastDimensions_;
+    std::unordered_set<const Renderer*> presented_, reportedMissing_;
     Ogre::CompositorManager2* compositorManager_ = nullptr;
     RendererBackend backend_ = RendererBackend::Auto;
     std::unique_ptr<Ogre::PsoCacheHelper> psoCache_;
@@ -545,6 +586,16 @@ OgreUiBackend& Backend()
 }
 
 } // namespace
+
+void CheckOgreUIOutput(const Renderer* renderer)
+{
+    Backend().CheckOutput(renderer);
+}
+
+void SetOgreUIOutput(const Renderer* renderer, Ogre::TextureGpu* target)
+{
+    Backend().SetOutput(renderer, target);
+}
 
 void RegisterOgreUIRenderer(const Renderer* renderer)
 {

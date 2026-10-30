@@ -53,18 +53,28 @@ public:
         sceneRenderer_->Sync(session_->ViewWorld());
         engine.timings.sceneSyncMs = sceneRenderer_->Statistics().totalMs;
 
-        const PlagC::Editor::ViewportState &viewport = layer_.Viewport();
-        if (viewport.width > 1 && viewport.height > 1)
-            viewportTarget_->Resize(viewport.width, viewport.height);
-
         ImGuiIO &io = ImGui::GetIO();
         if (auto *window = engine.MainWindow())
-            io.DisplaySize = ImVec2(static_cast<float>(window->Width()),
-                                    static_cast<float>(window->Height()));
+        {
+            const int width = window->Width(), height = window->Height();
+            const int pixelsWide = window->FramebufferWidth(), pixelsHigh = window->FramebufferHeight();
+            if (window->Minimized() || width <= 0 || height <= 0 || pixelsWide <= 0 || pixelsHigh <= 0)
+            {
+                engine.Graphics().SubmitUI({});
+                return;
+            }
+            io.DisplaySize = ImVec2(float(width), float(height));
+            io.DisplayFramebufferScale = ImVec2(float(pixelsWide) / width, float(pixelsHigh) / height);
+        }
         io.DeltaTime = dt > 0.0 ? static_cast<float>(dt) : (1.0f / 60.0f);
 
         ImGui::NewFrame();
         layer_.Frame(engine, *session_);
+        const auto& viewport = layer_.Viewport();
+        if (viewport.width > 1 && viewport.height > 1)
+            viewportTarget_->Resize(
+                static_cast<unsigned>(std::clamp(std::lround(viewport.width * io.DisplayFramebufferScale.x), 1L, 8192L)),
+                static_cast<unsigned>(std::clamp(std::lround(viewport.height * io.DisplayFramebufferScale.y), 1L, 8192L)));
         UpdateEditorCamera(engine, dt);
         viewportPresenter_.Draw(viewportTarget_->Handle());
         ImGui::Render();

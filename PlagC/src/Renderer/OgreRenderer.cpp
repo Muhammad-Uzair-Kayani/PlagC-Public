@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "UiSubmissionInternal.h"
 #include <PlagC/Renderer/Renderer.h>
 #include <PlagC/Window.h>
 #include <PlagC/Thread.h>
@@ -1140,8 +1141,10 @@ void Renderer::Render(double dt)
     for (auto &[id, o] : p.objects)
         if (o.animation)
             o.animation->addTime(float(std::min(dt, .25)) * o.speed);
+    Detail::SetOgreUIOutput(this, p.output ? p.output->getTexture() : nullptr);
     if (!p.root->renderOneFrame())
         throw std::runtime_error("Ogre stopped rendering");
+    Detail::CheckOgreUIOutput(this);
     const auto &metrics = p.root->getRenderSystem()->getMetrics();
     p.stats.drawCalls = metrics.mDrawCount;
     p.stats.triangles = metrics.mFaceCount;

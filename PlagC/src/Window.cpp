@@ -101,3 +101,6 @@ NativeWindow Window::NativeHandle() const {
 #endif
 }
 }
+
+int PlagC::Window::FramebufferWidth() const { Thread::RequireMain(); int w,h; glfwGetFramebufferSize(impl_->handle,&w,&h); return w; }
+int PlagC::Window::FramebufferHeight() const { Thread::RequireMain(); int w,h; glfwGetFramebufferSize(impl_->handle,&w,&h); return h; }

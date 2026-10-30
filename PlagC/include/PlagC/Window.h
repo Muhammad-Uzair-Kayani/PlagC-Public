@@ -20,6 +20,9 @@ public:
     void SetCursorCaptured(bool);
     int Width() const;
     int Height() const;
+    // Physical pixel extent; Width/Height remain logical input coordinates.
+    int FramebufferWidth() const;
+    int FramebufferHeight() const;
     bool Minimized() const;
     NativeWindow NativeHandle() const;
 private:
