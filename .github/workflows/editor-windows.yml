@@ -45,6 +45,7 @@ jobs:
           python Scripts\Tests\EditorMilestone7MaterialTests.py
           python Scripts\Tests\EditorMilestone8Tests.py
           python Scripts\Tests\EditorMilestone9Tests.py
+          python Scripts\Tests\EditorMilestone10Tests.py
           python Scripts\Tests\EditorMilestone12Tests.py
           python Scripts\Tests\EditorMilestone15Tests.py
           python Scripts\Tests\EditorMilestone18Tests.py
