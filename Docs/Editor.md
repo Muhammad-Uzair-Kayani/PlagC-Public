@@ -135,7 +135,7 @@ Authorable material assets and Ogre PBS mapping for base color, base-color textu
 
 Directional/Point/Spot editing, color, intensity, range, cones, shadows, and viewport light visualization with immediate scene updates.
 
-## 9. Camera Inspector — `FOUNDATION`
+## 9. Camera Inspector — `DONE`
 
 FOV/clip/aspect editing, active-camera controls, frustum visualization, camera preview, align-camera-to-view and align-view-to-camera actions.
 
@@ -147,7 +147,7 @@ Static/Kinematic/Dynamic body authoring, collider type and dimensions, mass/fric
 
 Skeleton/clip/controller assignment, playback controls, loop/speed, state and parameter editing, animation preview and skeleton diagnostics.
 
-## 12. Animation State Machine Editor — `NOT STARTED`
+## 12. Animation State Machine Editor — `DONE`
 
 Node-based states, entry state, transitions, conditions, parameters, transition duration/blending, state inspector, runtime active-state visualization and controller asset persistence.
 
@@ -159,7 +159,7 @@ Replace the registry-table presentation with folders, breadcrumbs, grid/list vie
 
 Preview scene/camera/lighting, model/material/texture thumbnails, cache and invalidation, asynchronous generation and non-blocking placeholders.
 
-## 15. Asset Import Workflow — `FOUNDATION`
+## 15. Asset Import Workflow — `DONE`
 
 Import/reimport UI for supported model/texture formats, source-to-cooked relationship, scale/coordinate/normal/tangent/material/animation options and surfaced import errors.
 
@@ -349,6 +349,34 @@ Definition of done for the product milestone:
 - Delivered: ModelAsset field and cooked-asset browse/drop/replace, state-preserving replacement, visibility, renderer-backed per-model shadow control, mesh/submesh statistics, imported material-slot diagnostics, geometry-derived local bounds, immutable-generation reload/rebind, and locate-in-browser highlighting.
 - Architecture: edits remain command-backed through `SceneDocument`; renderer object ownership remains inside `AssetScene`; imported material slots remain read-only until Milestone 7.
 - Regression: `Scripts/Tests/EditorMilestone6Tests.py` plus updated model interaction/entity-creation tests; `ValidateEditor.bat` and Windows CI run the milestone gate.
+
+## 9. Camera Inspector — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: `45bd0fb450b715d51101ef845bcd1fe92cc7df74` on `prototype`.
+- Delivered: command-backed FOV, near/far clip and aspect-override editing; active-camera set/clear controls; renderer-neutral selected-camera frustum visualization; camera preview through the selected authored camera; and bidirectional Align Camera to View / Align View to Camera workflows.
+- Architecture: camera authoring remains in `CameraComponent`/`CameraDesc` and `SceneDocument`; no Ogre camera implementation object is exposed to editor-facing code. Preview state is restored when selection changes or Play begins.
+- Regression: `Scripts/Tests/EditorMilestone9Tests.py` covers projection fields, active-camera controls, frustum overlay, preview, bidirectional alignment, Scene View integration and the renderer-neutral boundary; it is wired into `ValidateEditor.bat` and Windows CI.
+- Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 9.
+
+## 12. Animation State Machine Editor — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: `55a424a06c6c380ca122290ac1eb72ea986eba4b` on `prototype`.
+- Delivered: persistent `.pgcontroller` controller assets; draggable node states and node positions; entry state; typed Float/Bool/Trigger parameters; transitions and typed conditions; transition/crossfade duration; state/parameter/condition inspectors; runtime active-state presentation; Save/Load/Apply authoring; and compilation into the engine's existing executable `AnimationController` rather than a duplicate editor runtime.
+- Architecture: runtime transition evaluation and crossfading continue through the engine animation controller/animator path; Play-mode graph authoring is locked and the editor does not expose renderer implementation objects.
+- Regression: `Scripts/Tests/EditorMilestone12Tests.py` covers controller persistence/validation, graph authoring, parameters, transitions/conditions, duration, runtime compilation/crossfade execution, active-state presentation, Play locking and Save/Load/Apply; it is wired into `ValidateEditor.bat` and Windows CI.
+- Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 12.
+
+## 15. Asset Import Workflow — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: `2bf403438f38d6672a8cbccdc622197c4db6d2b3` on `prototype`.
+- Delivered: source-to-cooked model and texture import/reimport UI; persisted import receipts retaining source, cooked destination and import settings; configurable scale, coordinate/handedness conversion, UV orientation, normal generation/preservation, tangent/material/animation inclusion, texture vertical flip; standalone PNG/JPEG import as first-class `TextureAsset`; actionable visible/logged import errors; and immutable-generation reload of known cooked assets after reimport.
+- Architecture: source processing and cooked serialization remain in the asset layer/`AssetManager`; the editor orchestrates the workflow without Ogre-specific coupling.
+- Regression: `Scripts/Tests/EditorMilestone15Tests.py` covers the import options, texture asset path, receipt persistence, import/reimport execution, editor settings surface, error handling and normal editor-frame integration; it is wired into `ValidateEditor.bat` and Windows CI.
+- Validation note: the exact Windows run for the original Milestone 15 commit was cancelled by CI concurrency after newer `prototype` pushes, not failed; the implementation remains covered by the branch-level Windows Editor validation gate.
+- Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 15.
 
 ## Historical architecture note
 
