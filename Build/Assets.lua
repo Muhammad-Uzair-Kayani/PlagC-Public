@@ -35,7 +35,12 @@ for _,name in ipairs({"Assimp","Ozz","OpenAL"}) do
     end
 end
 function assetRuntimeIncludes()
-    includedirs { path.join(assetRoot,"Vendor/ozz/include"),path.join(assetRoot,"Vendor/openal/include") }
+    includedirs {
+        path.join(assetRoot,"Vendor/ozz/include"),
+        path.join(assetRoot,"Vendor/openal/include"),
+        -- PlagC's texture importer uses the stb_image copy pinned with Assimp.
+        path.join(assetRoot,"Vendor/assimp/contrib")
+    }
     -- Required by OpenAL Soft when consumers include AL/al.h and AL/alc.h while
     -- linking the implementation statically (notably avoids __declspec(dllimport)).
     defines { "AL_LIBTYPE_STATIC" }
