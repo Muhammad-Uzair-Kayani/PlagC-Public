@@ -11,9 +11,6 @@ enum class ReplacePolicy {
     DiscardChanges
 };
 
-// Main-thread editor lifecycle controller. UI code supplies decisions such as
-// whether the user confirmed discarding unsaved changes; this class enforces the
-// resulting policy and keeps scene/path/play state transactional.
 class EditorSession {
 public:
     explicit EditorSession(std::unique_ptr<SceneDocument>);
@@ -57,9 +54,10 @@ public:
     bool Paused() const;
     std::uint64_t PlayGeneration() const;
 
-    // World the viewport should display. Runtime systems mutate RuntimeWorld()
-    // only while Playing(); authoring edits use EditDocument() while stopped.
     const World& ViewWorld() const;
+    // Mutable view reserved for editor-owned runtime/render systems. UI authoring must
+    // continue through EditDocument() so commands, dirty state and undo/redo are preserved.
+    World& SystemWorld();
     World& RuntimeWorld();
     const World& RuntimeWorld() const;
 
