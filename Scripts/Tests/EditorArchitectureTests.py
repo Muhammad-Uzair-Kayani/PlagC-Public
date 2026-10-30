@@ -26,6 +26,29 @@ class EditorArchitectureTests(unittest.TestCase):
         ):
             self.assertIn(required, header)
 
+    def test_component_authoring_commands_cover_world_components(self):
+        header = self.read("PlagC/include/PlagC/Editor/SceneDocument.h")
+        source = self.read("PlagC/src/Editor/SceneDocumentComponents.cpp")
+        for required in (
+            "void SetRenderable(Entity, const RenderableComponent&);",
+            "void RemoveRenderable(Entity);",
+            "void SetPhysics(Entity, const PhysicsComponent&);",
+            "void RemovePhysics(Entity);",
+            "void SetAnimator(Entity, const AnimatorComponent&);",
+            "void RemoveAnimator(Entity);",
+        ):
+            self.assertIn(required, header)
+        self.assertIn("class ComponentCommand final : public Command", source)
+        self.assertIn("history_.Execute", source)
+        self.assertIn("PersistentID(entity)", source)
+        self.assertIn("FindByPersistentID(persistentID)", source)
+        self.assertIn("world_->SetPhysics", source)
+        self.assertIn("world_->RemovePhysics", source)
+        self.assertIn("world_->SetAnimator", source)
+        self.assertIn("world_->RemoveAnimator", source)
+        self.assertIn("world_->SetRenderable", source)
+        self.assertIn("world_->RemoveRenderable", source)
+
     def test_world_hierarchy_is_engine_owned_and_world_space_compatible(self):
         header = self.read("PlagC/include/PlagC/World/World.h")
         source = self.read("PlagC/src/World/World.cpp")

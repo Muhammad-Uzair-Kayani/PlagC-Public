@@ -102,12 +102,18 @@ public:
     void SetParent(Entity child, Entity parent);
     void ClearParent(Entity child);
 
+    void SetRenderable(Entity, const RenderableComponent&);
+    void RemoveRenderable(Entity);
     void SetCamera(Entity, const CameraComponent&);
     void RemoveCamera(Entity);
     void SetLight(Entity, const LightComponent&);
     void RemoveLight(Entity);
+    void SetPhysics(Entity, const PhysicsComponent&);
+    void RemovePhysics(Entity);
     void SetModel(Entity, const ModelComponent&);
     void RemoveModel(Entity);
+    void SetAnimator(Entity, const AnimatorComponent&);
+    void RemoveAnimator(Entity);
     void SetModelVisible(Entity, bool);
     void SetActiveCamera(Entity);
     void ClearActiveCamera();
