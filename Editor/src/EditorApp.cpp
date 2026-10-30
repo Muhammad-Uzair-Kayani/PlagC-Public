@@ -6,6 +6,7 @@
 #include "ImGuiInputBridge.h"
 #include "ImGuiRendererBridge.h"
 #include <PlagC/Application.h>
+#include <PlagC/Assets/AssetScene.h>
 #include <PlagC/Editor/EditorSession.h>
 #include <PlagC/Editor/ViewportTarget.h>
 #include <PlagC/World/SceneRenderer.h>
@@ -34,6 +35,7 @@ public:
             std::make_unique<PlagC::Editor::SceneDocument>(
                 std::make_unique<PlagC::World>()));
         sceneRenderer_ = std::make_unique<PlagC::SceneRenderer>(engine.Graphics());
+        assetScene_ = std::make_unique<PlagC::AssetScene>(engine.Graphics());
         viewportTarget_ = std::make_unique<PlagC::Editor::ViewportTarget>(engine.Graphics());
         if (auto *window = engine.MainWindow(); window && window->Width() && window->Height())
             viewportTarget_->Resize(window->Width(), window->Height());
@@ -66,7 +68,7 @@ public:
 
     void OnFrame(PlagC::Engine &engine, double dt) override
     {
-        if (!ImGui::GetCurrentContext() || !session_ || !sceneRenderer_ || !viewportTarget_)
+        if (!ImGui::GetCurrentContext() || !session_ || !sceneRenderer_ || !assetScene_ || !viewportTarget_)
             return;
 
         std::span<const PlagC::TransformUpdate> presentation;
@@ -85,6 +87,13 @@ public:
 
         sceneRenderer_->Sync(session_->ViewWorld(), presentation);
         engine.timings.sceneSyncMs = sceneRenderer_->Statistics().totalMs;
+
+        // ModelComponent rendering and Ozz animation are owned by AssetScene rather than
+        // SceneRenderer. Authoring uses dt=0 so models are visible without advancing clips;
+        // Play/Pause/Step use the exact simulation delta produced by EditorPlayRuntime.
+        assetScene_->Update(session_->SystemWorld(),
+                            session_->Playing() ? playRuntime_.SimulationDelta() : 0.0);
+        engine.timings.animationMs = assetScene_->Statistics().animationMs;
 
         ImGuiIO &io = ImGui::GetIO();
         if (auto *window = engine.MainWindow())
@@ -131,9 +140,12 @@ public:
         preferences_.Shutdown();
         layer_.Shutdown();
         renderer_.Shutdown(engine.Graphics());
+        if (assetScene_)
+            assetScene_->Clear();
         if (sceneRenderer_)
             sceneRenderer_->Clear();
         viewportTarget_.reset();
+        assetScene_.reset();
         sceneRenderer_.reset();
         input_.Shutdown();
         session_.reset();
@@ -244,6 +256,7 @@ private:
     PlagC::CameraLook cameraLook_{-128.6598f, -25.1041f, .12f};
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
     std::unique_ptr<PlagC::SceneRenderer> sceneRenderer_;
+    std::unique_ptr<PlagC::AssetScene> assetScene_;
     std::unique_ptr<PlagC::Editor::ViewportTarget> viewportTarget_;
     PlagC::EventBus::Connection closeConnection_;
     bool closePrompt_ = false;

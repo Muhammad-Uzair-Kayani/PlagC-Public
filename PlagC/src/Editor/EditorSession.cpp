@@ -181,6 +181,11 @@ const World& EditorSession::ViewWorld() const {
     return ViewDocument().Scene();
 }
 
+World& EditorSession::SystemWorld() {
+    Thread::RequireMain();
+    return play_.Running() ? play_.RuntimeWorld() : *document_->world_;
+}
+
 World& EditorSession::RuntimeWorld() {
     Thread::RequireMain();
     return play_.RuntimeWorld();

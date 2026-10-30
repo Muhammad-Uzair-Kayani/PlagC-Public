@@ -60,6 +60,8 @@ public:
     // World the viewport should display. Runtime systems mutate RuntimeWorld()
     // only while Playing(); authoring edits use EditDocument() while stopped.
     const World& ViewWorld() const;
+    // Mutable view reserved for editor-owned systems. UI code must not author through this API.
+    World& SystemWorld();
     World& RuntimeWorld();
     const World& RuntimeWorld() const;
 

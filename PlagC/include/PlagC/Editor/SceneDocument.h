@@ -137,6 +137,7 @@ public:
 
 private:
     friend class PlaySession;
+    friend class EditorSession;
 
     void RequireStableEditState() const;
     void PreviewTransform(Entity, const Transform&);
