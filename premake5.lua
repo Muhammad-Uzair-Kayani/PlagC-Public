@@ -59,6 +59,11 @@ end
 
 -- Each target builds its own PCH with its own flags and definitions.
 function enginePch(source)
+    -- Define MSVC compatibility switches before building/consuming the PCH.
+    -- Defining the STL switch after pgcpch.h is too late for <iterator>.
+    filter "toolset:msc*"
+        defines { "_CRT_SECURE_NO_WARNINGS", "_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING" }
+    filter {}
     pchheader "pgcpch.h"
     pchsource(source)
     includedirs { root .. "/Build/Pch" }
