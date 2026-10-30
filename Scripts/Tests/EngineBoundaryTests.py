@@ -58,6 +58,17 @@ class EngineBoundaryTests(unittest.TestCase):
         self.assertIn("availableBackends.Supports(preferred)", application_cpp)
         self.assertIn("ResolveRendererBackend(requestedBackend", application_cpp)
 
+    def test_automatic_vulkan_failure_falls_back_but_explicit_requests_do_not(self):
+        application = self.read("PlagC/src/Application.cpp")
+        self.assertIn("config.rendererBackend == RendererBackend::Auto", application)
+        self.assertIn("allowAutomaticFallback", application)
+        self.assertIn("backend == RendererBackend::Vulkan", application)
+        self.assertIn("availableBackends.Supports(RendererBackend::OpenGL)", application)
+        self.assertIn("Vulkan initialization failed; falling back to OpenGL", application)
+        self.assertIn("createRenderer(RendererBackend::OpenGL)", application)
+        self.assertIn("SaveRendererPreference(DefaultRendererPreferencePath(), RendererBackend::OpenGL)", application)
+        self.assertIn("if (!canFallback)\n            throw;", application)
+
     def test_non_vulkan_renderer_generation_keeps_workspace_ui_hook(self):
         dependencies = self.read("Build/Dependencies.lua")
         renderer = self.read("Build/Renderer.lua")

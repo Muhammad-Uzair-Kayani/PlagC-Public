@@ -27,6 +27,8 @@ Engine::Engine(const EngineConfig &config)
     const auto availableBackends = Renderer::BackendCapabilities();
     RendererBackend requestedBackend = config.rendererBackend;
     const bool graphicalWindow = !config.headless && !config.nullPlatform && !config.offscreen;
+    const bool allowAutomaticFallback =
+        config.rendererBackend == RendererBackend::Auto && !config.rendererSelectionPrompt && graphicalWindow;
 
     // An explicit caller/CLI backend always wins. Otherwise restore the last graphical choice.
     // Ignore preferences for backends not compiled into this build so Auto can choose a fallback.
@@ -62,11 +64,41 @@ Engine::Engine(const EngineConfig &config)
         window_ = std::make_unique<Window>(events_, windowConfig);
     }
 
-    RendererConfig rendererConfig;
-    rendererConfig.backend = backend;
-    rendererConfig.nullBackend = backend == RendererBackend::Null;
-    rendererConfig.offscreen = config.offscreen;
-    renderer_ = std::make_unique<Renderer>(window_.get(), rendererConfig);
+    const auto createRenderer = [this, &config](RendererBackend selected) {
+        RendererConfig rendererConfig;
+        rendererConfig.backend = selected;
+        rendererConfig.nullBackend = selected == RendererBackend::Null;
+        rendererConfig.offscreen = config.offscreen;
+        return std::make_unique<Renderer>(window_.get(), rendererConfig);
+    };
+
+    try
+    {
+        renderer_ = createRenderer(backend);
+    }
+    catch (const std::exception& error)
+    {
+        const bool canFallback = allowAutomaticFallback && backend == RendererBackend::Vulkan &&
+                                 availableBackends.Supports(RendererBackend::OpenGL);
+        if (!canFallback)
+            throw;
+
+        logger_.Write(Severity::Warning, "RENDER",
+                      std::string("Vulkan initialization failed; falling back to OpenGL: ") +
+                          error.what());
+        renderer_ = createRenderer(RendererBackend::OpenGL);
+        try
+        {
+            SaveRendererPreference(DefaultRendererPreferencePath(), RendererBackend::OpenGL);
+        }
+        catch (const std::exception& preferenceError)
+        {
+            logger_.Write(Severity::Warning, "RENDER",
+                          std::string("Could not persist OpenGL fallback preference: ") +
+                              preferenceError.what());
+        }
+    }
+
     logger_.Write(Severity::Info, "RENDER",
                   std::string("Backend: ") + BackendName(renderer_->Backend()));
 
