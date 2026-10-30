@@ -73,6 +73,9 @@ struct ConstraintDesc {
 };
 enum class TriggerPhase { Enter,Stay,Exit };
 struct TriggerEvent {PhysicsBodyHandle sensor,other;TriggerPhase phase;};
+// Non-sensor contacts use the same stable Enter/Stay/Exit lifetime semantics as triggers.
+enum class CollisionPhase { Enter,Stay,Exit };
+struct CollisionEvent {PhysicsBodyHandle a,b;CollisionPhase phase;};
 struct CharacterHandle { std::uint64_t value=0;explicit operator bool()const{return value!=0;}bool operator==(const CharacterHandle&)const=default; };
 struct CharacterDesc {Vec3 position{0,2,0};float radius=.35f,halfHeight=.55f,mass=70,maxSlopeDegrees=45,stepHeight=.4f;};
 struct CharacterState {Vec3 position,velocity;bool grounded=false;};

@@ -9,6 +9,8 @@ class InputState {
 public:
     void BeginFrame();
     void Reset();
+    void ResetKeyboard();
+    void ResetMouse();
     void RebaseCursor() { positioned_ = false; delta_ = {}; }
     void Apply(const Event&);
     bool IsKeyPressed(KeyCode) const;

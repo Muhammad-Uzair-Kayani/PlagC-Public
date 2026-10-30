@@ -16,6 +16,20 @@ void InputState::Reset()
     *this = InputState{};
 }
 
+void InputState::ResetKeyboard()
+{
+    keys_.fill(false);
+}
+
+void InputState::ResetMouse()
+{
+    buttons_.fill(false);
+    position_ = {};
+    delta_ = {};
+    scroll_ = {};
+    positioned_ = false;
+}
+
 bool InputState::IsKeyPressed(KeyCode key) const
 {
     const auto index = static_cast<std::size_t>(key);

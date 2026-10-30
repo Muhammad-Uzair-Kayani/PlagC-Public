@@ -36,16 +36,15 @@ class EditorPlayRuntimeTests(unittest.TestCase):
         app = self.read("Editor/src/EditorApp.cpp")
         self.assertIn("double SimulationDelta() const noexcept", header)
         self.assertIn("simulationDelta_ = 0.0", source)
-        self.assertIn("if (session.Paused())", source)
-        self.assertIn("session.ConsumeStep()", source)
-        self.assertIn("simulationDelta_ = 1.0 / physicsConfig_.fixedHz", source)
-        self.assertIn("physics_->Advance(simulationDelta_)", source)
-        self.assertIn("simulationDelta_ = frameSeconds", source)
+        self.assertIn("session.Paused() && !session.ConsumeStep()", source)
+        self.assertIn("simulationDelta_ = session.Paused() ? (1.0 / physicsConfig_.fixedHz) : frameSeconds", source)
+        self.assertIn("physics_->Advance(simulationDelta_,", source)
+        self.assertIn("gameplay_.FixedUpdate(context, fixedSeconds)", source)
         self.assertIn("return physics_->Presentation();", source)
         self.assertIn("playRuntime_.SimulationDelta()", app)
         self.assertNotIn("session.EditDocument()", source)
 
-    def test_editor_feeds_physics_presentation_and_model_animation(self):
+    def test_editor_feeds_physics_presentation_model_animation_and_completion(self):
         app = self.read("Editor/src/EditorApp.cpp")
         self.assertIn("presentation = playRuntime_.Update(engine, *session_, dt)", app)
         self.assertIn("sceneRenderer_->Sync(session_->ViewWorld(), presentation)", app)
@@ -53,10 +52,11 @@ class EditorPlayRuntimeTests(unittest.TestCase):
         self.assertIn("assetScene_->Update(session_->SystemWorld()", app)
         self.assertIn("session_->Playing() ? playRuntime_.SimulationDelta() : 0.0", app)
         self.assertIn("engine.timings.animationMs = assetScene_->Statistics().animationMs", app)
+        self.assertIn("playRuntime_.CompleteFrame(engine, *session_)", app)
         self.assertIn("assetScene_->Clear()", app)
         self.assertIn('"EDITOR-PLAY"', app)
         self.assertIn("session_->StopPlay()", app)
-        self.assertIn("playRuntime_.Reset()", app)
+        self.assertIn("playRuntime_.Reset(engine)", app)
         self.assertIn("std::make_unique<EditorApplication>(config)", app)
 
     def test_play_mode_uses_runtime_active_camera_and_editor_fallback(self):

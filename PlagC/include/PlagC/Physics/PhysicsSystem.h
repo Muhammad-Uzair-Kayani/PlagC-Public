@@ -6,7 +6,7 @@
 namespace PlagC {
 struct PhysicsFrameStats {
     unsigned steps=0;
-    std::size_t ecsWrites=0;
+    std::size_t ecsWrites=0,collisionEvents=0;
     double alpha=0,droppedSeconds=0,structureMs=0,inputMs=0,stepMs=0,outputMs=0,presentationMs=0,eventsMs=0,charactersMs=0;
     PhysicsStats physics;
 };
@@ -35,6 +35,7 @@ public:
     void SetCharacterInput(CharacterHandle,Vec3,bool jump=false);
     CharacterState ReadCharacter(CharacterHandle) const;
     std::span<const TriggerEvent> TriggerEvents() const; // Includes every catch-up tick.
+    std::span<const CollisionEvent> CollisionEvents() const; // Non-sensor contacts, every catch-up tick.
 
     std::optional<RayHit> Raycast(Vec3 origin,Vec3 displacement,CollisionLayer=CollisionLayer::Projectile);
     Entity EntityFor(PhysicsBodyHandle) const;

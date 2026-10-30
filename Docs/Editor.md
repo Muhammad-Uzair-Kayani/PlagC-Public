@@ -171,7 +171,7 @@ New/Open/Save/Save As/Recent scenes, dirty indicator, transactional replacement,
 
 Professional Play/Pause/Step/Stop transport, clear runtime visual state, shortcuts, authoring lock policy, runtime camera, physics/animation lifecycle and clean return to the unchanged authoring world.
 
-## 18. Runtime / Game Logic — `FOUNDATION`
+## 18. Runtime / Game Logic — `DONE`
 
 Define gameplay update/lifecycle hooks, editor-vs-game input routing, physics step callbacks, animation/audio ordering, trigger/collision routing and correct Pause/Step semantics.
 
@@ -387,6 +387,17 @@ Definition of done for the product milestone:
 - Regression: `Scripts/Tests/EditorMilestone15Tests.py` covers the import options, texture asset path, receipt persistence, import/reimport execution, editor settings surface, error handling and normal editor-frame integration; it is wired into `ValidateEditor.bat` and Windows CI.
 - Validation note: the exact Windows run for the original Milestone 15 commit was cancelled by CI concurrency after newer `prototype` pushes, not failed; the implementation remains covered by the branch-level Windows Editor validation gate.
 - Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 15.
+
+## 18. Runtime / Game Logic — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 18 implementation commit on `prototype`.
+- Delivered: engine-owned `GameplayRuntime`/`GameplaySystem` lifecycle hooks for Start/Stop/Pause/Resume, routed input, variable Update, physics-scheduled FixedUpdate, trigger/collision callbacks and LateUpdate; isolated gameplay input state with keyboard/mouse capture gates and focus-loss reset; fixed-step gameplay callbacks executed through the existing `PhysicsSystem::Advance` scheduler; deterministic non-sensor collision Enter/Stay/Exit routing by stable physics/entity identity; and explicit Play-frame ordering of gameplay input/update → fixed gameplay/physics → physics events → animation → late gameplay/audio maintenance.
+- Pause/Step semantics: a paused frame with no Step performs no gameplay Update/FixedUpdate/LateUpdate and only synchronizes structure; Step consumes exactly one configured fixed interval and advances gameplay, physics, physics events and animation once while remaining paused. Pause/Resume lifecycle callbacks fire only on state transitions.
+- Architecture: Play continues to simulate the isolated runtime clone, never the authoring `World`; Jolt callbacks only update an internal thread-safe contact registry and never execute ECS or user gameplay code; collision events are translated back through `PhysicsSystem` after workers finish; no Jolt/EnTT/Ogre implementation object leaks into `GameplaySystem` contracts.
+- Regression: `Scripts/Tests/EditorMilestone18Tests.py` covers lifecycle, editor-vs-game input isolation, fixed-step callback ordering, Pause/Step semantics, trigger/collision routing, animation/audio ordering, validation wiring and the Milestone 19 scope boundary. Existing `EditorPlayRuntimeTests.py` was updated for the fixed-step gameplay callback path. Both are wired into `ValidateEditor.bat` and Windows Editor CI.
+- Scope boundary: no Console (19), profiler UI (20), toolbar redesign (21), menu work (22), theme/icons, scripting language, audio authoring or later editor milestone work is included.
+- Next step: stop here and wait for explicit approval before starting any other milestone.
 
 ## Historical architecture note
 

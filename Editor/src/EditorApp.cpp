@@ -43,6 +43,7 @@ public:
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         ImGui::StyleColorsDark();
         input_.Initialize(engine.Events());
+        playRuntime_.Initialize(engine);
         renderer_.Initialize(engine.Graphics());
         layer_.Initialize(engine, *session_);
         preferences_.Initialize(engine);
@@ -75,15 +76,28 @@ public:
         catch (const std::exception& error)
         {
             engine.Logger().Write(PlagC::Severity::Error, "EDITOR-PLAY", error.what());
-            playRuntime_.Reset();
+            playRuntime_.Reset(engine);
             if (session_->Playing()) session_->StopPlay();
             engine.timings.physicsMs = 0.0;
+            engine.timings.audioMs = 0.0;
         }
 
         sceneRenderer_->Sync(session_->ViewWorld(), presentation);
         engine.timings.sceneSyncMs = sceneRenderer_->Statistics().totalMs;
         assetScene_->Update(session_->SystemWorld(), session_->Playing() ? playRuntime_.SimulationDelta() : 0.0);
         engine.timings.animationMs = assetScene_->Statistics().animationMs;
+        try
+        {
+            // Milestone 18 ordering: gameplay/physics in Update -> animation above -> late gameplay/audio here.
+            playRuntime_.CompleteFrame(engine, *session_);
+        }
+        catch (const std::exception& error)
+        {
+            engine.Logger().Write(PlagC::Severity::Error, "EDITOR-PLAY", error.what());
+            playRuntime_.Reset(engine);
+            if (session_->Playing()) session_->StopPlay();
+            engine.timings.audioMs = 0.0;
+        }
 
         ImGuiIO &io = ImGui::GetIO();
         if (auto *window = engine.MainWindow())
@@ -109,6 +123,14 @@ public:
         if (layer_.InspectorVisible()) layer_.AppendComponentInspector(engine, *session_);
 
         const auto& viewport = layer_.Viewport();
+        const bool popupBlocksGame = ImGui::IsPopupOpen(nullptr,
+            ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+        playRuntime_.SetGameInputRouting(
+            session_->Playing() && !session_->Paused() && viewport.input.viewportFocused &&
+                !io.WantTextInput && !popupBlocksGame,
+            session_->Playing() && !session_->Paused() && viewport.input.viewportHovered &&
+                !viewport.input.gizmoActive && !popupBlocksGame);
+
         if (viewport.width > 1 && viewport.height > 1)
             viewportTarget_->Resize(
                 static_cast<unsigned>(std::clamp(std::lround(viewport.width * io.DisplayFramebufferScale.x), 1L, 8192L)),
@@ -136,7 +158,7 @@ public:
     {
         closeConnection_.Reset();
         closePrompt_ = false;
-        playRuntime_.Reset();
+        playRuntime_.Shutdown(engine);
         RestoreEditorPreviewEnvironment(engine);
         DestroyEditorPreviewLights(engine);
         preferences_.Shutdown();
