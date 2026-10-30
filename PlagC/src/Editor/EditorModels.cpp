@@ -52,6 +52,11 @@ std::string Lower(std::string value) {
     return value;
 }
 
+std::string NormalizedPath(std::string value) {
+    std::replace(value.begin(), value.end(), '\\', '/');
+    return value;
+}
+
 EditorAssetKind KindFor(const std::filesystem::path& path) {
     const auto extension = Lower(path.extension().string());
     if (extension == ".plasset")
@@ -65,8 +70,8 @@ EditorAssetKind KindFor(const std::filesystem::path& path) {
         return EditorAssetKind::AudioSource;
     if (extension == ".png" || extension == ".jpg" ||
         extension == ".jpeg" || extension == ".dds" ||
-        extension == ".tga" || extension == ".ktx" ||
-        extension == ".ktx2")
+        extension == ".tga" || extension == ".kt" ||
+        extension == ".ktx" || extension == ".ktx2")
         return EditorAssetKind::Texture;
     if (extension == ".glsl" || extension == ".hlsl" ||
         extension == ".vert" || extension == ".frag" ||
@@ -74,7 +79,7 @@ EditorAssetKind KindFor(const std::filesystem::path& path) {
         return EditorAssetKind::Shader;
     if (extension == ".plscene" || extension == ".scene")
         return EditorAssetKind::Scene;
-    if (extension == ".material" || extension == ".mat")
+    if (extension == ".pgmaterial" || extension == ".material" || extension == ".mat")
         return EditorAssetKind::Material;
     return EditorAssetKind::Other;
 }
@@ -83,6 +88,25 @@ std::string MountedPath(const AssetRoot& root,
                         const std::filesystem::path& relative) {
     const auto value = relative.generic_string();
     return root.mount.empty() ? value : root.mount + "://" + value;
+}
+
+std::optional<std::size_t> FindRegistryEntry(
+    const std::vector<AssetBrowserEntry>& entries,
+    const std::unordered_map<std::string, std::size_t>& byPath,
+    std::string registryPath) {
+    registryPath = NormalizedPath(std::move(registryPath));
+    if (const auto exact = byPath.find(registryPath); exact != byPath.end())
+        return exact->second;
+
+    const std::string suffix = '/' + registryPath;
+    for (std::size_t i = 0; i < entries.size(); ++i) {
+        if (entries[i].kind != EditorAssetKind::Cooked)
+            continue;
+        const std::string candidate = NormalizedPath(entries[i].path);
+        if (candidate == registryPath || candidate.ends_with(suffix))
+            return i;
+    }
+    return std::nullopt;
 }
 
 bool SeverityEnabled(Severity severity, const ConsoleFilter& filter) {
@@ -194,11 +218,11 @@ void AssetBrowserModel::MergeRegistry(std::vector<AssetBrowserEntry>& entries,
     std::unordered_map<std::string, std::size_t> byPath;
     byPath.reserve(entries.size());
     for (std::size_t i = 0; i < entries.size(); ++i)
-        byPath.emplace(entries[i].path, i);
+        byPath.emplace(NormalizedPath(entries[i].path), i);
 
     for (const auto& info : registry) {
-        const auto it = byPath.find(info.metadata.path);
-        if (it == byPath.end()) {
+        const auto match = FindRegistryEntry(entries, byPath, info.metadata.path);
+        if (!match) {
             AssetBrowserEntry item;
             item.path = info.metadata.path;
             item.kind = EditorAssetKind::Cooked;
@@ -207,12 +231,12 @@ void AssetBrowserModel::MergeRegistry(std::vector<AssetBrowserEntry>& entries,
             item.bytes = info.metadata.bytes;
             item.generation = info.metadata.generation;
             item.error = info.error;
-            byPath.emplace(item.path, entries.size());
+            byPath.emplace(NormalizedPath(item.path), entries.size());
             entries.push_back(std::move(item));
             continue;
         }
 
-        auto& item = entries[it->second];
+        auto& item = entries[*match];
         item.state = info.state;
         item.runtimeType = info.metadata.type;
         item.bytes = info.metadata.bytes;
@@ -257,7 +281,8 @@ std::vector<LogRecord> FilterLogRecords(std::span<const LogRecord> records,
             continue;
 
         if (!search.empty()) {
-            const auto haystack = Lower(record.category + "\n" + record.thread +
+            const auto haystack = Lower(filter.search.empty() ? record.category + "\n" + record.thread +
+                                        "\n" + record.message : record.category + "\n" + record.thread +
                                         "\n" + record.message);
             if (haystack.find(search) == std::string::npos)
                 continue;
