@@ -62,6 +62,8 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         overlay = self.read("Editor/src/EditorViewportExperience.cpp")
         self.assertIn("viewport.cameraSpeed", app)
         self.assertIn("SyncCameraLookFromEditorCamera", app)
+        self.assertIn("focusDistance", app)
+        self.assertIn("forward.x*focusDistance", app)
         self.assertIn("ImGuiKey_F", overlay)
         self.assertIn("FocusSelection", overlay)
         self.assertIn("FrameAll", overlay)

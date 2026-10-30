@@ -289,6 +289,10 @@ private:
 
         engine.Graphics().SetCameraProjection(viewport.orthographic ? PlagC::CameraProjection::Orthographic : PlagC::CameraProjection::Perspective,
                                               viewport.orthographicHeight);
+        const float focusDx=editorCamera_.target.x-editorCamera_.position.x;
+        const float focusDy=editorCamera_.target.y-editorCamera_.position.y;
+        const float focusDz=editorCamera_.target.z-editorCamera_.position.z;
+        const float focusDistance=std::clamp(std::sqrt(focusDx*focusDx+focusDy*focusDy+focusDz*focusDz),0.1f,100000.0f);
         SyncCameraLookFromEditorCamera();
         if (viewport.input.AcceptCameraMouse() && viewport.input.AcceptKeyboard() && !blocked && ImGui::IsMouseDown(ImGuiMouseButton_Right))
         {
@@ -308,7 +312,7 @@ private:
         }
         const auto forward=cameraLook_.Forward();
         const auto p=editorCamera_.position;
-        editorCamera_.target={p.x+forward.x,p.y+forward.y,p.z+forward.z};
+        editorCamera_.target={p.x+forward.x*focusDistance,p.y+forward.y*focusDistance,p.z+forward.z*focusDistance};
         engine.Graphics().SetCamera(editorCamera_);
     }
 
