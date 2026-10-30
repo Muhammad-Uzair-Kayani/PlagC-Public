@@ -35,8 +35,7 @@ class EditorAssetInteractionTests(unittest.TestCase):
         self.assertIn("ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)", source)
         self.assertIn("CreateCookedModelEntity(engine, session, entry.path.c_str(), Vec3{})", source)
         self.assertIn("entity.model = ModelComponent{model, true}", source)
-        self.assertIn("document.Create(std::move(entity))", source)
-        self.assertIn("document.Select(created)", source)
+        self.assertIn("session.EditDocument().Create(std::move(entity))", source)
 
     def test_inspector_model_drop_is_undoable(self):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
