@@ -22,9 +22,10 @@ public:
 
     const ViewportState& Viewport() const noexcept { return viewport_; }
     bool InspectorVisible() const noexcept { return showInspector_; }
-    // Appends full component authoring controls to the Inspector after the core
-    // transform/name section has been emitted by Frame().
     void AppendComponentInspector(Engine&, EditorSession&);
+    // Adds actionable cooked assets to Content Browser and an undoable model
+    // assignment drop target to Inspector without bypassing SceneDocument history.
+    void AppendAssetInteractions(Engine&, EditorSession&);
 
 private:
     void DrawDockHost(Engine&, EditorSession&);
