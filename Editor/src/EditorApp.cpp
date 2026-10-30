@@ -129,6 +129,7 @@ public:
                 static_cast<unsigned>(std::clamp(std::lround(viewport.height * io.DisplayFramebufferScale.y), 1L, 8192L)));
         UpdateEditorCamera(engine, dt);
         viewportPresenter_.Draw(viewportTarget_->Handle());
+        layer_.AppendTransformGizmo(engine, *session_, editorCamera_);
         ImGui::Render();
         renderer_.Submit(engine.Graphics(), ImGui::GetDrawData());
     }
