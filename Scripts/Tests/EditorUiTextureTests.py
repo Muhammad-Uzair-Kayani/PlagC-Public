@@ -30,6 +30,13 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("editor UI texture must be a standalone Ogre Type2D resource", source)
         self.assertIn("editor UI texture upload did not become ready", source)
 
+    def test_ui_texture_creation_is_diagnosable(self):
+        source = self.read("PlagC/src/Renderer/OgreUiTexture.cpp")
+        self.assertIn("[PlagC UI] standalone texture ready name=", source)
+        self.assertIn("type=Type2D batching=false ready=true", source)
+        self.assertIn("pixels=", source)
+        self.assertIn("handle=", source)
+
     def test_ui_texture_keeps_imgui_target_bit_free(self):
         source = self.read("PlagC/src/Renderer/OgreUiTexture.cpp")
         bridge = self.read("Editor/src/ImGuiRendererBridge.cpp")
