@@ -128,6 +128,10 @@ void ImGuiRendererBridge::Submit(Renderer& renderer, const ImDrawData* drawData)
             out.clipRight = std::clamp(right, 0.0f, frame.width);
             out.clipBottom = std::clamp(bottom, 0.0f, frame.height);
             out.texture = DecodeTexture(command.GetTexID());
+            if (out.texture.kind == UiTextureKind::Texture &&
+                out.texture.value != fontTexture_.value)
+                throw std::runtime_error(
+                    "ImGui submitted an unknown editor UI texture handle");
 
             for (unsigned i = 0; i < command.ElemCount; ++i)
             {

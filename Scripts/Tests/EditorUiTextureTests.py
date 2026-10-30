@@ -44,6 +44,12 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("std::uint64_t{1} << 63", bridge)
         self.assertIn("PlagC/AssetTexture", source)
 
+    def test_bridge_rejects_unknown_low_bit_texture_handles(self):
+        bridge = self.read("Editor/src/ImGuiRendererBridge.cpp")
+        self.assertIn("out.texture.kind == UiTextureKind::Texture", bridge)
+        self.assertIn("out.texture.value != fontTexture_.value", bridge)
+        self.assertIn("ImGui submitted an unknown editor UI texture handle", bridge)
+
     def test_ui_presentation_requires_an_executed_draw(self):
         backend = self.read("PlagC/src/Renderer/OgreUiBackend.cpp")
         self.assertIn("bool Render(const UiDrawData& frame", backend)
