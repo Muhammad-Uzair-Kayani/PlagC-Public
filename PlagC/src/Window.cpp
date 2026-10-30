@@ -77,6 +77,7 @@ Window::~Window() { Thread::RequireMain(); if (impl_->handle) glfwDestroyWindow(
 void Window::Poll() { Thread::RequireMain(); Input::state_.BeginFrame(); LatencyProfiler::BeginPoll(); glfwPollEvents(); LatencyProfiler::EndPoll(); if (impl_->eventFailure) { impl_->eventFailure = false; throw std::runtime_error("window event delivery failed"); } }
 bool Window::ShouldClose() const { Thread::RequireMain(); return glfwWindowShouldClose(impl_->handle) != 0; }
 void Window::RequestClose() { Thread::RequireMain(); glfwSetWindowShouldClose(impl_->handle, GLFW_TRUE); }
+void Window::CancelClose() { Thread::RequireMain(); glfwSetWindowShouldClose(impl_->handle, GLFW_FALSE); }
 void Window::SetTitle(const std::string& value) { Thread::RequireMain(); glfwSetWindowTitle(impl_->handle,value.c_str()); }
 void Window::SetCursorCaptured(bool enabled) {
     Thread::RequireMain();

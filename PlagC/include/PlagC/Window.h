@@ -15,6 +15,9 @@ public:
     void Poll();
     bool ShouldClose() const;
     void RequestClose();
+    // Clears an OS/user close request. Intended for synchronous close-policy handlers
+    // such as an editor unsaved-changes prompt.
+    void CancelClose();
     void SetTitle(const std::string&);
     void Resize(int, int);
     void SetCursorCaptured(bool);

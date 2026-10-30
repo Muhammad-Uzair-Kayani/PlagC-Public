@@ -90,6 +90,22 @@ class EngineBoundaryTests(unittest.TestCase):
         self.assertIn("vertices=0", script)
         self.assertIn("commands=0", script)
 
+    def test_editor_can_cancel_os_close_for_unsaved_scene_prompt(self):
+        window_h = self.read("PlagC/include/PlagC/Window.h")
+        window_cpp = self.read("PlagC/src/Window.cpp")
+        editor = self.read("Editor/src/EditorApp.cpp")
+        self.assertIn("void CancelClose();", window_h)
+        self.assertIn("glfwSetWindowShouldClose(impl_->handle, GLFW_FALSE)", window_cpp)
+        self.assertIn("EventType::Close", editor)
+        self.assertIn("session_->Dirty()", editor)
+        self.assertIn("session_->Document().HasTransientEdit()", editor)
+        self.assertIn("window->CancelClose()", editor)
+        self.assertIn('ImGui::Button("Save & Exit")', editor)
+        self.assertIn('ImGui::Button("Discard & Exit")', editor)
+        self.assertIn('ImGui::Button("Cancel")', editor)
+        self.assertIn("session_->Save()", editor)
+        self.assertIn("window->RequestClose()", editor)
+
     def test_runtime_staging_is_engine_only(self):
         manifest = self.read("Scripts/RuntimeAssetManifest.py")
         staging = self.read("Scripts/StageRuntimeAssets.py")

@@ -42,6 +42,17 @@ public:
         layer_.Initialize(engine, *session_);
         preferences_.Initialize(engine);
 
+        closeConnection_ = engine.Events().Subscribe(PlagC::EventType::Close,
+            [this, &engine](const PlagC::Event&) {
+                if (!session_)
+                    return;
+                if (!session_->Dirty() && !session_->Document().HasTransientEdit())
+                    return;
+                if (auto* window = engine.MainWindow())
+                    window->CancelClose();
+                closePrompt_ = true;
+            });
+
         engine.Logger().Write(
             PlagC::Severity::Info, "EDITOR",
             "Editor application shell initialized.");
@@ -77,6 +88,7 @@ public:
 
         layer_.Frame(engine, *session_);
         preferences_.Draw(engine, *session_);
+        DrawClosePrompt(engine);
 
         const auto& viewport = layer_.Viewport();
         if (viewport.width > 1 && viewport.height > 1)
@@ -91,6 +103,8 @@ public:
 
     void OnStop(PlagC::Engine &engine) override
     {
+        closeConnection_.Reset();
+        closePrompt_ = false;
         preferences_.Shutdown();
         layer_.Shutdown();
         renderer_.Shutdown(engine.Graphics());
@@ -108,6 +122,69 @@ public:
     }
 
 private:
+    void DrawClosePrompt(PlagC::Engine& engine)
+    {
+        if (!closePrompt_)
+            return;
+
+        constexpr const char* popup = "Unsaved Changes##WindowClose";
+        if (!ImGui::IsPopupOpen(popup))
+            ImGui::OpenPopup(popup);
+
+        if (!ImGui::BeginPopupModal(popup, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+            return;
+
+        ImGui::TextWrapped("The current scene has unsaved changes. Save before closing the Editor?");
+        ImGui::Spacing();
+
+        const bool canSave = session_->HasPath() && session_->EditingEnabled();
+        ImGui::BeginDisabled(!canSave);
+        if (ImGui::Button("Save & Exit"))
+        {
+            try
+            {
+                session_->Save();
+                closePrompt_ = false;
+                ImGui::CloseCurrentPopup();
+                if (auto* window = engine.MainWindow())
+                    window->RequestClose();
+            }
+            catch (const std::exception& error)
+            {
+                engine.Logger().Write(PlagC::Severity::Error, "EDITOR", error.what());
+            }
+        }
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+        if (ImGui::Button("Discard & Exit"))
+        {
+            closePrompt_ = false;
+            ImGui::CloseCurrentPopup();
+            if (auto* window = engine.MainWindow())
+                window->RequestClose();
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel"))
+        {
+            closePrompt_ = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (!canSave)
+        {
+            ImGui::Spacing();
+            if (!session_->HasPath())
+                ImGui::TextDisabled("Use File > Save As before closing if you want to keep this scene.");
+            else if (session_->Playing())
+                ImGui::TextDisabled("Stop Play mode before saving the scene.");
+            else
+                ImGui::TextDisabled("Finish the active editor gesture before saving the scene.");
+        }
+        ImGui::EndPopup();
+    }
+
     void UpdateEditorCamera(PlagC::Engine& engine, double dt)
     {
         // Navigation belongs to the editor, never to the saved authoring world.
@@ -146,6 +223,8 @@ private:
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
     std::unique_ptr<PlagC::SceneRenderer> sceneRenderer_;
     std::unique_ptr<PlagC::Editor::ViewportTarget> viewportTarget_;
+    PlagC::EventBus::Connection closeConnection_;
+    bool closePrompt_ = false;
     PlagC::Editor::ImGuiInputBridge input_;
     PlagC::Editor::ImGuiRendererBridge renderer_;
     PlagC::Editor::EditorLayer layer_;
