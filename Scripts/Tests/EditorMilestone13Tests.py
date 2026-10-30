@@ -14,6 +14,7 @@ class EditorMilestone13Tests(unittest.TestCase):
     def setUp(self):
         self.cpp = self.read("Editor/src/EditorDataPanels.cpp")
         self.header = self.read("Editor/src/EditorDataPanels.h")
+        self.models = self.read("PlagC/src/Editor/EditorModels.cpp")
         self.interactions = self.read("Editor/src/EditorAssetInteractions.cpp")
         self.docs = self.read("Docs/Editor.md")
 
@@ -52,6 +53,14 @@ class EditorMilestone13Tests(unittest.TestCase):
         self.assertIn("IsInternalAsset", self.cpp)
         self.assertIn('".import.json"', self.cpp)
         self.assertIn("contentShowInternal_", self.header)
+        self.assertIn('extension == ".pgmaterial"', self.models)
+
+    def test_registry_state_is_merged_into_mounted_cooked_entry(self):
+        self.assertIn("FindRegistryEntry", self.models)
+        self.assertIn("entries[i].kind != EditorAssetKind::Cooked", self.models)
+        self.assertIn("candidate.ends_with(suffix)", self.models)
+        self.assertIn("item.runtimeType = info.metadata.type", self.models)
+        self.assertIn("item.generation = info.metadata.generation", self.models)
 
     def test_context_menu_double_click_and_drag_drop_are_real(self):
         self.assertIn("BeginPopupContextItem", self.cpp)
