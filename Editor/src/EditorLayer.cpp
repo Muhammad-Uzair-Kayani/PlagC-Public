@@ -32,6 +32,31 @@ void EditorLayer::Initialize(Engine& engine, EditorSession&)
 
 void EditorLayer::Frame(Engine& engine, EditorSession& session)
 {
+    const auto& io = ImGui::GetIO();
+    if (session.EditingEnabled() && !io.WantTextInput && !ImGui::IsAnyItemActive() &&
+        !io.KeyAlt && !ImGui::IsPopupOpen(nullptr,
+            ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+    {
+        try
+        {
+            if (io.KeyCtrl && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Z, false) && session.CanUndo())
+                session.Undo();
+            else if (io.KeyCtrl && ((ImGui::IsKeyPressed(ImGuiKey_Y, false) && !io.KeyShift) ||
+                     (io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Z, false))) && session.CanRedo())
+                session.Redo();
+            else if (!session.Document().HasTransientEdit())
+            {
+                auto& document = session.EditDocument();
+                const Entity selected = document.Selection();
+                if (selected && io.KeyCtrl && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_D, false))
+                    document.Duplicate(selected);
+                else if (selected && !io.KeyCtrl && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Delete, false))
+                    document.Destroy(selected);
+            }
+        }
+        catch (const std::exception& error) { LogEditorError(engine, error); }
+    }
+
     DrawDockHost(engine, session);
 
     if (seenDocumentGeneration_ != files_.DocumentGeneration())
