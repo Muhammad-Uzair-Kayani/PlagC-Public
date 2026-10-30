@@ -58,6 +58,17 @@ class EngineBoundaryTests(unittest.TestCase):
         self.assertIn("availableBackends.Supports(preferred)", application_cpp)
         self.assertIn("ResolveRendererBackend(requestedBackend", application_cpp)
 
+    def test_non_vulkan_renderer_generation_keeps_workspace_ui_hook(self):
+        dependencies = self.read("Build/Dependencies.lua")
+        renderer = self.read("Build/Renderer.lua")
+        self.assertIn('include "Renderer.lua"', dependencies)
+        self.assertIn("if PLAGC_VULKAN then", renderer)
+        self.assertIn("return vulkanEngineSourcesImpl()", renderer)
+        self.assertIn("Detail::OgreUIWorkspaceScope uiWorkspace(this, p.workspace);", renderer)
+        self.assertIn("assert(first, 'Common Ogre renderer UI hook changed')", renderer)
+        self.assertIn("removefiles { original }", renderer)
+        self.assertIn("files { output }", renderer)
+
     def test_runtime_staging_is_engine_only(self):
         manifest = self.read("Scripts/RuntimeAssetManifest.py")
         staging = self.read("Scripts/StageRuntimeAssets.py")
