@@ -76,7 +76,7 @@ public:
             preferences_.Toggle();
 
         layer_.Frame(engine, *session_);
-        preferences_.Draw(engine);
+        preferences_.Draw(engine, *session_);
 
         const auto& viewport = layer_.Viewport();
         if (viewport.width > 1 && viewport.height > 1)
