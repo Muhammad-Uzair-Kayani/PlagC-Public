@@ -9,6 +9,7 @@
 #include <OgreRoot.h>
 #include <OgreSceneManager.h>
 #include <OgreCamera.h>
+#include <OgreIdString.h>
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -33,11 +34,12 @@ void Renderer::SetCameraProjection(CameraProjection projection, float orthograph
     while (managers.hasMoreElements())
     {
         Ogre::SceneManager *scene = managers.getNext();
-        if (scene && scene->hasCamera("PlagCCamera"))
-        {
-            camera = scene->getCamera("PlagCCamera");
+        if (!scene)
+            continue;
+
+        camera = scene->findCameraNoThrow(Ogre::IdString("PlagCCamera"));
+        if (camera)
             break;
-        }
     }
     if (!camera)
         throw std::logic_error("PlagC renderer camera is unavailable");
