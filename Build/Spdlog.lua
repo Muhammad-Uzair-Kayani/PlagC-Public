@@ -4,6 +4,7 @@ project "spdlog"
     language "C++"
     cppdialect "C++20"
     common()
+    warnings "Off"
     files { "../Vendor/spdlog/src/*.cpp" }
     includedirs { "../Vendor/spdlog/include" }
     defines { "SPDLOG_COMPILED_LIB" }
