@@ -112,6 +112,8 @@ public:
         UpdateEditorCamera(engine, dt);
         viewportPresenter_.Draw(viewportTarget_->Handle());
         layer_.AppendViewportExperience(engine, *session_, editorCamera_);
+        if (session_->Playing())
+            engine.Graphics().SetCameraProjection(PlagC::CameraProjection::Perspective);
         UpdateEditorPreviewLights(engine);
         layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);
         layer_.AppendTransformGizmo(engine, *session_, editorCamera_);

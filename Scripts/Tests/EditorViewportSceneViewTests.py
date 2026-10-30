@@ -83,6 +83,16 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         self.assertIn("request.orthographic = viewport.orthographic", app)
         self.assertIn("CameraProjection::Perspective", app)
 
+    def test_play_mode_reasserts_runtime_perspective_after_scene_view_overlay(self):
+        app = self.read("Editor/src/EditorApp.cpp")
+        experience = app.index("layer_.AppendViewportExperience")
+        play_guard = app.index("if (session_->Playing())", experience)
+        perspective = app.index("SetCameraProjection(PlagC::CameraProjection::Perspective)", play_guard)
+        gizmo = app.index("layer_.AppendTransformGizmo", perspective)
+        self.assertLess(experience, play_guard)
+        self.assertLess(play_guard, perspective)
+        self.assertLess(perspective, gizmo)
+
     def test_local_world_gizmo_and_visibility_are_respected(self):
         source = self.read("Editor/src/EditorTransformGizmo.cpp")
         self.assertIn("viewport_.gizmosVisible", source)
