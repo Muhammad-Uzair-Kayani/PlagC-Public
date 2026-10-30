@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include "EditorLayer.h"
+#include "EditorPlayRuntime.h"
 #include "EditorPreferences.h"
 #include "EditorViewportPresenter.h"
 #include "ImGuiInputBridge.h"
@@ -18,6 +19,11 @@ namespace
 class EditorApplication final : public PlagC::Application
 {
 public:
+    explicit EditorApplication(const PlagC::EngineConfig& config)
+        : playRuntime_(config)
+    {
+    }
+
     void OnStart(PlagC::Engine &engine) override
     {
         if (auto *window = engine.MainWindow())
@@ -63,7 +69,21 @@ public:
         if (!ImGui::GetCurrentContext() || !session_ || !sceneRenderer_ || !viewportTarget_)
             return;
 
-        sceneRenderer_->Sync(session_->ViewWorld());
+        std::span<const PlagC::TransformUpdate> presentation;
+        try
+        {
+            presentation = playRuntime_.Update(engine, *session_, dt);
+        }
+        catch (const std::exception& error)
+        {
+            engine.Logger().Write(PlagC::Severity::Error, "EDITOR-PLAY", error.what());
+            playRuntime_.Reset();
+            if (session_->Playing())
+                session_->StopPlay();
+            engine.timings.physicsMs = 0.0;
+        }
+
+        sceneRenderer_->Sync(session_->ViewWorld(), presentation);
         engine.timings.sceneSyncMs = sceneRenderer_->Statistics().totalMs;
 
         ImGuiIO &io = ImGui::GetIO();
@@ -107,6 +127,7 @@ public:
     {
         closeConnection_.Reset();
         closePrompt_ = false;
+        playRuntime_.Reset();
         preferences_.Shutdown();
         layer_.Shutdown();
         renderer_.Shutdown(engine.Graphics());
@@ -189,7 +210,6 @@ private:
 
     void UpdateEditorCamera(PlagC::Engine& engine, double dt)
     {
-        // Navigation belongs to the editor, never to the saved authoring world.
         const auto& viewport = layer_.Viewport();
         const auto& io = ImGui::GetIO();
         const bool blocked = io.WantTextInput ||
@@ -227,6 +247,7 @@ private:
     std::unique_ptr<PlagC::Editor::ViewportTarget> viewportTarget_;
     PlagC::EventBus::Connection closeConnection_;
     bool closePrompt_ = false;
+    PlagC::Editor::EditorPlayRuntime playRuntime_;
     PlagC::Editor::ImGuiInputBridge input_;
     PlagC::Editor::ImGuiRendererBridge renderer_;
     PlagC::Editor::EditorLayer layer_;
@@ -236,7 +257,7 @@ private:
 } // namespace
 
 std::unique_ptr<PlagC::Application>
-PlagC::CreateApplication(const PlagC::EngineConfig &)
+PlagC::CreateApplication(const PlagC::EngineConfig &config)
 {
-    return std::make_unique<EditorApplication>();
+    return std::make_unique<EditorApplication>(config);
 }
