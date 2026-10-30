@@ -9,6 +9,7 @@
 #include <OgreImage2.h>
 #include <OgreRoot.h>
 #include <OgreRenderSystem.h>
+#include <OgreTextureBox.h>
 #include <OgreTextureGpu.h>
 #include <OgreTextureGpuManager.h>
 #ifdef _MSC_VER
