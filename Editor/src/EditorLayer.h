@@ -6,6 +6,7 @@
 #include <PlagC/Editor/EditorSession.h>
 #include <array>
 #include <memory>
+#include <optional>
 
 namespace PlagC {
 class Engine;
@@ -20,6 +21,10 @@ public:
     void Shutdown();
 
     const ViewportState& Viewport() const noexcept { return viewport_; }
+    bool InspectorVisible() const noexcept { return showInspector_; }
+    // Appends full component authoring controls to the Inspector after the core
+    // transform/name section has been emitted by Frame().
+    void AppendComponentInspector(Engine&, EditorSession&);
 
 private:
     void DrawDockHost(Engine&, EditorSession&);
@@ -51,6 +56,13 @@ private:
     std::array<char, 256> renameBuffer_{};
     std::unique_ptr<SceneDocument::TransformEdit> transformEdit_;
     std::uint64_t transformEditPersistentID_ = 0;
+
+    std::uint64_t componentPersistentID_ = 0;
+    std::uint64_t componentRevision_ = 0;
+    std::optional<CameraComponent> componentCamera_;
+    std::optional<LightComponent> componentLight_;
+    std::optional<PhysicsComponent> componentPhysics_;
+    std::optional<AnimatorComponent> componentAnimator_;
 };
 
 } // namespace PlagC::Editor
