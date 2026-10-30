@@ -20,11 +20,20 @@ class EditorAssetInteractionTests(unittest.TestCase):
         self.assertIn("engine.Assets().Load<ModelAsset>(CookedAssetKey(payloadPath))", source)
         self.assertIn("Assets://Cooked", source)
 
+    def test_content_browser_exposes_read_only_snapshot_for_authoring(self):
+        source = self.read("Editor/src/EditorAssetInteractions.cpp")
+        panels = self.read("Editor/src/EditorDataPanels.h")
+        self.assertIn("ContentSnapshot() const", panels)
+        self.assertIn("return assets_.Snapshot();", panels)
+        self.assertIn("const auto content = dataPanels_.ContentSnapshot();", source)
+        self.assertIn("for (const auto& entry : *content)", source)
+        self.assertNotIn("entry.directory", source)
+
     def test_content_browser_can_create_model_entities(self):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
         self.assertIn("entry.kind != EditorAssetKind::Cooked", source)
         self.assertIn("ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)", source)
-        self.assertIn("CreateCookedModelEntity(engine, session, entry.path.c_str(), {})", source)
+        self.assertIn("CreateCookedModelEntity(engine, session, entry.path.c_str(), Vec3{})", source)
         self.assertIn("entity.model = ModelComponent{model, true}", source)
         self.assertIn("document.Create(std::move(entity))", source)
         self.assertIn("document.Select(created)", source)
