@@ -14,18 +14,14 @@ EditorPlayRuntime::EditorPlayRuntime(const EngineConfig& config)
     physicsConfig_.fixedHz = config.physicsHz;
     physicsConfig_.workers = config.physicsWorkers;
     if (config.physicsScheduler == "native")
-    {
         physicsConfig_.scheduler = PhysicsScheduler::Native;
-    }
     else if (config.physicsScheduler == "plagc")
     {
         physicsConfig_.scheduler = PhysicsScheduler::PlagC;
         useSharedJobs_ = true;
     }
     else
-    {
         throw std::invalid_argument("Editor play physics scheduler must be native or plagc");
-    }
 }
 
 std::span<const TransformUpdate>
@@ -33,6 +29,7 @@ EditorPlayRuntime::Update(Engine& engine, EditorSession& session, double frameSe
 {
     using Clock = std::chrono::steady_clock;
     const auto started = Clock::now();
+    simulationDelta_ = 0.0;
 
     if (!session.Playing())
     {
@@ -53,12 +50,18 @@ EditorPlayRuntime::Update(Engine& engine, EditorSession& session, double frameSe
     if (session.Paused())
     {
         if (session.ConsumeStep())
-            physics_->Advance(1.0 / physicsConfig_.fixedHz);
+        {
+            simulationDelta_ = 1.0 / physicsConfig_.fixedHz;
+            physics_->Advance(simulationDelta_);
+        }
         else
+        {
             physics_->Synchronize();
+        }
     }
     else
     {
+        simulationDelta_ = frameSeconds;
         physics_->Advance(frameSeconds);
     }
 
@@ -71,6 +74,7 @@ void EditorPlayRuntime::Reset() noexcept
 {
     physics_.reset();
     generation_ = 0;
+    simulationDelta_ = 0.0;
 }
 
 } // namespace PlagC::Editor
