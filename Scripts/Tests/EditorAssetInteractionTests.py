@@ -34,17 +34,20 @@ class EditorAssetInteractionTests(unittest.TestCase):
         self.assertIn("entry.kind != EditorAssetKind::Cooked", source)
         self.assertIn("ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)", source)
         self.assertIn("CreateCookedModelEntity(engine, session, entry.path.c_str(), Vec3{})", source)
-        self.assertIn("entity.model = ModelComponent{model, true}", source)
+        self.assertIn("entity.model = ModelComponent{model, true, true}", source)
         self.assertIn("session.EditDocument().Create(std::move(entity))", source)
 
-    def test_inspector_model_drop_is_undoable(self):
+    def test_inspector_model_drop_is_undoable_and_preserves_instance_flags(self):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
         app = self.read("Editor/src/EditorApp.cpp")
         header = self.read("Editor/src/EditorLayer.h")
         self.assertIn('constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL"', source)
         self.assertIn("ImGui::SetDragDropPayload(CookedModelPayload", source)
         self.assertIn("ImGui::AcceptDragDropPayload(CookedModelPayload)", source)
-        self.assertIn("session.EditDocument().SetModel(selected->entity, ModelComponent{model, true})", source)
+        self.assertIn("session.EditDocument().SetModel(selected->entity", source)
+        self.assertIn("ReplacementModel(*selected, std::move(model))", source)
+        self.assertIn("result.visible = selected.record.model->visible", source)
+        self.assertIn("result.castShadows = selected.record.model->castShadows", source)
         self.assertNotIn("SystemWorld().SetModel", source)
         self.assertIn("void AppendAssetInteractions(Engine&, EditorSession&);", header)
         self.assertIn("layer_.AppendAssetInteractions(engine, *session_)", app)

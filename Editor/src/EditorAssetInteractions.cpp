@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <filesystem>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -236,7 +237,7 @@ void DrawModelCreateMenu(Engine& engine, EditorSession& session,
                     EntityTemplate entity;
                     entity.name = path.stem().string();
                     entity.transform.position = position;
-                    entity.model = ModelComponent{model, true};
+                    entity.model = ModelComponent{model, true, true};
                     session.EditDocument().Create(std::move(entity));
                 }
                 catch (const std::exception& error)
@@ -320,6 +321,238 @@ void DrawCreateEntityPopup(Engine& engine, EditorSession& session,
     ImGui::EndPopup();
 }
 
+struct AssetBounds
+{
+    Vec3 minimum{};
+    Vec3 maximum{};
+    bool valid = false;
+};
+
+AssetBounds CalculateBounds(const ModelAsset& asset)
+{
+    AssetBounds result;
+    result.minimum = {std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
+                      std::numeric_limits<float>::max()};
+    result.maximum = {std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(),
+                      std::numeric_limits<float>::lowest()};
+    for (const auto& mesh : asset.meshes)
+    {
+        for (const auto& vertex : mesh.geometry.vertices)
+        {
+            const Vec3 p = vertex.position;
+            result.minimum.x = std::min(result.minimum.x, p.x);
+            result.minimum.y = std::min(result.minimum.y, p.y);
+            result.minimum.z = std::min(result.minimum.z, p.z);
+            result.maximum.x = std::max(result.maximum.x, p.x);
+            result.maximum.y = std::max(result.maximum.y, p.y);
+            result.maximum.z = std::max(result.maximum.z, p.z);
+            result.valid = true;
+        }
+    }
+    return result;
+}
+
+ModelComponent ReplacementModel(const AuthoringEntity& selected, AssetHandle<ModelAsset> asset)
+{
+    ModelComponent result{std::move(asset), true, true};
+    if (selected.record.model)
+    {
+        result.visible = selected.record.model->visible;
+        result.castShadows = selected.record.model->castShadows;
+    }
+    return result;
+}
+
+bool DrawModelPicker(Engine& engine, EditorSession& session, const AuthoringEntity& selected,
+                     const std::shared_ptr<const std::vector<AssetBrowserEntry>>& content)
+{
+    if (!ImGui::BeginPopup("PlagC.ModelPicker"))
+        return false;
+
+    bool changed = false;
+    bool found = false;
+    if (content)
+    {
+        for (const auto& entry : *content)
+        {
+            if (entry.kind != EditorAssetKind::Cooked ||
+                std::filesystem::path(entry.path).extension() != ".plasset")
+                continue;
+            found = true;
+            const std::filesystem::path path(entry.path);
+            const std::string label = path.filename().string() + "##ReplaceModel" + entry.path;
+            if (ImGui::Selectable(label.c_str()))
+            {
+                auto asset = LoadModel(engine, entry.path.c_str());
+                session.EditDocument().SetModel(selected.entity,
+                    ReplacementModel(selected, std::move(asset)));
+                changed = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", entry.path.c_str());
+        }
+    }
+    if (!found)
+        ImGui::TextDisabled(content ? "No cooked ModelAsset found." : "Scanning cooked assets...");
+    ImGui::EndPopup();
+    return changed;
+}
+
+void DrawModelAssetDetails(const ModelAsset& asset)
+{
+    const AssetBounds bounds = CalculateBounds(asset);
+    std::size_t vertices = 0;
+    std::size_t indices = 0;
+    for (const auto& mesh : asset.meshes)
+    {
+        vertices += mesh.geometry.vertices.size();
+        indices += mesh.geometry.indices.size();
+    }
+
+    if (ImGui::CollapsingHeader("Mesh / Submesh Information", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Text("Meshes: %zu   Vertices: %zu   Indices: %zu", asset.meshes.size(), vertices, indices);
+        if (ImGui::BeginTable("ModelMeshes", 4,
+            ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable))
+        {
+            ImGui::TableSetupColumn("Submesh");
+            ImGui::TableSetupColumn("Vertices");
+            ImGui::TableSetupColumn("Indices");
+            ImGui::TableSetupColumn("Material Slot");
+            ImGui::TableHeadersRow();
+            for (std::size_t i = 0; i < asset.meshes.size(); ++i)
+            {
+                const auto& mesh = asset.meshes[i];
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("%zu: %s", i, mesh.name.empty() ? "<unnamed>" : mesh.name.c_str());
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%zu", mesh.geometry.vertices.size());
+                ImGui::TableSetColumnIndex(2);
+                ImGui::Text("%zu", mesh.geometry.indices.size());
+                ImGui::TableSetColumnIndex(3);
+                if (mesh.material < asset.materials.size())
+                {
+                    const auto& material = asset.materials[mesh.material];
+                    ImGui::Text("%u: %s", mesh.material,
+                        material.name.empty() ? "<unnamed>" : material.name.c_str());
+                }
+                else
+                    ImGui::TextDisabled("Invalid slot %u", mesh.material);
+            }
+            ImGui::EndTable();
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Material Slots", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::TextDisabled("Imported slots are read-only here; material authoring is handled by the Material Inspector.");
+        for (std::size_t i = 0; i < asset.materials.size(); ++i)
+        {
+            const auto& material = asset.materials[i];
+            ImGui::BulletText("Slot %zu  %s", i, material.name.empty() ? "<unnamed>" : material.name.c_str());
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Bounds", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        if (!bounds.valid)
+            ImGui::TextDisabled("No vertex bounds available.");
+        else
+        {
+            const Vec3 size{bounds.maximum.x - bounds.minimum.x,
+                            bounds.maximum.y - bounds.minimum.y,
+                            bounds.maximum.z - bounds.minimum.z};
+            ImGui::Text("Min:  %.3f, %.3f, %.3f", bounds.minimum.x, bounds.minimum.y, bounds.minimum.z);
+            ImGui::Text("Max:  %.3f, %.3f, %.3f", bounds.maximum.x, bounds.maximum.y, bounds.maximum.z);
+            ImGui::Text("Size: %.3f, %.3f, %.3f", size.x, size.y, size.z);
+        }
+    }
+
+    if (!asset.warnings.empty() && ImGui::CollapsingHeader("Import Warnings"))
+        for (const auto& warning : asset.warnings)
+            ImGui::BulletText("%s", warning.c_str());
+}
+
+void DrawModelInspector(Engine& engine, EditorSession& session, EditorDataPanels& panels,
+                        const AuthoringEntity* selected,
+                        const std::shared_ptr<const std::vector<AssetBrowserEntry>>& content)
+{
+    ImGui::SeparatorText("Model / Mesh Inspector");
+    if (!selected)
+    {
+        ImGui::TextDisabled("Select an entity to inspect its model asset.");
+        return;
+    }
+
+    auto& document = session.EditDocument();
+    if (!selected->record.model || !selected->record.model->asset)
+    {
+        ImGui::TextDisabled("No ModelAsset assigned.");
+        if (ImGui::Button("Browse Model..."))
+            ImGui::OpenPopup("PlagC.ModelPicker");
+        try { (void)DrawModelPicker(engine, session, *selected, content); }
+        catch (const std::exception& error) { LogAssetError(engine, error); }
+        ImGui::TextDisabled("You can also drag a cooked ModelAsset from Content Browser onto this Inspector.");
+        return;
+    }
+
+    const ModelComponent model = *selected->record.model;
+    const auto asset = model.asset;
+    ImGui::TextDisabled("Model Asset");
+    ImGui::TextWrapped("%s", asset->metadata.path.c_str());
+    ImGui::Text("Generation: %llu   Cooked bytes: %llu",
+        static_cast<unsigned long long>(asset->metadata.generation),
+        static_cast<unsigned long long>(asset->metadata.bytes));
+
+    if (ImGui::Button("Browse / Replace..."))
+        ImGui::OpenPopup("PlagC.ModelPicker");
+    try { (void)DrawModelPicker(engine, session, *selected, content); }
+    catch (const std::exception& error) { LogAssetError(engine, error); }
+    ImGui::SameLine();
+    if (ImGui::Button("Locate in Browser"))
+        panels.RevealAsset(asset->metadata.path);
+    ImGui::SameLine();
+    if (ImGui::Button("Reload"))
+    {
+        try
+        {
+            const std::string path = asset->metadata.path;
+            engine.Assets().Reload(path);
+            engine.Assets().Wait();
+            auto reloaded = engine.Assets().Get<ModelAsset>(path);
+            if (!reloaded)
+                throw std::runtime_error("Reload completed without a ModelAsset result");
+            document.ReloadModelAsset(selected->entity, std::move(reloaded));
+            panels.RefreshAssets(engine);
+            engine.Logger().Write(Severity::Info, "EDITOR-ASSETS", "Reloaded model asset: " + path);
+        }
+        catch (const std::exception& error) { LogAssetError(engine, error); }
+    }
+
+    bool visible = model.visible;
+    if (ImGui::Checkbox("Visible##ModelMeshInspector", &visible))
+    {
+        try { document.SetModelVisible(selected->entity, visible); }
+        catch (const std::exception& error) { LogAssetError(engine, error); }
+    }
+    bool castShadows = model.castShadows;
+    if (ImGui::Checkbox("Cast Shadows", &castShadows))
+    {
+        try { document.SetModelCastShadows(selected->entity, castShadows); }
+        catch (const std::exception& error) { LogAssetError(engine, error); }
+    }
+
+    DrawModelAssetDetails(*asset);
+
+    if (ImGui::Button("Remove Model##ModelMeshInspector"))
+    {
+        try { document.RemoveModel(selected->entity); }
+        catch (const std::exception& error) { LogAssetError(engine, error); }
+    }
+}
+
 } // namespace
 
 void EditorLayer::CreateCookedModelEntity(Engine& engine, EditorSession& session,
@@ -329,7 +562,7 @@ void EditorLayer::CreateCookedModelEntity(Engine& engine, EditorSession& session
     EntityTemplate entity;
     entity.name = std::filesystem::path(assetPath).stem().string();
     entity.transform.position = position;
-    entity.model = ModelComponent{model, true};
+    entity.model = ModelComponent{model, true, true};
 
     session.EditDocument().Create(std::move(entity));
 }
@@ -408,7 +641,8 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
     {
         if (ImGui::Begin("Inspector"))
         {
-            ImGui::SeparatorText("Model Asset");
+            DrawModelInspector(engine, session, dataPanels_, selected, content);
+            ImGui::SeparatorText("Model Asset Drop Target");
             if (selected)
             {
                 ImGui::TextDisabled("Drop a cooked ModelAsset here to assign or replace the selected entity model.");
@@ -418,8 +652,9 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
                     {
                         try
                         {
-                            const auto model = LoadModel(engine, static_cast<const char*>(payload->Data));
-                            session.EditDocument().SetModel(selected->entity, ModelComponent{model, true});
+                            auto model = LoadModel(engine, static_cast<const char*>(payload->Data));
+                            session.EditDocument().SetModel(selected->entity,
+                                ReplacementModel(*selected, std::move(model)));
                         }
                         catch (const std::exception& error)
                         {

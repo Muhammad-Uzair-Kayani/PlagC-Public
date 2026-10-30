@@ -2,6 +2,7 @@
 
 #include <PlagC/Editor/EditorModels.h>
 #include <array>
+#include <string>
 
 namespace PlagC {
 class Engine;
@@ -15,6 +16,7 @@ public:
     void RefreshAssets(Engine&);
     void DrawContentBrowser(Engine&);
     void DrawConsole(Engine&);
+    void RevealAsset(std::string path);
 
     std::shared_ptr<const std::vector<AssetBrowserEntry>> ContentSnapshot() const
     {
@@ -26,6 +28,7 @@ private:
     ConsoleFilter consoleFilter_{};
     std::array<char, 256> assetSearch_{};
     std::array<char, 256> consoleSearch_{};
+    std::string revealAsset_;
     bool autoScrollConsole_ = true;
 };
 

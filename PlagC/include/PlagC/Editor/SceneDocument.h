@@ -115,6 +115,8 @@ public:
     void SetAnimator(Entity, const AnimatorComponent&);
     void RemoveAnimator(Entity);
     void SetModelVisible(Entity, bool);
+    void SetModelCastShadows(Entity, bool);
+    void ReloadModelAsset(Entity, AssetHandle<ModelAsset>);
     void SetActiveCamera(Entity);
     void ClearActiveCamera();
 

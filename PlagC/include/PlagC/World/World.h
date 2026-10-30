@@ -25,6 +25,7 @@ struct ModelComponent
 {
     AssetHandle<ModelAsset> asset;
     bool visible = true;
+    bool castShadows = true;
 };
 struct RenderableComponent
 {

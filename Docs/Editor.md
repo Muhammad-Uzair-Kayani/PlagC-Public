@@ -109,7 +109,7 @@ Required tests: source architecture regression for viewport state/UI wiring, cam
 
 Replace the functional tree/debug presentation with a real hierarchy workflow: search/filter, type icons, expand/collapse, inline rename, context menu, visibility/lock controls, drag reparent/root drop, selection synchronization, stable expansion state and useful empty-scene presentation.
 
-## 3. Entity Creation — `FOUNDATION`
+## 3. Entity Creation — `DONE`
 
 Provide Create workflows for Empty, Model, Camera, Directional/Point/Spot Light, physics objects and basic primitives. New entities receive sensible required components and model drops create at a meaningful scene position.
 
@@ -121,7 +121,7 @@ Turn the raw component/debug view into component cards with aligned property row
 
 Professional X/Y/Z position/rotation/scale controls, color-coded axes, reset actions, uniform scaling option, local/world awareness, immediate viewport feedback, and one-gesture/one-undo behavior.
 
-## 6. Model / Mesh Inspector — `FOUNDATION`
+## 6. Model / Mesh Inspector — `DONE`
 
 Model asset field, browse/drop/replace, visibility, shadow controls, mesh/submesh information, material slots, bounds, reload and locate-in-browser actions.
 
@@ -296,8 +296,23 @@ Definition of done for the product milestone:
 
 - Date: 2026-10-30
 - Purpose: replace the obsolete integration-only remaining-work list with the 43-milestone usable-editor roadmap.
-- Next milestone: **1. Viewport / Scene View**.
 - Policy: every future editor milestone updates this file in the same implementation commit.
+
+## 3. Entity Creation — `DONE`
+
+- Date: 2026-10-30
+- Commit evidence: `75eab676cda60ce6d5393bfd91a6e06d7c85a359` on `prototype`.
+- Delivered: command-backed creation for Empty, cooked ModelAsset, Camera, all three light types, renderer-backed primitives and useful static/dynamic/kinematic physics presets with contextual placement.
+- Regression: `Scripts/Tests/EditorMilestone3Tests.py`, `EditorAssetInteractionTests.py`, Windows Editor CI wiring.
+
+## 6. Model / Mesh Inspector — `DONE`
+
+- Date: 2026-10-30
+- Commit evidence: this Milestone 6 implementation commit on `prototype`.
+- Delivered: ModelAsset field and cooked-asset browse/drop/replace, state-preserving replacement, visibility, renderer-backed per-model shadow control, mesh/submesh statistics, imported material-slot diagnostics, geometry-derived local bounds, immutable-generation reload/rebind, and locate-in-browser highlighting.
+- Architecture: edits remain command-backed through `SceneDocument`; renderer object ownership remains inside `AssetScene`; imported material slots remain read-only until Milestone 7.
+- Regression: `Scripts/Tests/EditorMilestone6Tests.py` plus updated model interaction/entity-creation tests; `ValidateEditor.bat` and Windows CI run the milestone gate.
+- Next requested milestone: **9. Camera Inspector**.
 
 ## Historical architecture note
 

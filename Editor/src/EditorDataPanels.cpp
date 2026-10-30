@@ -67,6 +67,23 @@ bool Matches(std::string_view value, const char* search)
     return Lower(std::string(value)).find(Lower(search)) != std::string::npos;
 }
 
+std::string Normalized(std::string value)
+{
+    std::replace(value.begin(), value.end(), '\\', '/');
+    return value;
+}
+
+bool IsRevealMatch(std::string entryPath, std::string assetPath)
+{
+    entryPath = Normalized(std::move(entryPath));
+    assetPath = Normalized(std::move(assetPath));
+    if (entryPath == assetPath)
+        return true;
+    if (entryPath.size() <= assetPath.size())
+        return false;
+    return entryPath.ends_with('/' + assetPath);
+}
+
 } // namespace
 
 void EditorDataPanels::Initialize(Engine& engine)
@@ -90,6 +107,12 @@ void EditorDataPanels::RefreshAssets(Engine& engine)
     {
         engine.Logger().Write(Severity::Error, "EDITOR-ASSETS", error.what());
     }
+}
+
+void EditorDataPanels::RevealAsset(std::string path)
+{
+    revealAsset_ = Normalized(std::move(path));
+    assetSearch_.fill('\0');
 }
 
 void EditorDataPanels::DrawContentBrowser(Engine& engine)
@@ -128,11 +151,19 @@ void EditorDataPanels::DrawContentBrowser(Engine& engine)
     {
         if (!Matches(asset.path, assetSearch_.data()))
             continue;
+        const bool reveal = !revealAsset_.empty() && IsRevealMatch(asset.path, revealAsset_);
         ImGui::TableNextRow();
+        if (reveal)
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
         ImGui::TableSetColumnIndex(0);
         ImGui::TextUnformatted(asset.path.c_str());
         if (!asset.error.empty() && ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", asset.error.c_str());
+        if (reveal)
+        {
+            ImGui::SetScrollHereY(0.5f);
+            revealAsset_.clear();
+        }
         ImGui::TableSetColumnIndex(1);
         ImGui::TextUnformatted(KindName(asset.kind));
         ImGui::TableSetColumnIndex(2);

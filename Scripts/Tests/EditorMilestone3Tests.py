@@ -84,7 +84,7 @@ class EditorMilestone3Tests(unittest.TestCase):
         self.assertIn("entry.kind != EditorAssetKind::Cooked", self.source)
         self.assertIn('path.extension() != ".plasset"', self.source)
         self.assertIn("LoadModel(engine, entry.path.c_str())", self.source)
-        self.assertIn("entity.model = ModelComponent{model, true};", self.source)
+        self.assertIn("entity.model = ModelComponent{model, true, true};", self.source)
 
 
 if __name__ == "__main__":
