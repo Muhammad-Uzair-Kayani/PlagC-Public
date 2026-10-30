@@ -79,6 +79,10 @@ TextureHandle CreateUiTexture(Renderer& renderer, unsigned width, unsigned heigh
         Ogre::TextureTypes::Type2D);
     try
     {
+        // Standalone programmatic textures do not have AutomaticBatching's metadata path.
+        // Define the resource shape explicitly before asking Ogre to upload the Image2.
+        texture->setResolution(width, height);
+        texture->setPixelFormat(format);
         texture->scheduleTransitionTo(Ogre::GpuResidency::Resident, image.release(), true);
         manager.waitForStreamingCompletion();
     }

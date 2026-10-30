@@ -17,6 +17,8 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("CreateUiTexture(renderer", bridge)
         self.assertIn("DestroyUiTexture(renderer, fontTexture_)", bridge)
         self.assertIn("Ogre::TextureTypes::Type2D", source)
+        self.assertIn("texture->setResolution(width, height)", source)
+        self.assertIn("texture->setPixelFormat(format)", source)
         self.assertIn("manager.waitForStreamingCompletion()", source)
         self.assertNotIn("Ogre::TextureFlags::AutomaticBatching", source)
 
