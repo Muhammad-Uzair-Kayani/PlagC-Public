@@ -119,7 +119,7 @@ Provide Create workflows for Empty, Model, Camera, Directional/Point/Spot Light,
 
 Turn the raw component/debug view into component cards with aligned property rows, add/remove/reset actions, validation, tooltips, read-only states and undo/redo-backed editing.
 
-## 5. Transform Inspector — `FOUNDATION`
+## 5. Transform Inspector — `DONE`
 
 Professional X/Y/Z position/rotation/scale controls, color-coded axes, reset actions, uniform scaling option, local/world awareness, immediate viewport feedback, and one-gesture/one-undo behavior.
 
@@ -323,6 +323,14 @@ Definition of done for the product milestone:
 - Commit evidence: `75eab676cda60ce6d5393bfd91a6e06d7c85a359` on `prototype`.
 - Delivered: command-backed creation for Empty, cooked ModelAsset, Camera, all three light types, renderer-backed primitives and useful static/dynamic/kinematic physics presets with contextual placement.
 - Regression: `Scripts/Tests/EditorMilestone3Tests.py`, `EditorAssetInteractionTests.py`, Windows Editor CI wiring.
+
+## Milestone 5 — Transform Inspector — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 5 implementation commit on `prototype`.
+- Delivered: professional Position/Rotation/Scale rows with color-coded X/Y/Z controls, Local/World editing, parent-space context, proportional uniform scaling, per-row and full-transform reset actions, immediate viewport previews, hierarchy-lock and dynamic-physics read-only handling, and one continuous drag recorded as one undo command.
+- Architecture: transform authoring continues through `SceneDocument::BeginTransformEdit`/`TransformEdit::Preview`/`Commit`; Local mode resolves through canonical `ComposeTransform`, World mode remains the engine-facing transform contract, and no general Inspector/component-card work from Milestone 4 is included.
+- Regression: `Scripts/Tests/EditorMilestone5Tests.py` plus the existing transaction coverage in `EditorDocumentTests.cpp`; `ValidateEditor.bat` and Windows CI run the milestone gate.
 
 ## 6. Model / Mesh Inspector — `DONE`
 

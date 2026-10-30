@@ -3,6 +3,7 @@
 #include "EditorDataPanels.h"
 #include "EditorFileController.h"
 #include "EditorSceneHierarchy.h"
+#include "EditorTransformInspector.h"
 #include <PlagC/Animation/AnimationControllerAsset.h>
 #include <PlagC/Assets/AssetImport.h>
 #include <PlagC/Editor/EditorModels.h>
@@ -51,14 +52,13 @@ private:
     void DrawStatistics(Engine&, EditorSession&);
     void DrawTransport(Engine&, EditorSession&);
     void SyncInspector(EditorSession&, const AuthoringEntity&);
-    void PreviewInspectorTransform(Engine&, EditorSession&, const AuthoringEntity&);
-    void FinishTransformEdit(Engine&, bool commit);
     void FinishGizmoEdit(Engine&, bool commit);
     void CreateCookedModelEntity(Engine&, EditorSession&, const char* assetPath, Vec3 position);
 
     EditorFileController files_;
     EditorDataPanels dataPanels_;
     EditorSceneHierarchy hierarchy_;
+    EditorTransformInspector transformInspector_;
     std::uint64_t seenDocumentGeneration_ = 1;
     ViewportState viewport_{};
     bool showHierarchy_ = true;
@@ -69,10 +69,7 @@ private:
 
     std::uint64_t inspectorPersistentID_ = 0;
     std::uint64_t inspectorRevision_ = 0;
-    Transform inspectorLocal_{};
     std::array<char, 256> renameBuffer_{};
-    std::unique_ptr<SceneDocument::TransformEdit> transformEdit_;
-    std::uint64_t transformEditPersistentID_ = 0;
 
     std::uint64_t componentPersistentID_ = 0;
     std::uint64_t componentRevision_ = 0;

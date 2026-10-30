@@ -1,11 +1,9 @@
 #include "pgcpch.h"
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
-#include <PlagC/World/TransformGraph.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <algorithm>
-#include <cfloat>
 #include <cstdio>
 
 namespace PlagC::Editor {
@@ -55,7 +53,7 @@ void EditorLayer::Frame(Engine& engine, EditorSession& session)
 
     if (seenDocumentGeneration_ != files_.DocumentGeneration())
     {
-        FinishTransformEdit(engine, false);
+        transformInspector_.Reset();
         hierarchy_.Reset();
         seenDocumentGeneration_ = files_.DocumentGeneration();
         inspectorPersistentID_ = 0;
@@ -77,8 +75,7 @@ void EditorLayer::DrawModals(Engine& engine, EditorSession& session)
 
 void EditorLayer::Shutdown()
 {
-    transformEdit_.reset();
-    transformEditPersistentID_ = 0;
+    transformInspector_.Reset();
     hierarchy_.Reset();
     inspectorPersistentID_ = 0;
     inspectorRevision_ = 0;
@@ -211,7 +208,7 @@ void EditorLayer::DrawTransport(Engine& engine, EditorSession& session)
         case PlaySession::State::Stopped:
             if (ImGui::Button("Play"))
             {
-                FinishTransformEdit(engine, true); session.StartPlay();
+                transformInspector_.Finish(engine, true); session.StartPlay();
                 inspectorPersistentID_ = inspectorRevision_ = 0;
             }
             break;
@@ -260,48 +257,10 @@ void EditorLayer::SyncInspector(EditorSession& session, const AuthoringEntity& s
 {
     if (!session.EditingEnabled()) return;
     auto& document = session.EditDocument();
-    if (transformEdit_) return;
     if (inspectorPersistentID_ == selected.persistentID && inspectorRevision_ == document.Revision()) return;
     inspectorPersistentID_ = selected.persistentID;
     inspectorRevision_ = document.Revision();
-    inspectorLocal_ = document.LocalTransform(selected.entity);
     std::snprintf(renameBuffer_.data(), renameBuffer_.size(), "%s", selected.record.name.c_str());
-}
-
-void EditorLayer::PreviewInspectorTransform(Engine& engine, EditorSession& session,
-                                            const AuthoringEntity& selected)
-{
-    if (!transformEdit_ || transformEditPersistentID_ != selected.persistentID) return;
-    try
-    {
-        auto& document = session.EditDocument();
-        Transform world = inspectorLocal_;
-        if (selected.parentPersistentID)
-        {
-            const Entity parent = document.FindByPersistentID(selected.parentPersistentID);
-            if (!parent) throw std::logic_error("Inspector transform parent no longer exists");
-            world = ComposeTransform(document.Scene().ReadTransform(parent), inspectorLocal_);
-        }
-        transformEdit_->Preview(world);
-        inspectorRevision_ = document.Revision();
-    }
-    catch (const std::exception& error)
-    {
-        LogEditorError(engine, error); FinishTransformEdit(engine, false); inspectorRevision_ = 0;
-    }
-}
-
-void EditorLayer::FinishTransformEdit(Engine& engine, bool commit)
-{
-    if (!transformEdit_) return;
-    try
-    {
-        if (commit) transformEdit_->Commit(); else transformEdit_->Cancel();
-    }
-    catch (const std::exception& error) { LogEditorError(engine, error); }
-    transformEdit_.reset();
-    transformEditPersistentID_ = 0;
-    inspectorRevision_ = 0;
 }
 
 void EditorLayer::DrawInspector(Engine& engine, EditorSession& session)
@@ -342,40 +301,8 @@ void EditorLayer::DrawInspector(Engine& engine, EditorSession& session)
     if (selected->parentPersistentID)
         ImGui::Text("Parent ID: %llu", static_cast<unsigned long long>(selected->parentPersistentID));
     else ImGui::TextDisabled("Root entity");
-    ImGui::SeparatorText("Local Transform");
 
-    auto beginTransformEdit = [&]()
-    {
-        if (transformEdit_) return;
-        try
-        {
-            auto edit = document.BeginTransformEdit(selected->entity);
-            transformEdit_ = std::make_unique<SceneDocument::TransformEdit>(std::move(edit));
-            transformEditPersistentID_ = selected->persistentID;
-        }
-        catch (const std::exception& error) { LogEditorError(engine, error); inspectorRevision_ = 0; }
-    };
-
-    bool changed = ImGui::DragFloat3("Position", &inspectorLocal_.position.x, 0.05f);
-    if (ImGui::IsItemActivated()) beginTransformEdit();
-    if (changed) PreviewInspectorTransform(engine, session, *selected);
-    if (ImGui::IsItemDeactivated()) FinishTransformEdit(engine, true);
-
-    changed = ImGui::DragFloat3("Rotation", &inspectorLocal_.rotationDegrees.x, 0.25f);
-    if (ImGui::IsItemActivated()) beginTransformEdit();
-    if (changed) PreviewInspectorTransform(engine, session, *selected);
-    if (ImGui::IsItemDeactivated()) FinishTransformEdit(engine, true);
-
-    changed = ImGui::DragFloat3("Scale", &inspectorLocal_.scale.x, 0.01f, 0.001f, FLT_MAX);
-    if (changed)
-    {
-        inspectorLocal_.scale.x = std::max(inspectorLocal_.scale.x, 0.001f);
-        inspectorLocal_.scale.y = std::max(inspectorLocal_.scale.y, 0.001f);
-        inspectorLocal_.scale.z = std::max(inspectorLocal_.scale.z, 0.001f);
-    }
-    if (ImGui::IsItemActivated()) beginTransformEdit();
-    if (changed) PreviewInspectorTransform(engine, session, *selected);
-    if (ImGui::IsItemDeactivated()) FinishTransformEdit(engine, true);
+    transformInspector_.Draw(engine, session, *selected, hierarchy_.Locked(selected->persistentID));
 
     ImGui::SeparatorText("Components");
     ImGui::Text("Camera: %s", selected->record.camera ? "yes" : "no");
