@@ -70,8 +70,8 @@ EditorAssetKind KindFor(const std::filesystem::path& path) {
         return EditorAssetKind::AudioSource;
     if (extension == ".png" || extension == ".jpg" ||
         extension == ".jpeg" || extension == ".dds" ||
-        extension == ".tga" || extension == ".kt" ||
-        extension == ".ktx" || extension == ".ktx2")
+        extension == ".tga" || extension == ".ktx" ||
+        extension == ".ktx2")
         return EditorAssetKind::Texture;
     if (extension == ".glsl" || extension == ".hlsl" ||
         extension == ".vert" || extension == ".frag" ||
@@ -281,8 +281,7 @@ std::vector<LogRecord> FilterLogRecords(std::span<const LogRecord> records,
             continue;
 
         if (!search.empty()) {
-            const auto haystack = Lower(filter.search.empty() ? record.category + "\n" + record.thread +
-                                        "\n" + record.message : record.category + "\n" + record.thread +
+            const auto haystack = Lower(record.category + "\n" + record.thread +
                                         "\n" + record.message);
             if (haystack.find(search) == std::string::npos)
                 continue;
