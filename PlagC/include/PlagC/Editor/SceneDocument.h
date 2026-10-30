@@ -89,11 +89,16 @@ public:
 
     void Rename(Entity, std::string);
 
+    // World-space authoring remains the gizmo/runtime-facing contract.
     void SetTransform(Entity, const Transform&);
     TransformEdit BeginTransformEdit(Entity);
+
+    // Local-space authoring is intended for the Inspector on parented entities.
+    // It participates in the same persistent-ID-safe undo/redo history.
     Transform LocalTransform(Entity) const;
     void SetLocalTransform(Entity, const Transform&);
 
+    // Undoable relationship editing. Parent {} means root; reparent preserves world-space pose.
     void SetParent(Entity child, Entity parent);
     void ClearParent(Entity child);
 
@@ -142,7 +147,7 @@ private:
     std::uint64_t AllocatePersistentID();
 
     std::unique_ptr<World> world_;
-    CommandHistory history_;
+    CommandHistory history_; // destroyed before referenced world
     Entity selection_{};
 
     std::unordered_map<std::uint64_t, std::uint64_t> persistentIDs_;
