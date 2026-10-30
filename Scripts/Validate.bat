@@ -10,6 +10,8 @@ python Scripts\Tests\EditorArchitectureTests.py
 if errorlevel 1 exit /b 1
 python Scripts\Tests\EditorPlayRuntimeTests.py
 if errorlevel 1 exit /b 1
+python Scripts\Tests\EditorAssetInteractionTests.py
+if errorlevel 1 exit /b 1
 
 where msbuild >nul 2>nul
 if errorlevel 1 (
