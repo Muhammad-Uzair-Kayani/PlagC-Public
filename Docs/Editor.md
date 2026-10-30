@@ -1,5 +1,40 @@
 # PlagC Editor architecture and implementation plan
 
+## Current integration checkpoint
+
+The standalone Editor now includes docking, hierarchy/transform authoring, scene
+file dialogs, console/content/statistics panels, backend-neutral ImGui submission,
+and Ogre viewport target presentation. Older roadmap sections below describe the
+original backend handoff; their executable/UI items are no longer all outstanding.
+
+Authoring controls:
+
+- Hold right mouse over the focused viewport: look around.
+- While holding right mouse: WASD moves, Q/E moves down/up, Shift increases speed.
+- Ctrl+N/Open with Ctrl+O; Ctrl+S saves; Ctrl+Shift+S opens Save As.
+- Ctrl+Z undoes; Ctrl+Y or Ctrl+Shift+Z redoes.
+- Ctrl+D duplicates the selection; Delete removes it through command history.
+
+Navigation uses a separate editor camera and never changes saved scene cameras.
+Shortcuts are disabled during text entry and modal dialogs; authoring commands and
+editor-camera control are disabled during Play. Focus loss clears modifier tracking.
+
+Validation for this checkpoint: 14 architecture checks and all 11 portable backend
+executables pass. Changed UI translation units pass GCC C++20 syntax compilation
+against pinned ImGui. A real ImGui/EventBus regression covers Ctrl released outside
+the editor window; run it with a GCC/Clang-compatible CXX:
+
+```sh
+python3 Scripts/Tests/EditorInputTests.py
+```
+
+These checks do not establish Windows runtime or Vulkan rendering acceptance.
+Still verify actual viewport rendering, resizing, camera navigation, dialog/input
+routing, and shortcuts in the native Editor on both graphics backends. Remaining
+integration includes viewport picking/gizmos, runtime simulation transport wiring,
+OS-close unsaved prompts, and richer component/material/animation authoring.
+
+
 The Editor is a PlagC client. It does not own engine rendering, gameplay policy,
 physics, asset lifetime, job scheduling or ECS storage. The recovered ImGui
 wireframe defines the intended experience: a central scene viewport, Scene
