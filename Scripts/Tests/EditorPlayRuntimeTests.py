@@ -59,6 +59,21 @@ class EditorPlayRuntimeTests(unittest.TestCase):
         self.assertIn("playRuntime_.Reset()", app)
         self.assertIn("std::make_unique<EditorApplication>(config)", app)
 
+    def test_play_mode_uses_runtime_active_camera_and_editor_fallback(self):
+        app = self.read("Editor/src/EditorApp.cpp")
+        self.assertIn("PlagC::CameraSystem runtimeCamera_", app)
+        self.assertIn("runtimeCamera_.SetViewport(viewport.width, viewport.height)", app)
+        self.assertIn("runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics())", app)
+        self.assertIn("Scenes without an active camera deliberately fall back to the frozen editor view", app)
+        self.assertIn("engine.Graphics().SetCamera(editorCamera_)", app)
+
+        play = app.index("if (session_->Playing())")
+        sync = app.index("runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics())", play)
+        leave = app.index("return;", sync)
+        movement = app.index("viewport.input.AcceptCameraMouse()", play)
+        self.assertLess(sync, leave)
+        self.assertLess(leave, movement)
+
 
 if __name__ == "__main__":
     unittest.main()

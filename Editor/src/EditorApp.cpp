@@ -275,8 +275,18 @@ private:
         const auto& io = ImGui::GetIO();
         const bool blocked = io.WantTextInput ||
             ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+
+        editorCamera_.aspect = viewport.Aspect();
+        runtimeCamera_.SetViewport(viewport.width, viewport.height);
         if (session_->Playing())
+        {
+            // Play mode renders through the isolated runtime world's authored active camera.
+            // Scenes without an active camera deliberately fall back to the frozen editor view.
+            if (!runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics()))
+                engine.Graphics().SetCamera(editorCamera_);
             return;
+        }
+
         if (viewport.input.AcceptCameraMouse() && viewport.input.AcceptKeyboard() &&
             !blocked && ImGui::IsMouseDown(ImGuiMouseButton_Right))
         {
@@ -297,12 +307,12 @@ private:
         const auto forward = cameraLook_.Forward();
         const auto p = editorCamera_.position;
         editorCamera_.target = {p.x + forward.x, p.y + forward.y, p.z + forward.z};
-        editorCamera_.aspect = viewport.Aspect();
         engine.Graphics().SetCamera(editorCamera_);
     }
 
     PlagC::CameraDesc editorCamera_{};
     PlagC::CameraLook cameraLook_{-128.6598f, -25.1041f, .12f};
+    PlagC::CameraSystem runtimeCamera_{};
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
     std::unique_ptr<PlagC::SceneRenderer> sceneRenderer_;
     std::unique_ptr<PlagC::AssetScene> assetScene_;
