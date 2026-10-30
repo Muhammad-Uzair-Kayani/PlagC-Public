@@ -25,6 +25,7 @@ void EditorLayer::Initialize(Engine& engine, EditorSession&)
 void EditorLayer::Frame(Engine& engine, EditorSession& session)
 {
     const auto& io = ImGui::GetIO();
+    HandleTransportShortcuts(engine, session);
     if (session.EditingEnabled() && !io.WantTextInput && !ImGui::IsAnyItemActive() &&
         !io.KeyAlt && !ImGui::IsPopupOpen(nullptr,
             ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
@@ -201,43 +202,126 @@ void EditorLayer::BuildDefaultLayout(unsigned width, unsigned height)
     ImGui::DockBuilderFinish(dockspaceID);
 }
 
-void EditorLayer::DrawTransport(Engine& engine, EditorSession& session)
+void EditorLayer::ExecuteTransport(Engine& engine, EditorSession& session, TransportAction action)
 {
-    constexpr float approximateWidth = 220.0f;
-    const float target = (ImGui::GetWindowSize().x - approximateWidth) * 0.5f;
-    if (target > ImGui::GetCursorPosX()) ImGui::SetCursorPosX(target);
     try
     {
-        switch (session.PlayState())
+        switch (action)
         {
-        case PlaySession::State::Stopped:
-            if (ImGui::Button("Play"))
+        case TransportAction::PlayStop:
+            if (session.Playing())
             {
-                transformInspector_.Finish(engine, true); session.StartPlay();
-                inspectorPersistentID_ = inspectorRevision_ = 0;
+                session.StopPlay();
+                engine.Logger().Write(Severity::Info, "EDITOR-PLAY", "Play mode stopped; authoring world restored.");
             }
+            else
+            {
+                // Play always starts from a fully committed authoring snapshot.
+                transformInspector_.Finish(engine, true);
+                FinishGizmoEdit(engine, true);
+                session.StartPlay();
+                engine.Logger().Write(Severity::Info, "EDITOR-PLAY", "Play mode started from isolated authoring snapshot.");
+            }
+            inspectorPersistentID_ = inspectorRevision_ = 0;
+            componentPersistentID_ = componentRevision_ = 0;
             break;
-        case PlaySession::State::Playing:
-            if (ImGui::Button("Pause")) session.PausePlay();
-            ImGui::SameLine();
-            if (ImGui::Button("Stop"))
-            {
-                session.StopPlay(); inspectorPersistentID_ = inspectorRevision_ = 0;
-            }
+
+        case TransportAction::PauseResume:
+            if (!session.Playing())
+                return;
+            session.TogglePause();
+            engine.Logger().Write(Severity::Info, "EDITOR-PLAY",
+                session.Paused() ? "Play mode paused." : "Play mode resumed.");
             break;
-        case PlaySession::State::Paused:
-            if (ImGui::Button("Resume")) session.ResumePlay();
-            ImGui::SameLine();
-            if (ImGui::Button("Step")) session.RequestStep();
-            ImGui::SameLine();
-            if (ImGui::Button("Stop"))
-            {
-                session.StopPlay(); inspectorPersistentID_ = inspectorRevision_ = 0;
-            }
+
+        case TransportAction::Step:
+            if (!session.Paused())
+                return;
+            session.RequestStep();
+            engine.Logger().Write(Severity::Trace, "EDITOR-PLAY", "Single simulation step requested.");
             break;
         }
     }
-    catch (const std::exception& error) { LogEditorError(engine, error); }
+    catch (const std::exception& error)
+    {
+        LogEditorError(engine, error);
+    }
+}
+
+void EditorLayer::HandleTransportShortcuts(Engine& engine, EditorSession& session)
+{
+    const auto& io = ImGui::GetIO();
+    const bool blocked = io.WantTextInput || ImGui::IsAnyItemActive() ||
+        io.KeyCtrl || io.KeyAlt || io.KeySuper ||
+        ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+    if (blocked)
+        return;
+
+    // F5 = Play/Stop, F6 = Pause/Resume, F7 = single step while paused.
+    if (ImGui::IsKeyPressed(ImGuiKey_F5, false))
+        ExecuteTransport(engine, session, TransportAction::PlayStop);
+    else if (session.Playing() && ImGui::IsKeyPressed(ImGuiKey_F6, false))
+        ExecuteTransport(engine, session, TransportAction::PauseResume);
+    else if (session.Paused() && ImGui::IsKeyPressed(ImGuiKey_F7, false))
+        ExecuteTransport(engine, session, TransportAction::Step);
+}
+
+void EditorLayer::DrawTransport(Engine& engine, EditorSession& session)
+{
+    constexpr float approximateWidth = 430.0f;
+    const float target = (ImGui::GetWindowSize().x - approximateWidth) * 0.5f;
+    if (target > ImGui::GetCursorPosX())
+        ImGui::SetCursorPosX(target);
+
+    const PlaySession::State state = session.PlayState();
+    const bool running = state != PlaySession::State::Stopped;
+    const bool paused = state == PlaySession::State::Paused;
+
+    const ImVec4 stateColour = state == PlaySession::State::Playing
+        ? ImVec4(0.35f, 0.90f, 0.45f, 1.0f)
+        : paused
+            ? ImVec4(1.00f, 0.72f, 0.24f, 1.0f)
+            : ImVec4(0.68f, 0.72f, 0.78f, 1.0f);
+    const char* stateLabel = state == PlaySession::State::Playing
+        ? "PLAYING"
+        : paused ? "PAUSED" : "EDIT";
+
+    ImGui::TextColored(stateColour, "%s", stateLabel);
+    ImGui::SameLine();
+    ImGui::TextDisabled("|");
+    ImGui::SameLine();
+
+    ImGui::BeginDisabled(running);
+    if (ImGui::Button("Play##Transport"))
+        ExecuteTransport(engine, session, TransportAction::PlayStop);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("Start Play mode from an isolated scene snapshot. Shortcut: F5");
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!running);
+    if (ImGui::Button(paused ? "Resume##Transport" : "Pause##Transport"))
+        ExecuteTransport(engine, session, TransportAction::PauseResume);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip(paused ? "Resume runtime simulation. Shortcut: F6"
+                                 : "Pause runtime simulation. Shortcut: F6");
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!paused);
+    if (ImGui::Button("Step##Transport"))
+        ExecuteTransport(engine, session, TransportAction::Step);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("Advance exactly one configured fixed simulation interval. Shortcut: F7");
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!running);
+    if (ImGui::Button("Stop##Transport"))
+        ExecuteTransport(engine, session, TransportAction::PlayStop);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("Stop Play mode and return to the unchanged authoring world. Shortcut: F5");
+    ImGui::EndDisabled();
 }
 
 void EditorLayer::DrawHierarchy(Engine& engine, EditorSession& session)
@@ -245,7 +329,7 @@ void EditorLayer::DrawHierarchy(Engine& engine, EditorSession& session)
     hierarchy_.Draw(engine, session, showHierarchy_);
 }
 
-void EditorLayer::DrawViewport(EditorSession&)
+void EditorLayer::DrawViewport(EditorSession& session)
 {
     ImGui::Begin("Viewport");
     const ImVec2 available = ImGui::GetContentRegionAvail();
@@ -253,8 +337,32 @@ void EditorLayer::DrawViewport(EditorSession&)
                      static_cast<unsigned>(std::max(1.0f, available.y)));
     viewport_.input.viewportHovered = ImGui::IsWindowHovered();
     viewport_.input.viewportFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+
+    const ImVec2 surfaceMin = ImGui::GetCursorScreenPos();
     ImGui::InvisibleButton("ViewportSurface", ImVec2(static_cast<float>(viewport_.width),
                                                       static_cast<float>(viewport_.height)));
+
+    if (session.Playing())
+    {
+        const bool paused = session.Paused();
+        const ImVec2 surfaceMax{surfaceMin.x + static_cast<float>(viewport_.width),
+                                surfaceMin.y + static_cast<float>(viewport_.height)};
+        ImDrawList* draw = ImGui::GetWindowDrawList();
+        const ImU32 accent = paused ? IM_COL32(255, 184, 61, 235) : IM_COL32(72, 220, 110, 235);
+        const ImU32 background = IM_COL32(17, 21, 28, 220);
+        const char* label = paused
+            ? "PAUSED  |  Authoring locked  |  F6 Resume  F7 Step  F5 Stop"
+            : "PLAYING  |  Authoring locked  |  F6 Pause  F5 Stop";
+        const ImVec2 textSize = ImGui::CalcTextSize(label);
+        const ImVec2 badgeMin{surfaceMin.x + 10.0f, surfaceMin.y + 10.0f};
+        const ImVec2 badgeMax{badgeMin.x + textSize.x + 18.0f, badgeMin.y + textSize.y + 10.0f};
+
+        draw->AddRect(surfaceMin, surfaceMax, accent, 0.0f, 0, 2.0f);
+        draw->AddRectFilled(badgeMin, badgeMax, background, 4.0f);
+        draw->AddRect(badgeMin, badgeMax, accent, 4.0f, 0, 1.0f);
+        draw->AddText(ImVec2(badgeMin.x + 9.0f, badgeMin.y + 5.0f), accent, label);
+    }
+
     ImGui::End();
 }
 

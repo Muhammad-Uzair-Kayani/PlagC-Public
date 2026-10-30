@@ -18,6 +18,28 @@ Vec3 Cross(Vec3 a,Vec3 b){ return {a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b
 float Length(Vec3 value){ return std::sqrt(Dot(value,value)); }
 Vec3 Normalize(Vec3 value){ const float length=Length(value); return length>1e-6f?Mul(value,1.0f/length):Vec3{}; }
 
+void DrawPlayStateOverlay(EditorSession& session, const ImRect& rect, ImDrawList& draw)
+{
+    if(!session.Playing()) return;
+
+    const bool paused=session.Paused();
+    const ImU32 accent=paused?IM_COL32(255,184,61,235):IM_COL32(72,220,110,235);
+    const ImU32 background=IM_COL32(17,21,28,220);
+    const char* label=paused
+        ? "PAUSED  |  Authoring locked  |  F6 Resume  F7 Step  F5 Stop"
+        : "PLAYING  |  Authoring locked  |  F6 Pause  F5 Stop";
+    const ImVec2 textSize=ImGui::CalcTextSize(label);
+    const ImVec2 badgeMin{rect.Min.x+10.0f,rect.Min.y+10.0f};
+    const ImVec2 badgeMax{badgeMin.x+textSize.x+18.0f,badgeMin.y+textSize.y+10.0f};
+
+    // This pass runs after EditorViewportPresenter::Draw, so runtime-state feedback stays
+    // above the rendered scene instead of being covered by the viewport target image.
+    draw.AddRect(rect.Min,rect.Max,accent,0.0f,0,2.0f);
+    draw.AddRectFilled(badgeMin,badgeMax,background,4.0f);
+    draw.AddRect(badgeMin,badgeMax,accent,4.0f,0,1.0f);
+    draw.AddText(ImVec2(badgeMin.x+9.0f,badgeMin.y+5.0f),accent,label);
+}
+
 Vec3 DropPosition(const CameraDesc& camera,const ViewportState& viewport,const ImRect& rect,ImVec2 mouse)
 {
     const float width=std::max(1.0f,rect.GetWidth()),height=std::max(1.0f,rect.GetHeight());
@@ -65,11 +87,15 @@ Vec3 DropPosition(const CameraDesc& camera,const ViewportState& viewport,const I
 void EditorLayer::AppendViewportAssetDrop(Engine& engine,EditorSession& session,
                                           const CameraDesc& editorCamera)
 {
-    if(!session.EditingEnabled()||!ImGui::GetCurrentContext()) return;
+    if(!ImGui::GetCurrentContext()) return;
     if(!ImGui::Begin("Viewport")){ ImGui::End(); return; }
     ImGuiWindow* window=ImGui::GetCurrentWindow();
     const ImRect rect=window->WorkRect;
     if(rect.GetWidth()<=1.0f||rect.GetHeight()<=1.0f){ ImGui::End(); return; }
+
+    DrawPlayStateOverlay(session,rect,*window->DrawList);
+
+    if(!session.EditingEnabled()){ ImGui::End(); return; }
     const ImGuiID surface=window->GetID("ViewportSurface");
     if(ImGui::BeginDragDropTargetCustom(rect,surface))
     {

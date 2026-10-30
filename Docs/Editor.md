@@ -23,7 +23,7 @@ A milestone is not complete because a backend API exists. It is complete when th
 8. Update this document in the same milestone commit with status, tests, files, and commit evidence.
 9. Stop after each milestone and wait for approval before starting the next one.
 
-Assigned milestone lane for this implementation stream: **1, 4, 7, 10, 13, 16**. Work must not leak into other milestones; each assigned milestone must be finished before moving to the next assigned milestone.
+Assigned milestone lane for this implementation stream: **1, 4, 7, 10, 13, 17**. Work must not leak into other milestones; each assigned milestone must be finished before moving to the next assigned milestone.
 
 ## Status legend
 
@@ -167,7 +167,7 @@ Import/reimport UI for supported model/texture formats, source-to-cooked relatio
 
 New/Open/Save/Save As/Recent scenes, dirty indicator, transactional replacement, unsaved prompts, scene-version validation, persistent hierarchy/components/material assignments and useful load/save errors.
 
-## 17. Play Toolbar — `FOUNDATION`
+## 17. Play Toolbar — `DONE`
 
 Professional Play/Pause/Step/Stop transport, clear runtime visual state, shortcuts, authoring lock policy, runtime camera, physics/animation lifecycle and clean return to the unchanged authoring world.
 
@@ -442,6 +442,19 @@ Definition of done for the product milestone:
 - Regression: `Scripts/Tests/EditorMilestone15Tests.py` covers the import options, texture asset path, receipt persistence, import/reimport execution, editor settings surface, error handling and normal editor-frame integration; it is wired into `ValidateEditor.bat` and Windows CI.
 - Validation note: the exact Windows run for the original Milestone 15 commit was cancelled by CI concurrency after newer `prototype` pushes, not failed; the implementation remains covered by the branch-level Windows Editor validation gate.
 - Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 15.
+
+## 17. Play Toolbar — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 17 completion commit on `prototype`.
+- Delivered: an always-visible centered transport with explicit `EDIT`, `PLAYING`, and `PAUSED` state; stable Play/Pause-or-Resume/Step/Stop controls with context-sensitive enabled states; and transport shortcuts `F5` Play/Stop, `F6` Pause/Resume, and `F7` single-step while paused.
+- Shortcut routing: transport shortcuts are suppressed while typing, while an ImGui item is active, while modal/popup UI is open, or while Ctrl/Alt/Super modifiers are held, preventing editor transport commands from leaking through text/modal workflows.
+- Runtime presentation: Scene View receives a play-state border and compact `PLAYING`/`PAUSED` banner that explicitly identifies authoring as locked and shows the applicable transport shortcuts. The runtime state is therefore visible even when focus is in the viewport rather than the menu bar.
+- Transition semantics: entering Play commits any active Transform Inspector or viewport-gizmo transaction before cloning the runtime scene. `PlaySession` continues to clone the authoring document, authoring mutation remains rejected through `EditorSession::RequireStopped`, and Stop destroys the runtime clone so the unchanged authoring document becomes visible again.
+- Runtime integration: Milestone 17 reuses the existing `EditorPlayRuntime`/Milestone 18 lifecycle rather than creating a second simulation path. Runtime camera selection/fallback, physics fixed stepping, gameplay callbacks, animation update ordering, Pause/Step semantics and audio maintenance remain owned by their existing systems.
+- Scope boundary: no Console (19), Statistics/Profiler (20), general Editor Toolbar redesign (21), Menu Bar expansion (22), icon/font system (24), or broad Keyboard Shortcuts milestone (35) work is included beyond the transport-specific shortcuts required here.
+- Regression: `Scripts/Tests/EditorMilestone17PlayToolbarTests.py` plus the existing `EditorPlayRuntimeTests.py`; `ValidateEditor.bat` and Windows Editor CI run the focused gate.
+- Next step: stop here and wait for explicit approval before starting any other milestone.
 
 ## 18. Runtime / Game Logic — `DONE`
 

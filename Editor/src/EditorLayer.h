@@ -49,6 +49,12 @@ public:
     void AppendTransformGizmo(Engine&, EditorSession&, const CameraDesc& editorCamera);
 
 private:
+    enum class TransportAction {
+        PlayStop,
+        PauseResume,
+        Step
+    };
+
     void DrawDockHost(Engine&, EditorSession&);
     void BuildDefaultLayout(unsigned width, unsigned height);
     void DrawHierarchy(Engine&, EditorSession&);
@@ -59,6 +65,8 @@ private:
     void DrawConsole(Engine&);
     void DrawStatistics(Engine&, EditorSession&);
     void DrawTransport(Engine&, EditorSession&);
+    void HandleTransportShortcuts(Engine&, EditorSession&);
+    void ExecuteTransport(Engine&, EditorSession&, TransportAction);
     void SyncInspector(EditorSession&, const AuthoringEntity&);
     void FinishGizmoEdit(Engine&, bool commit);
     void CreateCookedModelEntity(Engine&, EditorSession&, const char* assetPath, Vec3 position);
