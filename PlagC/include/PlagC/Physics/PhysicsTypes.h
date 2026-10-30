@@ -7,10 +7,15 @@ class JobSystem;
 enum class MotionType { Static, Dynamic, Kinematic };
 enum class ColliderType { Box, Sphere, Capsule, Cylinder, ConvexHull, Compound, Mesh, Heightfield };
 enum class CollisionLayer : std::uint8_t { StaticWorld, Dynamic, Character, Vehicle, Projectile, Sensor, Debris, Ragdoll, Count };
+using CollisionLayerMask = std::uint32_t;
+constexpr CollisionLayerMask CollisionLayerBit(CollisionLayer layer) noexcept { return CollisionLayerMask{1u} << static_cast<unsigned>(layer); }
+constexpr CollisionLayerMask AllCollisionLayers = (CollisionLayerMask{1u} << static_cast<unsigned>(CollisionLayer::Count)) - 1u;
 struct PhysicsMaterial { float friction=.5f, restitution=0; };
 struct RigidBodyComponent {
     MotionType motion=MotionType::Dynamic;
     CollisionLayer layer=CollisionLayer::Dynamic;
+    // Per-body narrow-phase mask. The global CollisionMatrix remains the cheap broad-phase policy.
+    CollisionLayerMask collisionMask=AllCollisionLayers;
     float mass=1, gravityScale=1, linearDamping=.05f, angularDamping=.05f;
     bool allowSleep=true, continuous=false, sensor=false;
     // Equal nonzero groups do not self-collide (e.g. linked ragdoll parts).
