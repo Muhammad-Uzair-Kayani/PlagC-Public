@@ -139,7 +139,7 @@ Directional/Point/Spot editing, color, intensity, range, cones, shadows, and vie
 
 FOV/clip/aspect editing, active-camera controls, frustum visualization, camera preview, align-camera-to-view and align-view-to-camera actions.
 
-## 10. Physics Inspector — `FOUNDATION`
+## 10. Physics Inspector — `DONE`
 
 Static/Kinematic/Dynamic body authoring, collider type and dimensions, mass/friction/restitution, layers/masks/triggers, validation, and collider debug visualization.
 
@@ -380,6 +380,18 @@ Definition of done for the product milestone:
 - Architecture: camera authoring remains in `CameraComponent`/`CameraDesc` and `SceneDocument`; no Ogre camera implementation object is exposed to editor-facing code. Preview state is restored when selection changes or Play begins.
 - Regression: `Scripts/Tests/EditorMilestone9Tests.py` covers projection fields, active-camera controls, frustum overlay, preview, bidirectional alignment, Scene View integration and the renderer-neutral boundary; it is wired into `ValidateEditor.bat` and Windows CI.
 - Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 9.
+
+## Milestone 10 — Physics Inspector — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 10 completion commit on `prototype`.
+- Delivered: complete Static/Kinematic/Dynamic body authoring; mass and gravity scale; linear/angular damping; sleep and continuous-CCD controls; primitive collider type/dimensions; friction, restitution and center-of-mass offset; collision layer, per-body mask, trigger and collision-group controls; actionable validation; and editor-only selected/all collider visualization in Scene View.
+- Runtime integration: `RigidBodyComponent` now carries renderer-neutral `CollisionLayerMask` state. Jolt registers each body's layer/mask and rejects a candidate contact in `OnContactValidate` unless both bodies' masks accept the other body layer. The existing global `CollisionMatrix` remains the broad, cheap policy; the per-body mask is an additional narrow restriction, with the lookup protected for worker-thread contact validation.
+- Architecture: Inspector mutations remain command-backed through `SceneDocument::SetPhysics`; no Jolt/Ogre implementation object is exposed to Editor code. Geometry-backed collider data is retained rather than fabricated, while safe primitive collider authoring remains available. Collider visualization is editor-only and suppressed during Play.
+- Validation: layer/body/trigger consistency, unknown mask bits, mass/damping/material ranges, collider dimensions, primitive scale restrictions, geometry presence and static-only mesh/heightfield rules are surfaced before committing invalid authoring state.
+- Scope boundary: no Milestone 13 Content Browser, Milestone 16 scene-file persistence/workflow, constraint/character-controller editor tooling, or Milestone 34 general debug-visualization system is included. Scene v3 still explicitly rejects physics persistence, leaving that ownership with Milestone 16.
+- Regression: `Scripts/Tests/EditorMilestone10Tests.py`; `ValidateEditor.bat` and Windows Editor CI cover the authoring surface, command-backed edits, runtime mask wiring, validation, editor-only collider visualization and scope boundaries.
+- Next assigned milestone: **13. Content Browser** — do not begin until explicitly requested.
 
 ## 11. Animator Inspector — `DONE`
 

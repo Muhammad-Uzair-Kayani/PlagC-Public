@@ -39,6 +39,7 @@ public:
     void AppendAnimatorInspector(Engine&, EditorSession&);
     void AppendAssetInteractions(Engine&, EditorSession&);
     void AppendCameraInspector(Engine&, EditorSession&, CameraDesc& editorCamera);
+    void AppendPhysicsInspector(Engine&, EditorSession&, const CameraDesc& editorCamera);
     void AppendAnimationStateMachine(Engine&, EditorSession&);
     void AppendAssetImport(Engine&, EditorSession&);
     void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);
@@ -84,6 +85,9 @@ private:
     std::optional<LightComponent> componentLight_;
     std::optional<PhysicsComponent> componentPhysics_;
     std::optional<AnimatorComponent> componentAnimator_;
+
+    bool physicsDebugVisible_ = true;
+    bool physicsDebugAll_ = false;
 
     std::uint64_t animatorInspectorPersistentID_ = 0;
     std::uint64_t animatorPreviewPersistentID_ = 0;

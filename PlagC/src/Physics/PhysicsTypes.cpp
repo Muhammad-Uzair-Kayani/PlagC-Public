@@ -8,7 +8,8 @@ bool CollisionMatrix::Get(CollisionLayer a,CollisionLayer b)const{return pairs[I
 void ValidatePhysicsBody(const PhysicsBodyDesc& d){
  const auto& b=d.component.body;const auto& c=d.component.collider;const auto& t=d.transform;
  Require(b.motion==MotionType::Static||b.motion==MotionType::Dynamic||b.motion==MotionType::Kinematic);
- Index(b.layer);Require(b.sensor==(b.layer==CollisionLayer::Sensor));
+ Index(b.layer);Require((b.collisionMask&~AllCollisionLayers)==0);
+ Require(b.sensor==(b.layer==CollisionLayer::Sensor));
  Require(b.sensor || ((b.motion==MotionType::Static)==(b.layer==CollisionLayer::StaticWorld)));
  Require(std::isfinite(b.mass)&&b.mass>0&&std::isfinite(b.gravityScale)&&std::isfinite(b.linearDamping)&&b.linearDamping>=0&&std::isfinite(b.angularDamping)&&b.angularDamping>=0);
  Require(Finite(t.position)&&Finite(t.rotationDegrees)&&Finite(t.scale)&&t.scale.x>0&&t.scale.y>0&&t.scale.z>0);
