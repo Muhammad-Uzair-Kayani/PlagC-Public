@@ -8,9 +8,11 @@
 #include <PlagC/Application.h>
 #include <PlagC/Assets/AssetScene.h>
 #include <PlagC/Editor/EditorSession.h>
+#include <PlagC/Editor/ScenePicking.h>
 #include <PlagC/Editor/ViewportTarget.h>
 #include <PlagC/World/SceneRenderer.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <PlagC/Camera/CameraSystem.h>
 #include <algorithm>
 #include <cmath>
@@ -126,6 +128,7 @@ public:
         viewportPresenter_.Draw(viewportTarget_->Handle());
         layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);
         layer_.AppendTransformGizmo(engine, *session_, editorCamera_);
+        HandleViewportPicking(engine);
 
         // Popups/modals must be submitted after every late viewport append pass.
         // Otherwise ImGui's modal dim layer can cover the docked UI while a later
@@ -163,6 +166,44 @@ public:
     }
 
 private:
+    void HandleViewportPicking(PlagC::Engine& engine)
+    {
+        const auto& viewport = layer_.Viewport();
+        if (!session_->EditingEnabled() || !viewport.input.AcceptSelectionMouse() ||
+            !ImGui::IsMouseClicked(ImGuiMouseButton_Left, false) || ImGui::GetDragDropPayload())
+            return;
+
+        ImGuiWindow* window = ImGui::FindWindowByName("Viewport");
+        if (!window || !window->WasActive || window->Collapsed)
+            return;
+        const ImRect rect = window->WorkRect;
+        const ImVec2 mouse = ImGui::GetIO().MousePos;
+        if (rect.GetWidth() <= 1.0f || rect.GetHeight() <= 1.0f || !rect.Contains(mouse))
+            return;
+
+        PlagC::Editor::PickRequest request;
+        request.x = (mouse.x - rect.Min.x) * static_cast<float>(viewport.width) / rect.GetWidth();
+        request.y = (mouse.y - rect.Min.y) * static_cast<float>(viewport.height) / rect.GetHeight();
+        request.width = viewport.width;
+        request.height = viewport.height;
+        request.camera = editorCamera_;
+
+        try
+        {
+            PlagC::Editor::RendererPickingProvider picker(
+                engine.Graphics(), session_->EditDocument(), *sceneRenderer_, *assetScene_);
+            auto& document = session_->EditDocument();
+            if (const auto hit = picker.Pick(request))
+                document.SelectPersistent(hit->persistentID);
+            else
+                document.Select({});
+        }
+        catch (const std::exception& error)
+        {
+            engine.Logger().Write(PlagC::Severity::Error, "EDITOR-PICK", error.what());
+        }
+    }
+
     void DrawClosePrompt(PlagC::Engine& engine)
     {
         if (!closePrompt_)

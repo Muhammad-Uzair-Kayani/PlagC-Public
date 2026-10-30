@@ -51,6 +51,12 @@ using ObjectHandle = RenderHandle<struct ObjectTag>;
 using LightHandle = RenderHandle<struct LightTag>;
 using TargetHandle = RenderHandle<struct TargetTag>;
 
+struct ObjectRayHit
+{
+    ObjectHandle object{};
+    float distance = 0.0f;
+};
+
 enum class UiTextureKind : std::uint8_t
 {
     Texture,
@@ -185,6 +191,9 @@ class Renderer
     void SetCastShadows(ObjectHandle, bool);
     void SetRenderQueue(ObjectHandle, std::uint8_t);
     void DestroyObject(ObjectHandle);
+    // Bounding-volume ray query against renderer-owned scene objects. The displacement
+    // controls both ray direction and maximum distance; results are nearest-first.
+    std::vector<ObjectRayHit> RaycastObjects(Vec3 origin, Vec3 displacement) const;
     LightHandle CreateLight(const LightDesc &);
     void UpdateLight(LightHandle, const LightDesc &);
     void DestroyLight(LightHandle);

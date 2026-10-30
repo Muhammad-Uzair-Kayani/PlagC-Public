@@ -21,6 +21,9 @@ class AssetScene
     void Update(World &, double dt);
     std::optional<Vec3> AnimatedNodePoint(const World &, Entity, const std::string &,
                                           Vec3 local = {}) const;
+    // Owner-thread identity bridge for editor/tooling picking. Objects not owned by a
+    // ModelComponent instance resolve to an empty Entity.
+    Entity EntityForObject(ObjectHandle) const;
     void Clear();
     AssetSceneStats Statistics() const;
 

@@ -8,6 +8,7 @@ namespace PlagC::Editor {
 
 std::optional<PickResult> ResolveSceneObjectPick(const SceneDocument& document,
                                                  const SceneRenderer& sceneRenderer,
+                                                 const AssetScene& assetScene,
                                                  ObjectHandle object,
                                                  float distance)
 {
@@ -17,11 +18,32 @@ std::optional<PickResult> ResolveSceneObjectPick(const SceneDocument& document,
     if (!object)
         return std::nullopt;
 
-    const Entity entity = sceneRenderer.EntityForObject(object);
+    Entity entity = sceneRenderer.EntityForObject(object);
+    if (!entity)
+        entity = assetScene.EntityForObject(object);
     if (!entity || !document.Scene().Alive(entity))
         return std::nullopt;
 
     return PickResult{document.PersistentID(entity), distance};
+}
+
+RendererPickingProvider::RendererPickingProvider(Renderer& renderer,
+                                                 const SceneDocument& document,
+                                                 const SceneRenderer& sceneRenderer,
+                                                 const AssetScene& assetScene)
+    : renderer_(renderer), document_(document), sceneRenderer_(sceneRenderer), assetScene_(assetScene)
+{
+}
+
+std::optional<PickResult> RendererPickingProvider::Pick(const PickRequest& request)
+{
+    Thread::RequireMain();
+    const PickRay ray = BuildPickRay(request);
+    for (const ObjectRayHit& hit : renderer_.RaycastObjects(ray.origin, ray.displacement))
+        if (auto resolved = ResolveSceneObjectPick(document_, sceneRenderer_, assetScene_,
+                                                   hit.object, hit.distance))
+            return resolved;
+    return std::nullopt;
 }
 
 } // namespace PlagC::Editor

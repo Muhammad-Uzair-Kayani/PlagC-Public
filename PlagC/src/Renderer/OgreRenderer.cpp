@@ -29,6 +29,7 @@
 #include <OgreWindow.h>
 #include <OgreRenderSystem.h>
 #include <OgreSceneManager.h>
+#include <OgreSceneQuery.h>
 #include <OgreRenderQueue.h>
 #include <OgreSceneNode.h>
 #include <OgreCamera.h>
@@ -613,7 +614,6 @@ TextureHandle Renderer::LoadTexture(const std::string &resource, bool srgb, bool
     Require(!path.empty() && !path.is_absolute(), "texture resource must be relative");
     for (const auto &part : path)
         Require(part != "..", "texture resource escapes asset root");
-    // Use Ogre's registered image codecs on every platform; upload remains engine-owned.
     Ogre::Image2 image;
     image.load(resource, "General");
     const unsigned width = image.getWidth(), height = image.getHeight();
@@ -626,8 +626,6 @@ TextureHandle Renderer::LoadTexture(const std::string &resource, bool srgb, bool
     destination.data = rgba.data();
     Ogre::PixelFormatGpuUtils::bulkPixelConversion(image.getData(0), image.getPixelFormat(),
                                                    destination, Ogre::PFG_RGBA8_UNORM);
-    // A one-channel image is luminance in common PNG/JPEG files. Keep it neutral
-    // when used as colour, while preserving the red channel used by data maps.
     if (image.getPixelFormat() == Ogre::PFG_R8_UNORM)
         for (std::size_t i = 0; i < rgba.size(); i += 4)
         {
@@ -646,7 +644,6 @@ void Renderer::DestroyTexture(TextureHandle handle)
     impl_->root->getRenderSystem()->getTextureGpuManager()->destroyTexture(texture);
     impl_->textures.erase(handle.value);
 }
-
 MeshHandle Renderer::LoadModel(const std::string &resource, bool legacy)
 {
     Thread::RequireMain();
@@ -769,8 +766,6 @@ void Renderer::SetEnvironment(const EnvironmentDesc &desc)
     auto *tm = p.root->getRenderSystem()->getTextureGpuManager();
     Ogre::TextureGpu *next = p.environmentTexture;
     const bool replace = desc.cubemap != p.environment.cubemap;
-    // Validate and load before touching the live environment. Missing/invalid files
-    // fail synchronously rather than silently becoming a streaming placeholder.
     if (replace)
     {
         next = nullptr;
@@ -908,6 +903,47 @@ void Renderer::DestroyObject(ObjectHandle h)
     p.scene->destroySceneNode(o.node);
     std::erase(Get(p.meshes, o.mesh).users, h.value);
     p.objects.erase(h.value);
+}
+std::vector<ObjectRayHit> Renderer::RaycastObjects(Vec3 origin, Vec3 displacement) const
+{
+    Thread::RequireMain();
+    Require(Finite(origin) && Finite(displacement), "invalid renderer pick ray");
+    const Ogre::Vector3 delta = V(displacement);
+    const float maxDistance = delta.length();
+    Require(std::isfinite(maxDistance) && maxDistance > 1.0e-6f,
+            "renderer pick ray requires nonzero displacement");
+
+    const auto &p = *impl_;
+    if (!p.scene || p.nullBackend)
+        return {};
+
+    Ogre::RaySceneQuery *query = p.scene->createRayQuery(Ogre::Ray(V(origin), delta / maxDistance));
+    struct QueryGuard
+    {
+        Ogre::SceneManager *scene = nullptr;
+        Ogre::SceneQuery *query = nullptr;
+        ~QueryGuard() { if (scene && query) scene->destroyQuery(query); }
+    } guard{p.scene, query};
+    query->setSortByDistance(true);
+
+    std::unordered_map<const Ogre::MovableObject *, ObjectHandle> owned;
+    owned.reserve(p.objects.size());
+    for (const auto &[id, object] : p.objects)
+        if (object.value && object.value->getVisible())
+            owned.emplace(object.value, ObjectHandle{id});
+
+    std::vector<ObjectRayHit> hits;
+    for (const auto &entry : query->execute())
+    {
+        if (entry.distance > maxDistance)
+            break;
+        if (!entry.movable)
+            continue;
+        const auto found = owned.find(entry.movable);
+        if (found != owned.end())
+            hits.push_back(ObjectRayHit{found->second, static_cast<float>(entry.distance)});
+    }
+    return hits;
 }
 LightHandle Renderer::CreateLight(const LightDesc &d)
 {
