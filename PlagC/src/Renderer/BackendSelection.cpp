@@ -3,6 +3,7 @@
 #include <array>
 #include <charconv>
 #include <cctype>
+#include <fstream>
 #include <istream>
 #include <ostream>
 #include <string>
@@ -29,6 +30,16 @@ bool SameAscii(std::string_view lhs, std::string_view rhs)
             return false;
     }
     return true;
+}
+
+std::string Trim(std::string text)
+{
+    const auto notSpace = [](unsigned char value) { return !std::isspace(value); };
+    const auto first = std::find_if(text.begin(), text.end(), notSpace);
+    const auto last = std::find_if(text.rbegin(), text.rend(), notSpace).base();
+    if (first >= last)
+        return {};
+    return std::string(first, last);
 }
 } // namespace
 
@@ -85,5 +96,53 @@ RendererBackend PromptRendererBackend(const RendererBackendCapabilities &availab
     }
 
     throw std::invalid_argument("invalid renderer selection: " + selection);
+}
+
+std::filesystem::path DefaultRendererPreferencePath()
+{
+    return std::filesystem::path("Saved") / "RendererBackend.txt";
+}
+
+RendererBackend LoadRendererPreference(const std::filesystem::path &path,
+                                       RendererBackend fallback) noexcept
+{
+    try
+    {
+        std::ifstream input(path);
+        if (!input)
+            return fallback;
+
+        std::string text;
+        std::getline(input, text);
+        text = Trim(std::move(text));
+        if (text.empty())
+            return fallback;
+
+        const auto backend = ParseRendererBackend(text);
+        return backend == RendererBackend::OpenGL || backend == RendererBackend::Vulkan
+                   ? backend
+                   : fallback;
+    }
+    catch (...)
+    {
+        return fallback;
+    }
+}
+
+void SaveRendererPreference(const std::filesystem::path &path, RendererBackend backend)
+{
+    if (backend != RendererBackend::OpenGL && backend != RendererBackend::Vulkan)
+        throw std::invalid_argument("renderer preference must be OpenGL or Vulkan");
+
+    if (const auto parent = path.parent_path(); !parent.empty())
+        std::filesystem::create_directories(parent);
+
+    std::ofstream output(path, std::ios::trunc);
+    if (!output)
+        throw std::runtime_error("failed to open renderer preference for writing: " + path.string());
+
+    output << (backend == RendererBackend::Vulkan ? "vulkan\n" : "opengl\n");
+    if (!output)
+        throw std::runtime_error("failed to write renderer preference: " + path.string());
 }
 } // namespace PlagC

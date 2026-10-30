@@ -26,9 +26,21 @@ Engine::Engine(const EngineConfig &config)
 
     const auto availableBackends = Renderer::BackendCapabilities();
     RendererBackend requestedBackend = config.rendererBackend;
+    const bool graphicalWindow = !config.headless && !config.nullPlatform && !config.offscreen;
+
+    // An explicit caller/CLI backend always wins. Otherwise restore the last graphical choice.
+    // Ignore preferences for backends not compiled into this build so Auto can choose a fallback.
+    if (requestedBackend == RendererBackend::Auto && graphicalWindow &&
+        !config.rendererSelectionPrompt)
+    {
+        const auto preferred =
+            LoadRendererPreference(DefaultRendererPreferencePath(), RendererBackend::Auto);
+        if (preferred != RendererBackend::Auto && availableBackends.Supports(preferred))
+            requestedBackend = preferred;
+    }
+
     bool interactiveRendererSelection =
-        config.rendererSelectionPrompt && requestedBackend == RendererBackend::Auto &&
-        !config.headless && !config.nullPlatform && !config.offscreen;
+        config.rendererSelectionPrompt && requestedBackend == RendererBackend::Auto && graphicalWindow;
 #ifdef PC_DIST
     interactiveRendererSelection = false;
 #endif

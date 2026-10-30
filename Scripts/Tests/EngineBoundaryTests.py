@@ -46,6 +46,18 @@ class EngineBoundaryTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, entry)
 
+    def test_renderer_preference_is_restored_without_overriding_explicit_selection(self):
+        application_h = self.read("PlagC/include/PlagC/Application.h")
+        application_cpp = self.read("PlagC/src/Application.cpp")
+        selection_h = self.read("PlagC/include/PlagC/Renderer/BackendSelection.h")
+        self.assertIn("bool rendererSelectionPrompt = false", application_h)
+        self.assertIn("LoadRendererPreference", selection_h)
+        self.assertIn("SaveRendererPreference", selection_h)
+        self.assertIn("requestedBackend == RendererBackend::Auto", application_cpp)
+        self.assertIn("LoadRendererPreference(DefaultRendererPreferencePath()", application_cpp)
+        self.assertIn("availableBackends.Supports(preferred)", application_cpp)
+        self.assertIn("ResolveRendererBackend(requestedBackend", application_cpp)
+
     def test_runtime_staging_is_engine_only(self):
         manifest = self.read("Scripts/RuntimeAssetManifest.py")
         staging = self.read("Scripts/StageRuntimeAssets.py")
