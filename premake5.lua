@@ -96,6 +96,10 @@ project "PlagC"
 
     filter "toolset:msc*"
         disablewarnings { "4324" }
+    filter { "toolset:msc*", "files:PlagC/src/Assets/AssetImport.cpp" }
+        -- stb_image is intentionally compiled with internal linkage in this translation unit;
+        -- MSVC C4505 reports the unused portions of stb's public API after optimization.
+        disablewarnings { "4505" }
     filter {}
 
     files { "PlagC/include/**.h", "PlagC/src/**.h", "PlagC/src/**.cpp" }
@@ -137,7 +141,7 @@ project "Sandbox"
     files { "Sandbox/src/**.cpp", "Sandbox/src/**.h" }
     enginePch("Sandbox/src/pgcpch.cpp")
     includedirs { "PlagC/include", "Vendor/rapidjson/include" }
-    links { "PlagC", "GLFW", "spdlog", "Jolt", "Ozz", "OpenAL" }
+    links { "PlagC", "PlagCImport", "Assimp", "GLFW", "spdlog", "Jolt", "Ozz", "OpenAL" }
 
     filter "system:linux"
         linkoptions { "-Wl,-rpath,'$$ORIGIN'" }
@@ -191,7 +195,7 @@ project "Editor"
         "Vendor/rapidjson/include",
         "Vendor/imgui"
     }
-    links { "PlagC", "ImGui", "GLFW", "spdlog", "Jolt", "Ozz", "OpenAL" }
+    links { "PlagC", "PlagCImport", "Assimp", "ImGui", "GLFW", "spdlog", "Jolt", "Ozz", "OpenAL" }
 
     filter "system:linux"
         linkoptions { "-Wl,-rpath,'$$ORIGIN'" }
