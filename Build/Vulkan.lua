@@ -37,6 +37,8 @@ end
 -- generated translation units for explicit-API hot paths and low-overhead profiling.
 function vulkanEngineSources()
     if not PLAGC_VULKAN then return end
+    -- Generated sources retain private includes from their source directory.
+    includedirs { root .. '/PlagC/src/Renderer' }
     local original = root .. '/PlagC/src/Renderer/OgreRenderer.cpp'
     local patchRenderer = dofile(root .. '/Build/Patches/OgreRendererPerformance.lua')
     local output = generated .. '/PlagCOgreRenderer.cpp'
