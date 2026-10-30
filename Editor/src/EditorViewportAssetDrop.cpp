@@ -103,36 +103,45 @@ void EditorLayer::AppendViewportAssetDrop(Engine& engine, EditorSession& session
     if (!session.EditingEnabled() || !ImGui::GetCurrentContext())
         return;
 
-    ImGuiWindow* window = ImGui::FindWindowByName("Viewport");
-    if (!window || !window->WasActive || window->Collapsed)
-        return;
-
-    const ImRect rect = window->WorkRect;
-    if (rect.GetWidth() <= 1.0f || rect.GetHeight() <= 1.0f)
-        return;
-
-    // DrawViewport() created this exact item ID. Use a custom target so the drop
-    // maps to the real rendered surface even though other editor windows were drawn
-    // between the InvisibleButton and this late viewport presentation pass.
-    const ImGuiID surface = window->GetID("ViewportSurface");
-    if (!ImGui::BeginDragDropTargetCustom(rect, surface))
-        return;
-
-    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(CookedModelPayload))
+    // Begin the same existing Viewport window again for this late presentation pass.
+    // BeginDragDropTargetCustom uses ImGui's current window internally, so merely
+    // finding the window pointer is insufficient after other editor panels have run.
+    if (!ImGui::Begin("Viewport"))
     {
-        try
-        {
-            const auto position = DropPosition(editorCamera, rect, ImGui::GetIO().MousePos);
-            CreateCookedModelEntity(engine, session,
-                                    static_cast<const char*>(payload->Data), position);
-        }
-        catch (const std::exception& error)
-        {
-            engine.Logger().Write(Severity::Error, "EDITOR-ASSETS", error.what());
-        }
+        ImGui::End();
+        return;
     }
 
-    ImGui::EndDragDropTarget();
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    const ImRect rect = window->WorkRect;
+    if (rect.GetWidth() <= 1.0f || rect.GetHeight() <= 1.0f)
+    {
+        ImGui::End();
+        return;
+    }
+
+    // DrawViewport() created this exact item ID. The custom target covers that
+    // original rendered surface while keeping the scene image unobscured.
+    const ImGuiID surface = window->GetID("ViewportSurface");
+    if (ImGui::BeginDragDropTargetCustom(rect, surface))
+    {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(CookedModelPayload))
+        {
+            try
+            {
+                const auto position = DropPosition(editorCamera, rect, ImGui::GetIO().MousePos);
+                CreateCookedModelEntity(engine, session,
+                                        static_cast<const char*>(payload->Data), position);
+            }
+            catch (const std::exception& error)
+            {
+                engine.Logger().Write(Severity::Error, "EDITOR-ASSETS", error.what());
+            }
+        }
+        ImGui::EndDragDropTarget();
+    }
+
+    ImGui::End();
 }
 
 } // namespace PlagC::Editor
