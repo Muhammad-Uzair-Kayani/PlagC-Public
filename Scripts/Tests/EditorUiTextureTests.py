@@ -22,6 +22,13 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("manager.waitForStreamingCompletion()", source)
         self.assertNotIn("Ogre::TextureFlags::AutomaticBatching", source)
 
+    def test_imgui_atlas_white_texel_is_verified_before_upload(self):
+        bridge = self.read("Editor/src/ImGuiRendererBridge.cpp")
+        self.assertIn("io.Fonts->TexUvWhitePixel", bridge)
+        self.assertIn("whiteOffset", bridge)
+        self.assertIn("ImGui font atlas white texel is not opaque white", bridge)
+        self.assertIn("pixels[whiteOffset + 3] != 0xffu", bridge)
+
     def test_ui_texture_contract_is_checked_at_runtime(self):
         source = self.read("PlagC/src/Renderer/OgreUiTexture.cpp")
         self.assertIn("texture->hasAutomaticBatching()", source)

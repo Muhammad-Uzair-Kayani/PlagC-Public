@@ -44,6 +44,18 @@ void ImGuiRendererBridge::Initialize(Renderer& renderer)
     if (!pixels || width <= 0 || height <= 0 || bytesPerPixel != 4)
         throw std::runtime_error("ImGui font atlas generation failed");
 
+    // Dear ImGui renders solid shapes through TexUvWhitePixel. If this texel is not
+    // opaque white, every widget colour is multiplied by the wrong atlas value.
+    const ImVec2 whiteUv = io.Fonts->TexUvWhitePixel;
+    const int whiteX = std::clamp(static_cast<int>(whiteUv.x * width), 0, width - 1);
+    const int whiteY = std::clamp(static_cast<int>(whiteUv.y * height), 0, height - 1);
+    const std::size_t whiteOffset =
+        (static_cast<std::size_t>(whiteY) * static_cast<std::size_t>(width) +
+         static_cast<std::size_t>(whiteX)) * 4u;
+    if (pixels[whiteOffset + 0] != 0xffu || pixels[whiteOffset + 1] != 0xffu ||
+        pixels[whiteOffset + 2] != 0xffu || pixels[whiteOffset + 3] != 0xffu)
+        throw std::runtime_error("ImGui font atlas white texel is not opaque white");
+
     const std::size_t bytes = static_cast<std::size_t>(width) *
                               static_cast<std::size_t>(height) * 4u;
     fontTexture_ = CreateUiTexture(renderer,
