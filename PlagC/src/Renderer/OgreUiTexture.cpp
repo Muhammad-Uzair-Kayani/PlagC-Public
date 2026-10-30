@@ -30,6 +30,7 @@ namespace PlagC {
 namespace {
 
 constexpr std::uint64_t UiTextureBase = std::uint64_t{1} << 62;
+constexpr std::uint64_t UiTargetBit = std::uint64_t{1} << 63;
 std::atomic<std::uint64_t> nextUiTexture{UiTextureBase};
 
 std::string UiTextureName(std::uint64_t id)
@@ -41,6 +42,11 @@ std::string UiDrawTextureName(const UiTextureRef& ref)
 {
     const char* kind = ref.kind == UiTextureKind::Target ? "Target" : "AssetTexture";
     return std::string("PlagC/") + kind + std::to_string(ref.value);
+}
+
+std::uint64_t UiDrawTextureKey(const UiTextureRef& ref) noexcept
+{
+    return ref.value | (ref.kind == UiTextureKind::Target ? UiTargetBit : 0u);
 }
 
 Ogre::TextureGpuManager& TextureManager()
@@ -66,7 +72,7 @@ TextureHandle CreateUiTexture(Renderer& renderer, unsigned width, unsigned heigh
         throw std::invalid_argument("invalid RGBA editor UI texture");
 
     const std::uint64_t id = nextUiTexture.fetch_add(1u, std::memory_order_relaxed);
-    if (id >= (std::uint64_t{1} << 63))
+    if (id >= UiTargetBit)
         throw std::overflow_error("editor UI texture handle space exhausted");
 
     auto image = std::make_unique<Ogre::Image2>();
@@ -128,7 +134,7 @@ void DestroyUiTexture(Renderer&, TextureHandle handle)
     Thread::RequireMain();
     if (!handle)
         return;
-    if (handle.value < UiTextureBase || handle.value >= (std::uint64_t{1} << 63))
+    if (handle.value < UiTextureBase || handle.value >= UiTargetBit)
         throw std::invalid_argument("invalid editor UI texture handle");
 
     auto& manager = TextureManager();
@@ -143,14 +149,15 @@ void ValidateOgreUITextures(const UiDrawData& data)
     Thread::RequireMain();
     auto& manager = TextureManager();
     static std::unordered_set<std::string> reported;
-    std::unordered_set<std::string> validatedThisFrame;
+    std::unordered_set<std::uint64_t> validatedThisFrame;
 
     for (const UiDrawCommand& command : data.commands)
     {
-        const std::string name = UiDrawTextureName(command.texture);
-        if (!validatedThisFrame.insert(name).second)
+        const std::uint64_t key = UiDrawTextureKey(command.texture);
+        if (!validatedThisFrame.insert(key).second)
             continue;
 
+        const std::string name = UiDrawTextureName(command.texture);
         Ogre::TextureGpu* texture = manager.findTextureNoThrow(Ogre::IdString(name));
         if (!texture)
         {

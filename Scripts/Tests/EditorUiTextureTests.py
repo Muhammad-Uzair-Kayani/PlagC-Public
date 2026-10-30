@@ -41,6 +41,7 @@ class EditorUiTextureTests(unittest.TestCase):
         source = self.read("PlagC/src/Renderer/OgreUiTexture.cpp")
         bridge = self.read("Editor/src/ImGuiRendererBridge.cpp")
         self.assertIn("std::uint64_t{1} << 62", source)
+        self.assertIn("std::uint64_t{1} << 63", source)
         self.assertIn("std::uint64_t{1} << 63", bridge)
         self.assertIn("PlagC/AssetTexture", source)
 
@@ -62,8 +63,9 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("[PlagC UI] resolved draw texture kind=", texture)
         self.assertIn('ref.kind == UiTextureKind::Target ? "Target" : "AssetTexture"', texture)
         self.assertIn('std::string("PlagC/") + kind', texture)
-        self.assertIn("std::unordered_set<std::string> validatedThisFrame", texture)
-        self.assertIn("if (!validatedThisFrame.insert(name).second)", texture)
+        self.assertIn("std::unordered_set<std::uint64_t> validatedThisFrame", texture)
+        self.assertIn("const std::uint64_t key = UiDrawTextureKey(command.texture)", texture)
+        self.assertIn("if (!validatedThisFrame.insert(key).second)", texture)
 
     def test_ui_presentation_requires_an_executed_draw(self):
         backend = self.read("PlagC/src/Renderer/OgreUiBackend.cpp")
