@@ -10,6 +10,7 @@ project "Jolt"
     language "C++"
     cppdialect "C++20"
     common()
+    warnings "Off"
     files { "../Vendor/jolt/Jolt/**.cpp", "../Vendor/jolt/Jolt/**.h", "../Vendor/jolt/Jolt/**.inl" }
     removefiles { "../Vendor/jolt/Jolt/ObjectStream/ObjectStream*.cpp", "../Vendor/jolt/Jolt/ObjectStream/TypeDeclarations.cpp" }
     -- SerializableObject.cpp supplies RTTI even when object streaming is disabled.
