@@ -1,7 +1,14 @@
 #include "pgcpch.h"
 #include <PlagC/Assets/AssetManifest.h>
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 5054) // Pinned RapidJSON cross-enum flags.
+#endif
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 #include <algorithm>
 #include <fstream>
 #include <sstream>
