@@ -24,6 +24,7 @@ public:
     bool InspectorVisible() const noexcept { return showInspector_; }
     void AppendComponentInspector(Engine&, EditorSession&);
     void AppendAssetInteractions(Engine&, EditorSession&);
+    void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);
     // Draws and drives a world-space transform gizmo on the existing Viewport window.
     // Must be called after the viewport target image is appended so handles stay on top.
     void AppendTransformGizmo(Engine&, EditorSession&, const CameraDesc& editorCamera);
@@ -42,6 +43,7 @@ private:
     void PreviewInspectorTransform(Engine&, EditorSession&, const AuthoringEntity&);
     void FinishTransformEdit(Engine&, bool commit);
     void FinishGizmoEdit(Engine&, bool commit);
+    void CreateCookedModelEntity(Engine&, EditorSession&, const char* assetPath, Vec3 position);
 
     EditorFileController files_;
     EditorDataPanels dataPanels_;
