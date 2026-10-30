@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "UiSubmissionInternal.h"
 #include <PlagC/Renderer/UiTexture.h>
 #include <PlagC/Thread.h>
 
@@ -23,6 +24,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 
 namespace PlagC {
 namespace {
@@ -33,6 +35,12 @@ std::atomic<std::uint64_t> nextUiTexture{UiTextureBase};
 std::string UiTextureName(std::uint64_t id)
 {
     return "PlagC/AssetTexture" + std::to_string(id);
+}
+
+std::string UiDrawTextureName(const UiTextureRef& ref)
+{
+    const char* kind = ref.kind == UiTextureKind::Target ? "Target" : "AssetTexture";
+    return std::string("PlagC/") + kind + std::to_string(ref.value);
 }
 
 Ogre::TextureGpuManager& TextureManager()
@@ -128,5 +136,59 @@ void DestroyUiTexture(Renderer&, TextureHandle handle)
             manager.findTextureNoThrow(Ogre::IdString(UiTextureName(handle.value))))
         manager.destroyTexture(texture);
 }
+
+namespace Detail {
+void ValidateOgreUITextures(const UiDrawData& data)
+{
+    Thread::RequireMain();
+    auto& manager = TextureManager();
+    static std::unordered_set<std::string> reported;
+
+    for (const UiDrawCommand& command : data.commands)
+    {
+        const std::string name = UiDrawTextureName(command.texture);
+        Ogre::TextureGpu* texture = manager.findTextureNoThrow(Ogre::IdString(name));
+        if (!texture)
+        {
+            Ogre::LogManager::getSingleton().logMessage(
+                std::string("[PlagC UI] ERROR: draw texture did not resolve kind=") +
+                (command.texture.kind == UiTextureKind::Target ? "Target" : "Texture") +
+                " handle=" + std::to_string(command.texture.value) + " name=" + name,
+                Ogre::LML_CRITICAL);
+            throw std::runtime_error("editor UI draw texture did not resolve: " + name);
+        }
+
+        const bool normalUiTexture = command.texture.kind == UiTextureKind::Texture;
+        if (normalUiTexture &&
+            (texture->hasAutomaticBatching() ||
+             texture->getTextureType() != Ogre::TextureTypes::Type2D ||
+             !texture->isDataReady()))
+        {
+            Ogre::LogManager::getSingleton().logMessage(
+                std::string("[PlagC UI] ERROR: invalid normal UI texture name=") + name +
+                " batching=" + (texture->hasAutomaticBatching() ? "true" : "false") +
+                " ready=" + (texture->isDataReady() ? "true" : "false") +
+                " type=" + std::to_string(static_cast<unsigned>(texture->getTextureType())),
+                Ogre::LML_CRITICAL);
+            throw std::logic_error(
+                "normal editor UI draws require a ready standalone Ogre Type2D texture");
+        }
+
+        if (reported.insert(name).second)
+        {
+            Ogre::LogManager::getSingleton().logMessage(
+                std::string("[PlagC UI] resolved draw texture kind=") +
+                (command.texture.kind == UiTextureKind::Target ? "Target" : "Texture") +
+                " handle=" + std::to_string(command.texture.value) +
+                " name=" + name +
+                " pixels=" + std::to_string(texture->getWidth()) + "x" +
+                std::to_string(texture->getHeight()) +
+                " batching=" + (texture->hasAutomaticBatching() ? "true" : "false") +
+                " ready=" + (texture->isDataReady() ? "true" : "false") +
+                " type=" + std::to_string(static_cast<unsigned>(texture->getTextureType())));
+        }
+    }
+}
+} // namespace Detail
 
 } // namespace PlagC

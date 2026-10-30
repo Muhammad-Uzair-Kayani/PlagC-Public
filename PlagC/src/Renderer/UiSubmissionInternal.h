@@ -8,6 +8,7 @@ void CheckOgreUIOutput(const Renderer*);
 void SetOgreUIOutput(const Renderer*, Ogre::TextureGpu*);
 void AttachOgreUIWorkspace(const Renderer*, Ogre::CompositorWorkspace*);
 void DetachOgreUIWorkspace(const Renderer*, Ogre::CompositorWorkspace*) noexcept;
+void ValidateOgreUITextures(const UiDrawData&);
 
 class OgreUIWorkspaceScope final {
 public:

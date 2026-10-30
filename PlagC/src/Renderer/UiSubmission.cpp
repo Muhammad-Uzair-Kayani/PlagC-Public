@@ -44,6 +44,8 @@ void Renderer::SubmitUI(UiDrawData data)
 {
     Thread::RequireMain();
     ValidateUI(data);
+    if (backend_ != RendererBackend::Null)
+        Detail::ValidateOgreUITextures(data);
     gPendingUiFrames[this] = std::move(data);
     if (backend_ != RendererBackend::Null)
         Detail::RegisterOgreUIRenderer(this);

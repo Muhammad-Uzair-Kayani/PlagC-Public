@@ -50,6 +50,19 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("out.texture.value != fontTexture_.value", bridge)
         self.assertIn("ImGui submitted an unknown editor UI texture handle", bridge)
 
+    def test_submission_resolves_and_validates_ogre_textures(self):
+        submission = self.read("PlagC/src/Renderer/UiSubmission.cpp")
+        internal = self.read("PlagC/src/Renderer/UiSubmissionInternal.h")
+        texture = self.read("PlagC/src/Renderer/OgreUiTexture.cpp")
+        self.assertIn("Detail::ValidateOgreUITextures(data)", submission)
+        self.assertIn("void ValidateOgreUITextures(const UiDrawData&);", internal)
+        self.assertIn("manager.findTextureNoThrow(Ogre::IdString(name))", texture)
+        self.assertIn("[PlagC UI] ERROR: draw texture did not resolve", texture)
+        self.assertIn("normal editor UI draws require a ready standalone Ogre Type2D texture", texture)
+        self.assertIn("[PlagC UI] resolved draw texture kind=", texture)
+        self.assertIn('ref.kind == UiTextureKind::Target ? "Target" : "AssetTexture"', texture)
+        self.assertIn('std::string("PlagC/") + kind', texture)
+
     def test_ui_presentation_requires_an_executed_draw(self):
         backend = self.read("PlagC/src/Renderer/OgreUiBackend.cpp")
         self.assertIn("bool Render(const UiDrawData& frame", backend)
