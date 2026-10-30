@@ -22,6 +22,14 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("manager.waitForStreamingCompletion()", source)
         self.assertNotIn("Ogre::TextureFlags::AutomaticBatching", source)
 
+    def test_ui_texture_contract_is_checked_at_runtime(self):
+        source = self.read("PlagC/src/Renderer/OgreUiTexture.cpp")
+        self.assertIn("texture->hasAutomaticBatching()", source)
+        self.assertIn("texture->getTextureType() != Ogre::TextureTypes::Type2D", source)
+        self.assertIn("texture->isDataReady()", source)
+        self.assertIn("editor UI texture must be a standalone Ogre Type2D resource", source)
+        self.assertIn("editor UI texture upload did not become ready", source)
+
     def test_ui_texture_keeps_imgui_target_bit_free(self):
         source = self.read("PlagC/src/Renderer/OgreUiTexture.cpp")
         bridge = self.read("Editor/src/ImGuiRendererBridge.cpp")
