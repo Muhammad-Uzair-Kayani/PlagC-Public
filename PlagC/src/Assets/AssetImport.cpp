@@ -1,5 +1,9 @@
 #include "pgcpch.h"
 #include <PlagC/Assets/Asset.h>
+#define STB_IMAGE_STATIC
+#define STBI_ONLY_PNG
+#define STBI_ONLY_JPEG
+#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include <algorithm>
 #include <cmath>
