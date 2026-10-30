@@ -23,7 +23,7 @@ A milestone is not complete because a backend API exists. It is complete when th
 8. Update this document in the same milestone commit with status, tests, files, and commit evidence.
 9. Stop after each milestone and wait for approval before starting the next one.
 
-Assigned milestone lane for this implementation stream: **1, 4, 7, 10, 13, 17**. Work must not leak into other milestones; each assigned milestone must be finished before moving to the next assigned milestone.
+Assigned milestone lane for this implementation stream: **1, 4, 7, 10, 13, 16**. Milestone 17 was completed concurrently by its adjacent implementation stream; concurrent milestone work must be preserved rather than overwritten during reconciliation.
 
 ## Status legend
 
@@ -163,7 +163,7 @@ Preview scene/camera/lighting, model/material/texture thumbnails, cache and inva
 
 Import/reimport UI for supported model/texture formats, source-to-cooked relationship, scale/coordinate/normal/tangent/material/animation options and surfaced import errors.
 
-## 16. Scene File Workflow — `FOUNDATION`
+## 16. Scene File Workflow — `DONE`
 
 New/Open/Save/Save As/Recent scenes, dirty indicator, transactional replacement, unsaved prompts, scene-version validation, persistent hierarchy/components/material assignments and useful load/save errors.
 
@@ -421,7 +421,7 @@ Definition of done for the product milestone:
 - Architecture: the browser consumes the existing `AssetBrowserModel` snapshot, `AssetManager` registry and Milestone 15 import receipts instead of duplicating asset/import systems. Model Inspector reveal, Inspector assignment, viewport placement and Milestone 3 model creation continue through their existing editor/document contracts.
 - Scope boundary: asset cards remain textual placeholders; no thumbnail/preview cache or generation (14), no new import/reimport processing (15), no scene open/save workflow (16), and no Play Toolbar work (17) is included.
 - Regression: `Scripts/Tests/EditorMilestone13ContentBrowserTests.py` plus updated `EditorAssetInteractionTests.py` and Milestone 6 reveal coverage; `ValidateEditor.bat` and Windows Editor CI run the focused gate.
-- Next step: stop here and wait for explicit approval before starting Milestone 17.
+- Next assigned milestone: **16. Scene File Workflow** — do not begin until explicitly requested.
 
 ## 14. Thumbnail / Preview System — `DONE`
 
@@ -442,6 +442,20 @@ Definition of done for the product milestone:
 - Regression: `Scripts/Tests/EditorMilestone15Tests.py` covers the import options, texture asset path, receipt persistence, import/reimport execution, editor settings surface, error handling and normal editor-frame integration; it is wired into `ValidateEditor.bat` and Windows CI.
 - Validation note: the exact Windows run for the original Milestone 15 commit was cancelled by CI concurrency after newer `prototype` pushes, not failed; the implementation remains covered by the branch-level Windows Editor validation gate.
 - Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 15.
+
+## Milestone 16 — Scene File Workflow — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 16 completion commit on `prototype`.
+- File workflow: New/Open/Save/Save As retain their existing shortcuts and native dialogs; the File menu now exposes a dirty `*`, current scene identity, persistent Open Recent history (up to eight paths), Clear Recent, and the last actionable file error. Recent-scene opens use the same unsaved Save/Discard/Cancel policy as normal Open/New, and missing recent files are rejected and removed rather than replacing the current document.
+- Transactional safety: `EditorSession::Open` still fully loads/validates a replacement `SceneDocument` before swapping the authoring document/path. Scene saves still stage to a temporary directory and replace the destination only after a complete serialization/write; the command history is marked saved only after the replacement succeeds. Failed open/save therefore leaves the current scene and dirty state intact.
+- Persistence: scene format **v4** adds Physics and Animator persistence while retaining v1/v2/v3 readers. Hierarchy, persistent IDs, transforms, active camera/camera fields, lights, model asset/visibility/shadows, material-slot overrides, physics body/layer/mask/material/collider data (including geometry-backed collider payloads), animation source/playback, controller graph/current state/typed parameter values and upper-body animation settings round-trip through the scene file.
+- Persistent-ID correctness: loading now advances `nextPersistentID_` past the highest restored ID, preventing newly created entities from colliding with IDs restored from disk.
+- Stable-resource boundary: raw `RenderableComponent` mesh/material handles remain intentionally non-serializable because they are renderer-runtime handles rather than stable asset references. Saving such an entity fails with an explicit message directing authoring code to use `ModelComponent`; unsupported state is never silently dropped.
+- Validation: strict format/version/duplicate-field/entity/hierarchy/asset-path validation remains active; physics is revalidated through `ValidatePhysicsBody` on load, controller graphs are reconstructed against the resolved clip source, and malformed/missing resources produce visible `EDITOR-FILE` errors without destructive replacement.
+- Regression: `Scripts/Tests/EditorMilestone16SceneFileTests.py` is wired into `ValidateEditor.bat` and Windows CI; `Scripts/Tests/EditorSerializationTests.cpp` now exercises a v4 hierarchy/model/physics/animator/controller round-trip, post-load persistent-ID allocation, unsupported raw-renderable rejection and failed-save rollback.
+- Scope boundary: Milestone 16 does not redesign Play transport (17), thumbnails/previews (14), generic Asset Manager move/rename semantics (31), or later menu/theme/notification systems. Recent-scene storage is limited to scene workflow state under `Saved/EditorRecentScenes.txt`.
+- Next step: this assigned milestone lane **1, 4, 7, 10, 13, 16** is complete. Stop here and wait for explicit approval before starting any other milestone.
 
 ## 17. Play Toolbar — `DONE`
 
