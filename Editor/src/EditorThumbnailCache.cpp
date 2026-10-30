@@ -323,6 +323,9 @@ struct EditorThumbnailCache::Entry {
     std::unique_ptr<Task> task;
 };
 
+EditorThumbnailCache::EditorThumbnailCache() = default;
+EditorThumbnailCache::~EditorThumbnailCache() = default;
+
 void EditorThumbnailCache::Initialize() { initialized_=true; }
 
 std::uint64_t EditorThumbnailCache::Fingerprint(const std::filesystem::path& path,std::uint64_t generation)
