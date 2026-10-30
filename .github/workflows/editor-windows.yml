@@ -39,6 +39,7 @@ jobs:
           python Scripts\Tests\EditorPlayRuntimeTests.py
           python Scripts\Tests\EditorAssetInteractionTests.py
           python Scripts\Tests\EditorGizmoTests.py
+          python Scripts\Tests\EditorUiTextureTests.py
 
       - name: Generate OpenGL VS2022 solution
         shell: cmd

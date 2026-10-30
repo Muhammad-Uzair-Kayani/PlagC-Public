@@ -16,6 +16,7 @@ for %%T in (
     EditorPlayRuntimeTests.py
     EditorAssetInteractionTests.py
     EditorGizmoTests.py
+    EditorUiTextureTests.py
 ) do (
     echo [Editor Validation] Running %%T...
     python "Scripts\Tests\%%T"

@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include "ImGuiRendererBridge.h"
+#include <PlagC/Renderer/UiTexture.h>
 #include <imgui.h>
 #include <algorithm>
 #include <limits>
@@ -45,10 +46,11 @@ void ImGuiRendererBridge::Initialize(Renderer& renderer)
 
     const std::size_t bytes = static_cast<std::size_t>(width) *
                               static_cast<std::size_t>(height) * 4u;
-    fontTexture_ = renderer.CreateTexture(static_cast<unsigned>(width),
-                                          static_cast<unsigned>(height),
-                                          std::span<const std::uint8_t>(pixels, bytes),
-                                          false, false);
+    fontTexture_ = CreateUiTexture(renderer,
+                                   static_cast<unsigned>(width),
+                                   static_cast<unsigned>(height),
+                                   std::span<const std::uint8_t>(pixels, bytes),
+                                   false);
     io.Fonts->SetTexID(static_cast<ImTextureID>(TextureID(fontTexture_)));
     io.BackendRendererName = "PlagC_Ogre_UI";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
@@ -151,7 +153,7 @@ void ImGuiRendererBridge::Shutdown(Renderer& renderer)
     renderer.ClearUI();
     if (fontTexture_)
     {
-        renderer.DestroyTexture(fontTexture_);
+        DestroyUiTexture(renderer, fontTexture_);
         fontTexture_ = {};
     }
     if (ImGui::GetCurrentContext())
