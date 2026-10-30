@@ -3,6 +3,7 @@ project "GLFW"
     language "C"
     cdialect "C99"
     common()
+    warnings "Off"
     includedirs { "../Vendor/glfw/include", "../Vendor/glfw/src" }
     files {
         "../Vendor/glfw/src/context.c", "../Vendor/glfw/src/init.c", "../Vendor/glfw/src/input.c",
