@@ -1,7 +1,9 @@
 compositor_node_shadow PlagCShadow
 {
     technique focused
-    texture atlas 2048 2048 PFG_D32_FLOAT
+    // Empty editor scenes may skip shadow rendering before the scene pass reads it.
+    // Keep the atlas layout/content across skipped updates and workspace passes.
+    texture atlas 2048 2048 PFG_D32_FLOAT keep_content
     shadow_map 0 atlas light 0
     shadow_map_target_type directional spot
     {
