@@ -133,6 +133,19 @@ class EditorArchitectureTests(unittest.TestCase):
         self.assertNotIn("compositorManager_->addListener(this)", backend)
         self.assertIn("Detail::OgreUIWorkspaceScope uiWorkspace(this, p.workspace);", patch)
 
+    def test_renderer_preferences_are_persistent_and_restart_gated(self):
+        header = self.read("Editor/src/EditorPreferences.h")
+        source = self.read("Editor/src/EditorPreferences.cpp")
+        app = self.read("Editor/src/EditorApp.cpp")
+        self.assertIn("class EditorPreferences final", header)
+        self.assertIn("RestartRequired(RendererBackend active)", header)
+        self.assertIn("SaveRendererPreference(DefaultRendererPreferencePath()", source)
+        self.assertIn('ImGui::Begin("Preferences"', source)
+        self.assertIn('ImGui::BeginTabItem("Graphics")', source)
+        self.assertIn("Restart the Editor to apply this setting", source)
+        self.assertIn("ImGuiKey_Comma", app)
+        self.assertIn("preferences_.Draw(engine)", app)
+
     def test_engine_backend_does_not_depend_on_imgui(self):
         paths = [
             ROOT / "PlagC/include/PlagC/Editor",
