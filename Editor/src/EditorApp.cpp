@@ -87,6 +87,8 @@ public:
             preferences_.Toggle();
 
         layer_.Frame(engine, *session_);
+        if (layer_.InspectorVisible())
+            layer_.AppendComponentInspector(engine, *session_);
         preferences_.Draw(engine, *session_);
         DrawClosePrompt(engine);
 
