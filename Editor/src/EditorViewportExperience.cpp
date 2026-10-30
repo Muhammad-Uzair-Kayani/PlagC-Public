@@ -293,6 +293,7 @@ bool ToggleButton(const char* label,bool active)
 
 void EditorLayer::AppendViewportExperience(Engine& engine,EditorSession& session,CameraDesc& editorCamera)
 {
+    AppendPhysicsInspector(engine,session,editorCamera);
     AppendCameraInspector(engine,session,editorCamera);
 
     ImGuiWindow* viewportWindow=ImGui::FindWindowByName("Viewport");
