@@ -57,6 +57,20 @@ const AuthoringEntity* SelectedEntity(const std::vector<AuthoringEntity>& entiti
 
 } // namespace
 
+void EditorLayer::CreateCookedModelEntity(Engine& engine, EditorSession& session,
+                                          const char* assetPath, Vec3 position)
+{
+    const auto model = LoadModel(engine, assetPath);
+    EntityTemplate entity;
+    entity.name = std::filesystem::path(assetPath).stem().string();
+    entity.transform.position = position;
+    entity.model = ModelComponent{model, true};
+
+    auto& document = session.EditDocument();
+    const Entity created = document.Create(std::move(entity));
+    document.Select(created);
+}
+
 void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session)
 {
     if (!session.EditingEnabled())
@@ -68,42 +82,41 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
         {
             ImGui::SeparatorText("Cooked runtime assets");
             ImGui::TextDisabled(
-                "Drag a cooked ModelAsset onto Inspector to assign it, or double-click to create an entity at the origin.");
-            for (const auto& entry : dataPanels_.ContentSnapshot())
+                "Drag a cooked ModelAsset onto Inspector to assign it, drag it into Viewport to place it, or double-click to create it at the origin.");
+
+            const auto content = dataPanels_.ContentSnapshot();
+            if (content)
             {
-                if (entry.kind != EditorAssetKind::Cooked || entry.directory)
-                    continue;
-
-                const std::filesystem::path path(entry.path);
-                const std::string label = path.filename().string() + "##CookedDrag" + entry.path;
-                ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick);
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("%s", entry.path.c_str());
-
-                if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                for (const auto& entry : *content)
                 {
-                    try
-                    {
-                        const auto model = LoadModel(engine, entry.path.c_str());
-                        EntityTemplate entity;
-                        entity.name = path.stem().string();
-                        entity.model = ModelComponent{model, true};
-                        auto& document = session.EditDocument();
-                        const Entity created = document.Create(std::move(entity));
-                        document.Select(created);
-                    }
-                    catch (const std::exception& error)
-                    {
-                        LogAssetError(engine, error);
-                    }
-                }
+                    if (entry.kind != EditorAssetKind::Cooked)
+                        continue;
 
-                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
-                {
-                    ImGui::SetDragDropPayload(CookedModelPayload,
-                                              entry.path.c_str(), entry.path.size() + 1u);
-                    ImGui::Text("Assign model: %s", path.filename().string().c_str());
-                    ImGui::EndDragDropSource();
+                    const std::filesystem::path path(entry.path);
+                    const std::string label = path.filename().string() + "##CookedDrag" + entry.path;
+                    ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick);
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("%s", entry.path.c_str());
+
+                    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                    {
+                        try
+                        {
+                            CreateCookedModelEntity(engine, session, entry.path.c_str(), Vec3{});
+                        }
+                        catch (const std::exception& error)
+                        {
+                            LogAssetError(engine, error);
+                        }
+                    }
+
+                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+                    {
+                        ImGui::SetDragDropPayload(CookedModelPayload,
+                                                  entry.path.c_str(), entry.path.size() + 1u);
+                        ImGui::Text("Assign model: %s", path.filename().string().c_str());
+                        ImGui::EndDragDropSource();
+                    }
                 }
             }
         }
