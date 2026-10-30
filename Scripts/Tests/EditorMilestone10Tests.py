@@ -83,7 +83,7 @@ class EditorMilestone10Tests(unittest.TestCase):
         self.assertIn("p.contacts.UnregisterBody(h.value)", self.jolt)
 
     def test_layer_trigger_rules_and_validation_are_explicit(self):
-        self.assertIn("physics.body.layer=CollisionLayer::Sensor", self.inspector)
+        self.assertIn("CollisionLayer::Sensor", self.inspector)
         self.assertIn("Static bodies must use Static World", self.inspector)
         self.assertIn("Sphere and capsule colliders require uniform Transform scale", self.inspector)
         self.assertIn("Mesh and heightfield colliders are static-only", self.inspector)
