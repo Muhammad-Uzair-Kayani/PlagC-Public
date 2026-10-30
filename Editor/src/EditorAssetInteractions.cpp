@@ -4,7 +4,6 @@
 #include <PlagC/Assets/AssetManager.h>
 #include <imgui.h>
 #include <algorithm>
-#include <cstring>
 #include <filesystem>
 #include <stdexcept>
 #include <string>
@@ -45,11 +44,6 @@ const AuthoringEntity* SelectedEntity(const std::vector<AuthoringEntity>& entiti
     return it == entities.end() ? nullptr : &*it;
 }
 
-void DrawDropHint(const char* text)
-{
-    ImGui::TextDisabled("%s", text);
-}
-
 } // namespace
 
 void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session)
@@ -62,7 +56,8 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
         if (ImGui::Begin("Content Browser"))
         {
             ImGui::SeparatorText("Cooked runtime assets");
-            ImGui::TextDisabled("Drag a .plasset onto the Inspector or Viewport. Non-model assets are rejected on drop.");
+            ImGui::TextDisabled(
+                "Drag a cooked ModelAsset onto Inspector to assign it, or double-click to create an entity at the origin.");
             for (const auto& entry : dataPanels_.ContentSnapshot())
             {
                 if (entry.kind != EditorAssetKind::Cooked || entry.directory)
@@ -73,6 +68,25 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
                 ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick);
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("%s", entry.path.c_str());
+
+                if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                {
+                    try
+                    {
+                        const auto model = LoadModel(engine, entry.path.c_str());
+                        EntityTemplate entity;
+                        entity.name = path.stem().string();
+                        entity.model = ModelComponent{model, true};
+                        auto& document = session.EditDocument();
+                        const Entity created = document.Create(std::move(entity));
+                        document.Select(created);
+                    }
+                    catch (const std::exception& error)
+                    {
+                        LogAssetError(engine, error);
+                    }
+                }
+
                 if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
                 {
                     ImGui::SetDragDropPayload(CookedModelPayload,
@@ -95,7 +109,7 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
             ImGui::SeparatorText("Model Asset");
             if (selected)
             {
-                DrawDropHint("Drop a cooked ModelAsset here to assign/replace the selected entity model.");
+                ImGui::TextDisabled("Drop a cooked ModelAsset here to assign or replace the selected entity model.");
                 if (ImGui::BeginDragDropTarget())
                 {
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(CookedModelPayload))
@@ -115,39 +129,11 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
             }
             else
             {
-                DrawDropHint("Select an entity before assigning a model.");
+                ImGui::TextDisabled("Select an entity before assigning a model.");
             }
         }
         ImGui::End();
     }
-
-    if (ImGui::Begin("Viewport"))
-    {
-        DrawDropHint("Drop a cooked ModelAsset into the viewport to create an entity at the origin.");
-        if (ImGui::BeginDragDropTarget())
-        {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(CookedModelPayload))
-            {
-                try
-                {
-                    const char* payloadPath = static_cast<const char*>(payload->Data);
-                    const auto model = LoadModel(engine, payloadPath);
-                    EntityTemplate entity;
-                    entity.name = std::filesystem::path(payloadPath).stem().string();
-                    entity.model = ModelComponent{model, true};
-                    auto& document = session.EditDocument();
-                    const Entity created = document.Create(std::move(entity));
-                    document.Select(created);
-                }
-                catch (const std::exception& error)
-                {
-                    LogAssetError(engine, error);
-                }
-            }
-            ImGui::EndDragDropTarget();
-        }
-    }
-    ImGui::End();
 }
 
 } // namespace PlagC::Editor
