@@ -62,6 +62,8 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("[PlagC UI] resolved draw texture kind=", texture)
         self.assertIn('ref.kind == UiTextureKind::Target ? "Target" : "AssetTexture"', texture)
         self.assertIn('std::string("PlagC/") + kind', texture)
+        self.assertIn("std::unordered_set<std::string> validatedThisFrame", texture)
+        self.assertIn("if (!validatedThisFrame.insert(name).second)", texture)
 
     def test_ui_presentation_requires_an_executed_draw(self):
         backend = self.read("PlagC/src/Renderer/OgreUiBackend.cpp")

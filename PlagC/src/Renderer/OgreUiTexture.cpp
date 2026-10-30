@@ -143,10 +143,14 @@ void ValidateOgreUITextures(const UiDrawData& data)
     Thread::RequireMain();
     auto& manager = TextureManager();
     static std::unordered_set<std::string> reported;
+    std::unordered_set<std::string> validatedThisFrame;
 
     for (const UiDrawCommand& command : data.commands)
     {
         const std::string name = UiDrawTextureName(command.texture);
+        if (!validatedThisFrame.insert(name).second)
+            continue;
+
         Ogre::TextureGpu* texture = manager.findTextureNoThrow(Ogre::IdString(name));
         if (!texture)
         {
