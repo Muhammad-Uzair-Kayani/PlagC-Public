@@ -8,6 +8,9 @@
 #include <PlagC/Editor/ViewportTarget.h>
 #include <PlagC/World/SceneRenderer.h>
 #include <imgui.h>
+#include <PlagC/Camera/CameraSystem.h>
+#include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -62,6 +65,7 @@ public:
 
         ImGui::NewFrame();
         layer_.Frame(engine, *session_);
+        UpdateEditorCamera(engine, dt);
         viewportPresenter_.Draw(viewportTarget_->Handle());
         ImGui::Render();
         renderer_.Submit(engine.Graphics(), ImGui::GetDrawData());
@@ -85,6 +89,41 @@ public:
     }
 
 private:
+    void UpdateEditorCamera(PlagC::Engine& engine, double dt)
+    {
+        // Navigation belongs to the editor, never to the saved authoring world.
+        const auto& viewport = layer_.Viewport();
+        const auto& io = ImGui::GetIO();
+        const bool blocked = io.WantTextInput ||
+            ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+        if (session_->Playing())
+            return;
+        if (viewport.input.AcceptCameraMouse() && viewport.input.AcceptKeyboard() &&
+            !blocked && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+        {
+            cameraLook_.Rotate(io.MouseDelta.x, io.MouseDelta.y);
+            const auto forward = cameraLook_.Forward();
+            constexpr float radians = 3.14159265358979323846f / 180.0f;
+            const PlagC::Vec3 right{-std::sin(cameraLook_.yaw * radians), 0,
+                                    std::cos(cameraLook_.yaw * radians)};
+            float x = float(ImGui::IsKeyDown(ImGuiKey_D)) - float(ImGui::IsKeyDown(ImGuiKey_A));
+            float y = float(ImGui::IsKeyDown(ImGuiKey_E)) - float(ImGui::IsKeyDown(ImGuiKey_Q));
+            float z = float(ImGui::IsKeyDown(ImGuiKey_W)) - float(ImGui::IsKeyDown(ImGuiKey_S));
+            const float length = std::max(1.0f, std::sqrt(x*x + y*y + z*z));
+            const float step = float(std::clamp(dt, 0.0, 0.1)) * (io.KeyShift ? 24.0f : 8.0f) / length;
+            editorCamera_.position.x += (right.x*x + forward.x*z) * step;
+            editorCamera_.position.y += (y + forward.y*z) * step;
+            editorCamera_.position.z += (right.z*x + forward.z*z) * step;
+        }
+        const auto forward = cameraLook_.Forward();
+        const auto p = editorCamera_.position;
+        editorCamera_.target = {p.x + forward.x, p.y + forward.y, p.z + forward.z};
+        editorCamera_.aspect = viewport.Aspect();
+        engine.Graphics().SetCamera(editorCamera_);
+    }
+
+    PlagC::CameraDesc editorCamera_{};
+    PlagC::CameraLook cameraLook_{-128.6598f, -25.1041f, .12f};
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
     std::unique_ptr<PlagC::SceneRenderer> sceneRenderer_;
     std::unique_ptr<PlagC::Editor::ViewportTarget> viewportTarget_;
