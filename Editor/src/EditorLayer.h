@@ -18,6 +18,7 @@ class EditorLayer {
 public:
     void Initialize(Engine&, EditorSession&);
     void Frame(Engine&, EditorSession&);
+    void DrawModals(Engine&, EditorSession&);
     void Shutdown();
 
     const ViewportState& Viewport() const noexcept { return viewport_; }

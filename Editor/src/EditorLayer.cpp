@@ -80,6 +80,11 @@ void EditorLayer::Frame(Engine& engine, EditorSession& session)
         DrawStatistics(engine, session);
 }
 
+void EditorLayer::DrawModals(Engine& engine, EditorSession& session)
+{
+    files_.DrawUnsavedModal(engine, session);
+}
+
 void EditorLayer::Shutdown()
 {
     transformEdit_.reset();
@@ -198,7 +203,6 @@ void EditorLayer::DrawDockHost(Engine& engine, EditorSession& session)
         ImGui::EndMenuBar();
     }
 
-    files_.DrawUnsavedModal(engine, session);
     ImGui::DockSpace(dockspaceID, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
     ImGui::End();
 }
@@ -453,9 +457,6 @@ void EditorLayer::DrawViewport(EditorSession&)
     const ImVec2 available = ImGui::GetContentRegionAvail();
     viewport_.Resize(static_cast<unsigned>(std::max(1.0f, available.x)),
                      static_cast<unsigned>(std::max(1.0f, available.y)));
-
-    // The presenter appends the target image to this window's draw list.
-    // A child window would render above it and obscure the scene surface.
     viewport_.input.viewportHovered = ImGui::IsWindowHovered();
     viewport_.input.viewportFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
     ImGui::InvisibleButton("ViewportSurface",

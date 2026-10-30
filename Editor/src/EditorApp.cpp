@@ -88,9 +88,6 @@ public:
         sceneRenderer_->Sync(session_->ViewWorld(), presentation);
         engine.timings.sceneSyncMs = sceneRenderer_->Statistics().totalMs;
 
-        // ModelComponent rendering and Ozz animation are owned by AssetScene rather than
-        // SceneRenderer. Authoring uses dt=0 so models are visible without advancing clips;
-        // Play/Pause/Step use the exact simulation delta produced by EditorPlayRuntime.
         assetScene_->Update(session_->SystemWorld(),
                             session_->Playing() ? playRuntime_.SimulationDelta() : 0.0);
         engine.timings.animationMs = assetScene_->Statistics().animationMs;
@@ -119,8 +116,6 @@ public:
         layer_.AppendAssetInteractions(engine, *session_);
         if (layer_.InspectorVisible())
             layer_.AppendComponentInspector(engine, *session_);
-        preferences_.Draw(engine, *session_);
-        DrawClosePrompt(engine);
 
         const auto& viewport = layer_.Viewport();
         if (viewport.width > 1 && viewport.height > 1)
@@ -131,6 +126,14 @@ public:
         viewportPresenter_.Draw(viewportTarget_->Handle());
         layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);
         layer_.AppendTransformGizmo(engine, *session_, editorCamera_);
+
+        // Popups/modals must be submitted after every late viewport append pass.
+        // Otherwise ImGui's modal dim layer can cover the docked UI while a later
+        // viewport draw obscures the actual modal, producing a mysterious dark sheet.
+        preferences_.Draw(engine, *session_);
+        layer_.DrawModals(engine, *session_);
+        DrawClosePrompt(engine);
+
         ImGui::Render();
         renderer_.Submit(engine.Graphics(), ImGui::GetDrawData());
     }
@@ -169,6 +172,8 @@ private:
         if (!ImGui::IsPopupOpen(popup))
             ImGui::OpenPopup(popup);
 
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing,
+                                ImVec2(0.5f, 0.5f));
         if (!ImGui::BeginPopupModal(popup, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
             return;
 
