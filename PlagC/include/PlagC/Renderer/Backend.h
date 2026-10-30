@@ -53,8 +53,8 @@ inline RendererBackend ParseRendererBackend(const std::string &name)
     if (name == "null") return RendererBackend::Null;
     throw std::invalid_argument("renderer must be auto, opengl, vulkan or null");
 }
-// Pure selection policy shared by initialization, tests and a future settings UI.
-// Explicit requests never silently fall back. Auto prefers the established OpenGL path.
+// Pure selection policy shared by initialization, tests and the editor settings UI.
+// Explicit requests never silently fall back. Auto prefers Vulkan, then OpenGL.
 inline RendererBackend ResolveRendererBackend(RendererBackend requested,
                                               const RendererBackendCapabilities &available,
                                               bool nullMode = false, bool offscreen = false)
@@ -69,10 +69,10 @@ inline RendererBackend ResolveRendererBackend(RendererBackend requested,
     }
     if (requested == RendererBackend::Auto)
     {
-        if (available.openGL)
-            requested = RendererBackend::OpenGL;
-        else if (available.vulkan)
+        if (available.vulkan)
             requested = RendererBackend::Vulkan;
+        else if (available.openGL)
+            requested = RendererBackend::OpenGL;
         else
             throw std::runtime_error("no graphical renderer available; request Null explicitly");
     }
