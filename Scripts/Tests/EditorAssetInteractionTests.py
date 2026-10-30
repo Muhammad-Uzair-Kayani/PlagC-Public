@@ -13,9 +13,12 @@ class EditorAssetInteractionTests(unittest.TestCase):
 
     def test_cooked_assets_are_loaded_relative_to_asset_manager_root(self):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
-        self.assertIn('const std::string marker = "Assets/Cooked/"', source)
+        self.assertIn('mountedPrefix = "Assets://Cooked/"', source)
+        self.assertIn('filesystemPrefix = "Assets/Cooked/"', source)
+        self.assertIn('cookedPrefix = "Cooked/"', source)
+        self.assertIn("path.starts_with(mountedPrefix)", source)
         self.assertIn("engine.Assets().Load<ModelAsset>(CookedAssetKey(payloadPath))", source)
-        self.assertIn("Only files under Assets/Cooked", source)
+        self.assertIn("Assets://Cooked", source)
 
     def test_content_browser_can_create_model_entities(self):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
