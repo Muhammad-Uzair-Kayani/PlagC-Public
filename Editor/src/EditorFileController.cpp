@@ -29,6 +29,27 @@ NativeWindow Owner(Engine& engine)
 
 void EditorFileController::DrawMenu(Engine& engine, EditorSession& session)
 {
+    // Shortcut labels in MenuItem are presentation only; route commands here
+    // even when the File menu is closed. Dialogs and text fields own their input.
+    const auto& io = ImGui::GetIO();
+    if (session.EditingEnabled() && io.KeyCtrl && !io.KeyAlt && !io.WantTextInput &&
+        !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+    {
+        if (!io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_N, false))
+            Request(engine, session, PendingAction::NewScene);
+        else if (!io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_O, false))
+            Request(engine, session, PendingAction::OpenScene);
+        else if (ImGui::IsKeyPressed(ImGuiKey_S, false))
+        {
+            try
+            {
+                if (io.KeyShift) SaveAs(engine, session);
+                else SaveCurrent(engine, session);
+            }
+            catch (const std::exception& error) { LogFileError(engine, error); }
+        }
+    }
+
     if (!ImGui::BeginMenu("File"))
         return;
 
