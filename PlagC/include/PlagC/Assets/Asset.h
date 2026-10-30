@@ -18,7 +18,8 @@ struct AssetID
 enum class AssetType : std::uint32_t
 {
     Model = 1,
-    Audio = 2
+    Audio = 2,
+    Texture = 3
 };
 struct AssetMetadata
 {
@@ -50,8 +51,9 @@ Matrix4 Multiply(const Matrix4 &, const Matrix4 &);
 Matrix4 Matrix(const JointTransform &);
 Vec3 TransformPoint(const Matrix4 &, Vec3);
 Vec3 TransformNormal(const Matrix4 &, Vec3);
-struct TextureAsset
+struct TextureAsset final : Asset
 {
+    static constexpr AssetType Type = AssetType::Texture;
     std::string name;
     unsigned width = 0, height = 0;
     std::vector<std::uint8_t> rgba;
@@ -128,6 +130,32 @@ struct AudioClip final : Asset
     unsigned sampleRate = 0, channels = 0;
     std::vector<std::int16_t> samples;
 };
+
+enum class ModelNormalImport : std::uint8_t
+{
+    PreserveOrGenerate,
+    RecalculateSmooth
+};
+enum class ModelCoordinateImport : std::uint8_t
+{
+    RightHandedYUp,
+    MirrorZToRightHanded
+};
+struct ModelImportOptions
+{
+    float scale = 1.0f;
+    ModelCoordinateImport coordinates = ModelCoordinateImport::RightHandedYUp;
+    bool flipUVs = true;
+    ModelNormalImport normals = ModelNormalImport::PreserveOrGenerate;
+    bool tangents = true;
+    bool materials = true;
+    bool animations = true;
+};
+struct TextureImportOptions
+{
+    bool flipVertical = false;
+};
+
 template <class T> class AssetHandle
 {
     std::shared_ptr<const T> value_;
@@ -158,10 +186,14 @@ template <class T> class AssetHandle
 };
 void Validate(const ModelAsset &);
 void Validate(const AudioClip &);
+void Validate(const TextureAsset &);
 // Import/cook are CPU-only. Assimp exists only inside ImportModel's implementation.
 ModelAsset ImportModel(const std::filesystem::path &);
+ModelAsset ImportModel(const std::filesystem::path &, const ModelImportOptions &);
+TextureAsset ImportTexture(const std::filesystem::path &, const TextureImportOptions & = {});
 AudioClip ImportWave(const std::filesystem::path &);
 void SaveAsset(const ModelAsset &, const std::filesystem::path &);
 void SaveAsset(const AudioClip &, const std::filesystem::path &);
+void SaveAsset(const TextureAsset &, const std::filesystem::path &);
 std::shared_ptr<Asset> ReadAsset(const std::filesystem::path &);
 } // namespace PlagC

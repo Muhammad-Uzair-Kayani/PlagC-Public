@@ -263,6 +263,17 @@ void SaveAsset(const AudioClip &a, const std::filesystem::path &path)
     }
     WriteFile(w, AssetType::Audio, path);
 }
+void SaveAsset(const TextureAsset &a, const std::filesystem::path &path)
+{
+    Validate(a);
+    Writer w;
+    w.S(a.name);
+    w.U(a.width);
+    w.U(a.height);
+    w.U(unsigned(a.rgba.size()));
+    w.data.insert(w.data.end(), a.rgba.begin(), a.rgba.end());
+    WriteFile(w, AssetType::Texture, path);
+}
 std::shared_ptr<Asset> ReadAsset(const std::filesystem::path &path)
 {
     auto size = std::filesystem::file_size(path);
@@ -406,6 +417,19 @@ std::shared_ptr<Asset> ReadAsset(const std::filesystem::path &path)
                               std::uint16_t(std::uint16_t(r.data[r.cursor + 1]) << 8)));
             r.cursor += 2;
         }
+        Validate(*a);
+        result = a;
+    }
+    else if (type == AssetType::Texture)
+    {
+        auto a = std::make_shared<TextureAsset>();
+        a->name = r.S();
+        a->width = r.U();
+        a->height = r.U();
+        const auto count = r.U();
+        r.Need(count);
+        a->rgba.assign(r.data.begin() + r.cursor, r.data.begin() + r.cursor + count);
+        r.cursor += count;
         Validate(*a);
         result = a;
     }

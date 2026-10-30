@@ -128,6 +128,7 @@ void LogCameraError(Engine& engine,const std::exception& error)
 
 void EditorLayer::AppendCameraInspector(Engine& engine,EditorSession& session,CameraDesc& editorCamera)
 {
+    AppendAssetImport(engine, session);
     AppendAnimationStateMachine(engine, session);
 
     const auto snapshot=session.ViewDocument().Snapshot();

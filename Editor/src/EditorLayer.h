@@ -4,6 +4,7 @@
 #include "EditorFileController.h"
 #include "EditorSceneHierarchy.h"
 #include <PlagC/Animation/AnimationControllerAsset.h>
+#include <PlagC/Assets/AssetImport.h>
 #include <PlagC/Editor/EditorModels.h>
 #include <PlagC/Editor/EditorSession.h>
 #include <array>
@@ -32,6 +33,7 @@ public:
     void AppendAssetInteractions(Engine&, EditorSession&);
     void AppendCameraInspector(Engine&, EditorSession&, CameraDesc& editorCamera);
     void AppendAnimationStateMachine(Engine&, EditorSession&);
+    void AppendAssetImport(Engine&, EditorSession&);
     void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);
     void AppendViewportExperience(Engine&, EditorSession&, CameraDesc& editorCamera);
     // Draws and drives a world-space/local-space transform gizmo on the existing Viewport window.
@@ -89,6 +91,15 @@ private:
     std::array<char, 260> animationControllerPath_{"Assets/Controllers/Controller.pgcontroller"};
     int animationSelectedState_ = -1;
     int animationSelectedTransition_ = -1;
+
+    bool showAssetImport_ = true;
+    AssetImportKind assetImportKind_ = AssetImportKind::Model;
+    std::array<char, 512> assetImportSource_{};
+    std::array<char, 512> assetImportCooked_{"Assets/Cooked/Imported.plasset"};
+    ModelImportOptions modelImportOptions_{};
+    TextureImportOptions textureImportOptions_{};
+    std::string assetImportStatus_;
+    std::string assetImportError_;
 
     std::unique_ptr<SceneDocument::TransformEdit> gizmoEdit_;
     std::uint64_t gizmoPersistentID_ = 0;
