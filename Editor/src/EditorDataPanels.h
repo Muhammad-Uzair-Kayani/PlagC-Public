@@ -16,6 +16,11 @@ public:
     void DrawContentBrowser(Engine&);
     void DrawConsole(Engine&);
 
+    std::shared_ptr<const std::vector<AssetBrowserEntry>> ContentSnapshot() const
+    {
+        return assets_.Snapshot();
+    }
+
 private:
     AssetBrowserModel assets_;
     ConsoleFilter consoleFilter_{};
