@@ -24,6 +24,7 @@ class EditorAssetInteractionTests(unittest.TestCase):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
         self.assertIn("entry.kind != EditorAssetKind::Cooked", source)
         self.assertIn("ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)", source)
+        self.assertIn("CreateCookedModelEntity(engine, session, entry.path.c_str(), {})", source)
         self.assertIn("entity.model = ModelComponent{model, true}", source)
         self.assertIn("document.Create(std::move(entity))", source)
         self.assertIn("document.Select(created)", source)
@@ -40,10 +41,30 @@ class EditorAssetInteractionTests(unittest.TestCase):
         self.assertIn("void AppendAssetInteractions(Engine&, EditorSession&);", header)
         self.assertIn("layer_.AppendAssetInteractions(engine, *session_)", app)
 
-    def test_no_fake_full_viewport_drop_target_is_advertised(self):
-        source = self.read("Editor/src/EditorAssetInteractions.cpp")
+    def test_viewport_drop_targets_real_rendered_surface(self):
+        source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
+        app = self.read("Editor/src/EditorApp.cpp")
+        header = self.read("Editor/src/EditorLayer.h")
+        self.assertIn('ImGui::FindWindowByName("Viewport")', source)
+        self.assertIn('window->GetID("ViewportSurface")', source)
+        self.assertIn("ImGui::BeginDragDropTargetCustom(rect, surface)", source)
+        self.assertIn('ImGui::AcceptDragDropPayload(CookedModelPayload)', source)
+        self.assertIn("DropPosition(editorCamera, rect, ImGui::GetIO().MousePos)", source)
+        self.assertIn("CreateCookedModelEntity(engine, session", source)
         self.assertNotIn('ImGui::Begin("Viewport")', source)
-        self.assertNotIn("Drop a cooked ModelAsset into the viewport", source)
+        self.assertIn("void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);", header)
+        self.assertIn("viewportPresenter_.Draw(viewportTarget_->Handle());", app)
+        self.assertIn("layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);", app)
+        self.assertLess(
+            app.index("viewportPresenter_.Draw(viewportTarget_->Handle());"),
+            app.index("layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);"))
+
+    def test_viewport_drop_uses_ground_plane_with_forward_ray_fallback(self):
+        source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
+        self.assertIn("const float t = -camera.position.y / direction.y", source)
+        self.assertIn("return Add(camera.position, Mul(direction, t))", source)
+        self.assertIn("fallbackDistance = Length(Sub(camera.target, camera.position))", source)
+        self.assertIn("return Add(camera.position, Mul(direction, fallbackDistance))", source)
 
 
 if __name__ == "__main__":
