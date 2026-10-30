@@ -16,6 +16,7 @@ for %%T in (
     EditorPlayRuntimeTests.py
     EditorAssetInteractionTests.py
     EditorMilestone3Tests.py
+    EditorMilestone4InspectorTests.py
     EditorMilestone5Tests.py
     EditorMilestone6Tests.py
     EditorMilestone9Tests.py

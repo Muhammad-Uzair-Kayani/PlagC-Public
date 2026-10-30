@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <algorithm>
+#include <cfloat>
 #include <cstdio>
 
 namespace PlagC::Editor {
@@ -266,50 +267,109 @@ void EditorLayer::SyncInspector(EditorSession& session, const AuthoringEntity& s
 void EditorLayer::DrawInspector(Engine& engine, EditorSession& session)
 {
     if (!ImGui::Begin("Inspector", &showInspector_)) { ImGui::End(); return; }
+
     const auto entities = session.ViewDocument().Snapshot();
     const auto selected = std::find_if(entities.begin(), entities.end(),
         [](const AuthoringEntity& entity) { return entity.selected; });
+
     if (selected == entities.end())
     {
-        ImGui::TextDisabled(session.EditingEnabled() ? "Select an entity to inspect it."
-                                                    : "Runtime document is read-only.");
-        ImGui::End(); return;
-    }
-    if (!session.EditingEnabled())
-    {
-        ImGui::TextUnformatted(selected->record.name.c_str());
-        ImGui::Separator();
-        ImGui::Text("Persistent ID: %llu", static_cast<unsigned long long>(selected->persistentID));
-        const Transform& transform = selected->record.transform;
-        ImGui::SeparatorText("World Transform");
-        ImGui::Text("Position  %.3f  %.3f  %.3f", transform.position.x, transform.position.y, transform.position.z);
-        ImGui::Text("Rotation  %.3f  %.3f  %.3f", transform.rotationDegrees.x,
-                    transform.rotationDegrees.y, transform.rotationDegrees.z);
-        ImGui::Text("Scale     %.3f  %.3f  %.3f", transform.scale.x, transform.scale.y, transform.scale.z);
-        ImGui::End(); return;
+        ImGui::Dummy(ImVec2(0.0f, 8.0f));
+        ImGui::TextDisabled(session.EditingEnabled()
+            ? "Select an entity in the Hierarchy or Scene View."
+            : "Play mode is active. Select a runtime entity to inspect it.");
+        ImGui::End();
+        return;
     }
 
-    SyncInspector(session, *selected);
-    auto& document = session.EditDocument();
-    if (ImGui::InputText("Name", renameBuffer_.data(), renameBuffer_.size(), ImGuiInputTextFlags_EnterReturnsTrue) ||
-        ImGui::IsItemDeactivatedAfterEdit())
-    {
-        try { document.Rename(selected->entity, renameBuffer_.data()); inspectorRevision_ = document.Revision(); }
-        catch (const std::exception& error) { LogEditorError(engine, error); inspectorRevision_ = 0; }
-    }
-    ImGui::Text("Persistent ID: %llu", static_cast<unsigned long long>(selected->persistentID));
+    const bool editing = session.EditingEnabled();
+    const bool locked = hierarchy_.Locked(selected->persistentID);
+
+    // Entity header -----------------------------------------------------------
+    ImGui::PushID("InspectorEntityHeader");
+    ImGui::TextUnformatted(selected->record.name.c_str());
+    ImGui::SameLine();
+    if (!editing)
+        ImGui::TextDisabled("  PLAY / READ ONLY");
+    else if (locked)
+        ImGui::TextDisabled("  LOCKED");
+    else
+        ImGui::TextDisabled("  ENTITY");
+
+    ImGui::TextDisabled("ID #%llu", static_cast<unsigned long long>(selected->persistentID));
     if (selected->parentPersistentID)
-        ImGui::Text("Parent ID: %llu", static_cast<unsigned long long>(selected->parentPersistentID));
-    else ImGui::TextDisabled("Root entity");
+    {
+        ImGui::SameLine();
+        ImGui::TextDisabled("  Parent #%llu",
+            static_cast<unsigned long long>(selected->parentPersistentID));
+    }
 
-    transformInspector_.Draw(engine, session, *selected, hierarchy_.Locked(selected->persistentID));
+    if (editing)
+    {
+        SyncInspector(session, *selected);
+        auto& document = session.EditDocument();
+        ImGui::BeginDisabled(locked);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::InputTextWithHint("##EntityName", "Entity name",
+                                     renameBuffer_.data(), renameBuffer_.size(),
+                                     ImGuiInputTextFlags_EnterReturnsTrue) ||
+            ImGui::IsItemDeactivatedAfterEdit())
+        {
+            try
+            {
+                document.Rename(selected->entity, renameBuffer_.data());
+                inspectorRevision_ = document.Revision();
+            }
+            catch (const std::exception& error)
+            {
+                LogEditorError(engine, error);
+                inspectorRevision_ = 0;
+            }
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+            ImGui::SetTooltip("Rename the selected entity. Rename is command-backed and undoable.");
+        ImGui::EndDisabled();
 
-    ImGui::SeparatorText("Components");
-    ImGui::Text("Camera: %s", selected->record.camera ? "yes" : "no");
-    ImGui::Text("Light: %s", selected->record.light ? "yes" : "no");
-    ImGui::Text("Model: %s", selected->record.model ? "yes" : "no");
-    ImGui::Text("Physics: %s", selected->record.physics ? "yes" : "no");
-    ImGui::Text("Animator: %s", selected->record.animator ? "yes" : "no");
+        if (locked)
+            ImGui::TextDisabled("Hierarchy lock prevents Inspector mutations.");
+    }
+    ImGui::Separator();
+    ImGui::PopID();
+
+    if (editing)
+    {
+        transformInspector_.Draw(engine, session, *selected, locked);
+    }
+    else
+    {
+        // Runtime uses the same Inspector surface, but authoring controls are deliberately read-only.
+        const Transform& transform = selected->record.transform;
+        ImGui::SeparatorText("Transform");
+        if (ImGui::BeginTable("RuntimeTransform", 2,
+            ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV))
+        {
+            ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthFixed, 85.0f);
+            ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+            auto row = [&](const char* label, Vec3 value)
+            {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%.3f   %.3f   %.3f", value.x, value.y, value.z);
+            };
+            row("Position", transform.position);
+            row("Rotation", transform.rotationDegrees);
+            row("Scale", transform.scale);
+            ImGui::EndTable();
+        }
+        ImGui::TextDisabled("Runtime world is isolated from the authoring document.");
+    }
+
+    // Component cards are appended by AppendComponentInspector in the same logical
+    // Inspector window later in the frame. Keeping the entity header/Transform here
+    // preserves the Transform Inspector milestone while eliminating the old yes/no
+    // component debug summary.
     ImGui::End();
 }
 

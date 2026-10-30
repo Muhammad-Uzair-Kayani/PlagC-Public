@@ -115,7 +115,7 @@ Replace the functional tree/debug presentation with a real hierarchy workflow: s
 
 Provide Create workflows for Empty, Model, Camera, Directional/Point/Spot Light, physics objects and basic primitives. New entities receive sensible required components and model drops create at a meaningful scene position.
 
-## 4. Inspector — `FOUNDATION`
+## 4. Inspector — `DONE`
 
 Turn the raw component/debug view into component cards with aligned property rows, add/remove/reset actions, validation, tooltips, read-only states and undo/redo-backed editing.
 
@@ -323,6 +323,16 @@ Definition of done for the product milestone:
 - Commit evidence: `75eab676cda60ce6d5393bfd91a6e06d7c85a359` on `prototype`.
 - Delivered: command-backed creation for Empty, cooked ModelAsset, Camera, all three light types, renderer-backed primitives and useful static/dynamic/kinematic physics presets with contextual placement.
 - Regression: `Scripts/Tests/EditorMilestone3Tests.py`, `EditorAssetInteractionTests.py`, Windows Editor CI wiring.
+
+## 4. Inspector — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 4 implementation commit on `prototype`.
+- Delivered: a coherent entity header with rename/status/parent context; removal of the raw component yes/no debug summary; reusable collapsible component cards; aligned two-column property rows; centralized `+ Add Component`; per-card `Reset` and `Remove Component` actions; validation messages and property tooltips; Camera/Light/Model/Physics/Animator baseline authoring; hierarchy-lock protection; and the same Inspector surface presented read-only for the isolated Play runtime.
+- Architecture: Inspector mutations remain command-backed through `SceneDocument`; no editor-facing control mutates renderer/Jolt/EnTT implementation objects directly. Existing specialized Transform, Model/Mesh and Camera inspectors remain their milestone owners and are composed into the Inspector rather than reimplemented here.
+- Regression: `Scripts/Tests/EditorMilestone4InspectorTests.py` is wired into both `ValidateEditor.bat` and the Windows Editor workflow, covering card structure, read-only policy, validation/help, command-backed mutation, roadmap completion and scope boundaries.
+- Scope boundary: Milestone 4 does not add Milestone 5 transform depth, Milestone 7 material authoring, Milestone 10's complete physics layer/mask/debug workflow, Milestone 13 Content Browser work, or Milestone 16 scene-file work.
+- Next assigned milestone: **7. Material System + Inspector** — do not begin until explicitly requested.
 
 ## Milestone 5 — Transform Inspector — `DONE`
 

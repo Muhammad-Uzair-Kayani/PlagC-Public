@@ -39,6 +39,7 @@ jobs:
           python Scripts\Tests\EditorPlayRuntimeTests.py
           python Scripts\Tests\EditorAssetInteractionTests.py
           python Scripts\Tests\EditorMilestone3Tests.py
+          python Scripts\Tests\EditorMilestone4InspectorTests.py
           python Scripts\Tests\EditorMilestone5Tests.py
           python Scripts\Tests\EditorMilestone6Tests.py
           python Scripts\Tests\EditorMilestone9Tests.py
