@@ -131,7 +131,7 @@ Model asset field, browse/drop/replace, visibility, shadow controls, mesh/submes
 
 Authorable material assets and Ogre PBS mapping for base color, base-color texture, normal, metallic, roughness, AO, emissive, alpha/cutout, double-sided state, material slots, save/load and immediate viewport preview with correct color-space handling.
 
-## 8. Lighting Inspector — `FOUNDATION`
+## 8. Lighting Inspector — `DONE`
 
 Directional/Point/Spot editing, color, intensity, range, cones, shadows, and viewport light visualization with immediate scene updates.
 
@@ -341,6 +341,16 @@ Definition of done for the product milestone:
 - Delivered: professional Position/Rotation/Scale rows with color-coded X/Y/Z controls, Local/World editing, parent-space context, proportional uniform scaling, per-row and full-transform reset actions, immediate viewport previews, hierarchy-lock and dynamic-physics read-only handling, and one continuous drag recorded as one undo command.
 - Architecture: transform authoring continues through `SceneDocument::BeginTransformEdit`/`TransformEdit::Preview`/`Commit`; Local mode resolves through canonical `ComposeTransform`, World mode remains the engine-facing transform contract, and no general Inspector/component-card work from Milestone 4 is included.
 - Regression: `Scripts/Tests/EditorMilestone5Tests.py` plus the existing transaction coverage in `EditorDocumentTests.cpp`; `ValidateEditor.bat` and Windows CI run the milestone gate.
+
+## 8. Lighting Inspector — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 8 implementation commit on `prototype`.
+- Delivered: complete Directional/Point/Spot authoring with type-specific controls, world-space direction where applicable, colour, renderer intensity, point/spot range, validated spot inner/outer cones, the existing renderer-wide Scene Shadows pass, hierarchy-lock read-only behavior, and immediate `SceneDocument::SetLight` updates while controls are manipulated.
+- Viewport: editor-only light gizmos are integrated into Scene View using the existing editor camera projection path; directional lights show direction arrows, point lights show 3-axis range rings, spot lights show inner/outer cone guides, selected lights receive stronger feedback, and all light visualization obeys the viewport Gizmos toggle and is suppressed during Play.
+- Architecture: no parallel light/runtime model was introduced. Authored values remain `LightComponent`/`LightDesc`, scene mutation remains command-backed through `SceneDocument`, rendering continues through `SceneRenderer`, and shadows use the already-owned renderer `RenderSettings::shadows` contract rather than leaking renderer implementation types into editor code.
+- Scope boundary: no Material (7), Camera (9), Physics (10), general Debug Visualization (34), or Rendering Quality (30) milestone work is included beyond the light-specific Scene View guides required by Milestone 8.
+- Regression: `Scripts/Tests/EditorMilestone8Tests.py`; `ValidateEditor.bat` and Windows Editor CI run the focused milestone gate.
 
 ## 6. Model / Mesh Inspector — `DONE`
 

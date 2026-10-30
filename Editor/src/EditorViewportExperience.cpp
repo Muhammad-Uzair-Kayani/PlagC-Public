@@ -125,6 +125,114 @@ void DrawSelectionFeedback(ImDrawList* draw,const ImRect& rect,const CameraDesc&
     draw->AddText(ImVec2(p.point.x+19,p.point.y-8),IM_COL32(255,225,165,235),selected->record.name.c_str());
 }
 
+ImU32 LightColour(Vec3 colour,int alpha)
+{
+    const int r=static_cast<int>(std::clamp(colour.x,0.0f,1.0f)*255.0f);
+    const int g=static_cast<int>(std::clamp(colour.y,0.0f,1.0f)*255.0f);
+    const int b=static_cast<int>(std::clamp(colour.z,0.0f,1.0f)*255.0f);
+    return IM_COL32(r,g,b,alpha);
+}
+
+void DrawWorldCircle(ImDrawList* draw,const ImRect& rect,const CameraDesc& camera,
+                     const ViewportState& state,V3 center,V3 axisA,V3 axisB,float radius,
+                     ImU32 colour,float thickness)
+{
+    constexpr int segments=40;
+    Projected previous{};
+    for(int i=0;i<=segments;++i)
+    {
+        const float a=2.0f*Pi*static_cast<float>(i)/static_cast<float>(segments);
+        const V3 point=Add(center,Add(Mul(axisA,std::cos(a)*radius),Mul(axisB,std::sin(a)*radius)));
+        const auto current=Project(point,camera,state,rect);
+        if(i>0&&previous.valid&&current.valid)
+            draw->AddLine(previous.point,current.point,colour,thickness);
+        previous=current;
+    }
+}
+
+void DrawLightVisualizations(ImDrawList* draw,const ImRect& rect,const CameraDesc& camera,
+                             const ViewportState& state,const std::vector<AuthoringEntity>& entities,
+                             bool playing)
+{
+    if(playing||!state.gizmosVisible) return;
+
+    draw->PushClipRect(rect.Min,rect.Max,true);
+    for(const auto& entity:entities)
+    {
+        if(!entity.record.light) continue;
+        const auto& light=entity.record.light->light;
+        const V3 origin=V(entity.record.transform.position);
+        const auto projected=Project(origin,camera,state,rect);
+        if(!projected.valid) continue;
+
+        const bool selected=entity.selected;
+        const ImU32 strong=LightColour(light.colour,selected?245:190);
+        const ImU32 faint=LightColour(light.colour,selected?115:60);
+        const float thickness=selected?2.0f:1.2f;
+
+        if(light.type==LightType::Directional)
+        {
+            draw->AddCircle(projected.point,selected?8.0f:6.0f,strong,20,thickness);
+            const V3 direction=Normalize(V(light.direction));
+            const auto tip=Project(Add(origin,Mul(direction,3.0f)),camera,state,rect);
+            if(tip.valid)
+            {
+                draw->AddLine(projected.point,tip.point,strong,thickness);
+                const ImVec2 d{tip.point.x-projected.point.x,tip.point.y-projected.point.y};
+                const float len=std::sqrt(d.x*d.x+d.y*d.y);
+                if(len>1.0f)
+                {
+                    const ImVec2 n{-d.y/len,d.x/len};
+                    const ImVec2 back{tip.point.x-d.x/len*8.0f,tip.point.y-d.y/len*8.0f};
+                    draw->AddTriangleFilled(tip.point,
+                        ImVec2(back.x+n.x*4.0f,back.y+n.y*4.0f),
+                        ImVec2(back.x-n.x*4.0f,back.y-n.y*4.0f),strong);
+                }
+            }
+        }
+        else if(light.type==LightType::Point)
+        {
+            draw->AddCircleFilled(projected.point,selected?5.0f:4.0f,strong,20);
+            draw->AddCircle(projected.point,selected?9.0f:7.0f,strong,20,thickness);
+            const float range=std::max(0.01f,light.radius);
+            DrawWorldCircle(draw,rect,camera,state,origin,{1,0,0},{0,1,0},range,faint,thickness);
+            DrawWorldCircle(draw,rect,camera,state,origin,{1,0,0},{0,0,1},range,faint,thickness);
+            DrawWorldCircle(draw,rect,camera,state,origin,{0,1,0},{0,0,1},range,faint,thickness);
+        }
+        else
+        {
+            draw->AddCircle(projected.point,selected?8.0f:6.0f,strong,4,thickness);
+            const V3 direction=Normalize(V(light.direction));
+            V3 reference={0,1,0};
+            if(std::fabs(Dot(direction,reference))>0.98f) reference={1,0,0};
+            const V3 right=Normalize(Cross(direction,reference));
+            const V3 up=Normalize(Cross(right,direction));
+            const float range=std::max(0.01f,light.radius);
+            const V3 base=Add(origin,Mul(direction,range));
+            const float outerRadius=std::tan(std::clamp(light.outerAngle,0.2f,179.0f)*0.5f*Pi/180.0f)*range;
+            const float innerRadius=std::tan(std::clamp(light.innerAngle,0.1f,178.8f)*0.5f*Pi/180.0f)*range;
+            DrawWorldCircle(draw,rect,camera,state,base,right,up,outerRadius,strong,thickness);
+            DrawWorldCircle(draw,rect,camera,state,base,right,up,innerRadius,faint,1.0f);
+            for(int i=0;i<4;++i)
+            {
+                const float a=0.5f*Pi*static_cast<float>(i);
+                const V3 edge=Add(base,Add(Mul(right,std::cos(a)*outerRadius),Mul(up,std::sin(a)*outerRadius)));
+                const auto end=Project(edge,camera,state,rect);
+                if(end.valid) draw->AddLine(projected.point,end.point,strong,thickness);
+            }
+        }
+
+        if(selected&&rect.Contains(projected.point))
+        {
+            const char* type=light.type==LightType::Directional?"Directional":
+                             light.type==LightType::Point?"Point":"Spot";
+            std::string label=entity.record.name+" ["+type+"]";
+            draw->AddText(ImVec2(projected.point.x+11.0f,projected.point.y+8.0f),strong,label.c_str());
+        }
+    }
+    draw->PopClipRect();
+}
+
 bool FocusSelection(EditorSession& session,CameraDesc& camera)
 {
     const auto entities=session.ViewDocument().Snapshot();
@@ -196,6 +304,7 @@ void EditorLayer::AppendViewportExperience(Engine& engine,EditorSession& session
     const auto* selected=Selected(entities);
     ImDrawList* draw=viewportWindow->DrawList;
     DrawGrid(draw,rect,editorCamera,viewport_);
+    DrawLightVisualizations(draw,rect,editorCamera,viewport_,entities,session.Playing());
     DrawSelectionFeedback(draw,rect,editorCamera,viewport_,selected);
     DrawOrientation(draw,rect,editorCamera);
 

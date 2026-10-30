@@ -160,15 +160,15 @@ std::string ValidateCamera(const CameraComponent& camera)
 std::string ValidateLight(const LightComponent& light)
 {
     if (!std::isfinite(light.light.power) || light.light.power < 0.0f)
-        return "Light power cannot be negative.";
+        return "Light intensity cannot be negative.";
     if (light.light.type != LightType::Directional &&
         (!std::isfinite(light.light.radius) || light.light.radius <= 0.0f))
-        return "Point and spot lights require a positive radius.";
+        return "Point and spot lights require a positive range.";
     if (light.light.type == LightType::Spot)
     {
         if (light.light.innerAngle < 0.0f || light.light.outerAngle <= light.light.innerAngle ||
             light.light.outerAngle >= 180.0f)
-            return "Spot outer angle must be greater than inner angle and below 180 degrees.";
+            return "Spot outer cone must be greater than inner cone and below 180 degrees.";
     }
     return {};
 }
@@ -344,7 +344,7 @@ void EditorLayer::AppendComponentInspector(Engine& engine, EditorSession& sessio
     {
         const auto card = BeginComponentCard(
             "Light", "LightCard", readOnly,
-            "Authoring surface for the renderer-neutral LightComponent.");
+            "Directional, point and spot light authoring with immediate Scene View feedback.");
         if (card.reset && editable)
         {
             try
@@ -368,11 +368,23 @@ void EditorLayer::AppendComponentInspector(Engine& engine, EditorSession& sessio
         }
         if (card.open && componentLight_)
         {
+            auto commitLight = [&]()
+            {
+                const std::string validation = ValidateLight(*componentLight_);
+                if (!editable || readOnly || !validation.empty())
+                    return;
+                try
+                {
+                    session.EditDocument().SetLight(selected->entity, *componentLight_);
+                    mutationSucceeded();
+                }
+                catch (const std::exception& error) { mutationFailed(error); }
+            };
+
             ImGui::BeginDisabled(readOnly);
-            bool commitRequested = false;
             if (BeginProperties("LightProperties"))
             {
-                Property("Type", "Directional, point or spot light.");
+                Property("Type", "Choose Directional, Point or Spot behavior.");
                 if (ImGui::BeginCombo("##LightType", LightName(componentLight_->light.type)))
                 {
                     for (LightType type : {LightType::Directional, LightType::Point, LightType::Spot})
@@ -381,56 +393,84 @@ void EditorLayer::AppendComponentInspector(Engine& engine, EditorSession& sessio
                         if (ImGui::Selectable(LightName(type), current))
                         {
                             componentLight_->light.type = type;
-                            commitRequested = true;
+                            if (type == LightType::Spot &&
+                                componentLight_->light.outerAngle <= componentLight_->light.innerAngle)
+                                componentLight_->light.outerAngle =
+                                    std::min(179.0f, componentLight_->light.innerAngle + 0.1f);
+                            commitLight();
                         }
                         if (current) ImGui::SetItemDefaultFocus();
                     }
                     ImGui::EndCombo();
                 }
 
-                Property("Direction", "World-space light direction.");
-                ImGui::DragFloat3("##Direction", &componentLight_->light.direction.x, 0.01f);
-                commitRequested |= ImGui::IsItemDeactivatedAfterEdit();
+                if (componentLight_->light.type != LightType::Point)
+                {
+                    Property("Direction", "World-space direction used by Directional and Spot lights.");
+                    if (ImGui::DragFloat3("##Direction", &componentLight_->light.direction.x,
+                                          0.01f, -1.0f, 1.0f, "%.3f"))
+                        commitLight();
+                }
 
-                Property("Colour", "Linear light colour.");
-                ImGui::ColorEdit3("##Colour", &componentLight_->light.colour.x);
-                commitRequested |= ImGui::IsItemDeactivatedAfterEdit();
+                Property("Colour", "Linear light colour sent to the renderer.");
+                if (ImGui::ColorEdit3("##Colour", &componentLight_->light.colour.x))
+                    commitLight();
 
-                Property("Power", "Renderer-neutral light intensity.");
-                ImGui::DragFloat("##Power", &componentLight_->light.power, 0.05f, 0.0f, FLT_MAX);
-                commitRequested |= ImGui::IsItemDeactivatedAfterEdit();
+                Property("Intensity", "Renderer-neutral light power/intensity.");
+                if (ImGui::DragFloat("##Intensity", &componentLight_->light.power,
+                                     0.05f, 0.0f, FLT_MAX, "%.3f"))
+                    commitLight();
 
                 if (componentLight_->light.type != LightType::Directional)
                 {
-                    Property("Radius", "Maximum influence distance.");
-                    ImGui::DragFloat("##Radius", &componentLight_->light.radius, 0.1f, 0.001f, FLT_MAX);
-                    commitRequested |= ImGui::IsItemDeactivatedAfterEdit();
+                    Property("Range", "Maximum influence distance for Point and Spot lights.");
+                    if (ImGui::DragFloat("##Range", &componentLight_->light.radius,
+                                         0.1f, 0.01f, 100000.0f, "%.2f"))
+                        commitLight();
+                }
+                else
+                {
+                    Property("Range");
+                    ImGui::TextDisabled("Infinite");
                 }
 
                 if (componentLight_->light.type == LightType::Spot)
                 {
-                    Property("Inner Angle", "Fully-lit inner cone angle.");
-                    ImGui::DragFloat("##Inner", &componentLight_->light.innerAngle, 0.25f, 0.0f, 179.0f);
-                    commitRequested |= ImGui::IsItemDeactivatedAfterEdit();
-                    Property("Outer Angle", "Outer falloff cone angle.");
-                    ImGui::DragFloat("##Outer", &componentLight_->light.outerAngle, 0.25f, 0.0f, 179.0f);
-                    commitRequested |= ImGui::IsItemDeactivatedAfterEdit();
+                    Property("Inner Cone", "Fully-lit inner cone angle.");
+                    float inner = componentLight_->light.innerAngle;
+                    if (ImGui::DragFloat("##InnerCone", &inner, 0.25f, 0.1f, 178.8f, "%.1f deg"))
+                    {
+                        componentLight_->light.innerAngle =
+                            std::clamp(inner, 0.1f,
+                                       std::max(0.1f, componentLight_->light.outerAngle - 0.1f));
+                        commitLight();
+                    }
+
+                    Property("Outer Cone", "Outer falloff cone angle.");
+                    float outer = componentLight_->light.outerAngle;
+                    if (ImGui::DragFloat("##OuterCone", &outer, 0.25f, 0.2f, 179.0f, "%.1f deg"))
+                    {
+                        componentLight_->light.outerAngle =
+                            std::clamp(outer, componentLight_->light.innerAngle + 0.1f, 179.0f);
+                        commitLight();
+                    }
                 }
+
+                Property("Shadows", "PlagC currently owns shadow-map execution as a renderer-wide pass.");
+                auto renderSettings = engine.Graphics().Settings();
+                bool sceneShadows = renderSettings.shadows;
+                if (ImGui::Checkbox("##SceneShadows", &sceneShadows))
+                {
+                    renderSettings.shadows = sceneShadows;
+                    engine.Graphics().SetSettings(renderSettings);
+                }
+
                 ImGui::EndTable();
             }
             ImGui::EndDisabled();
 
-            const std::string validation = ValidateLight(*componentLight_);
-            ValidationMessage(validation);
-            if (editable && !readOnly && validation.empty() && commitRequested)
-            {
-                try
-                {
-                    session.EditDocument().SetLight(selected->entity, *componentLight_);
-                    mutationSucceeded();
-                }
-                catch (const std::exception& error) { mutationFailed(error); }
-            }
+            ValidationMessage(ValidateLight(*componentLight_));
+            ImGui::TextDisabled("Scene View light guides follow the viewport Gizmos toggle and never render during Play.");
         }
         EndComponentCard();
     }
