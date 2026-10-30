@@ -57,6 +57,19 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         self.assertIn("engine.Graphics().CreateLight", app)
         self.assertIn("engine.Graphics().DestroyLight", app)
 
+    def test_editor_preview_environment_is_readable_and_never_leaks_to_play(self):
+        app = self.read("Editor/src/EditorApp.cpp")
+        self.assertIn("editorPreviousEnvironment_ = engine.Graphics().Environment()", app)
+        self.assertIn("editorPreviousBackground_ = engine.Graphics().Settings().background", app)
+        self.assertIn("UpdateEditorPreviewEnvironment(engine, true)", app)
+        self.assertIn("UpdateEditorPreviewEnvironment(engine)", app)
+        self.assertIn('SetEnvironment({"PlagCEnvironment.dds", true, true})', app)
+        self.assertIn("settings.background = {0.055f, 0.070f, 0.095f}", app)
+        self.assertIn("!session_->Playing() && layer_.Viewport().previewLighting", app)
+        self.assertIn("engine.Graphics().SetEnvironment(editorPreviousEnvironment_)", app)
+        self.assertIn("settings.background = editorPreviousBackground_", app)
+        self.assertIn("RestoreEditorPreviewEnvironment(engine)", app)
+
     def test_camera_navigation_uses_scene_view_speed_focus_and_presets(self):
         app = self.read("Editor/src/EditorApp.cpp")
         overlay = self.read("Editor/src/EditorViewportExperience.cpp")
@@ -107,10 +120,12 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         self.assertIn("viewport.orthographicHeight", source)
         self.assertIn("DropPosition(editorCamera,viewport_", source)
 
-    def test_scene_view_updates_roadmap_status(self):
+    def test_scene_view_roadmap_is_done_and_has_execution_evidence(self):
         doc = self.read("Docs/Editor.md")
-        self.assertIn("## 1. Viewport / Scene View", doc)
-        self.assertIn("# Milestone Execution Log", doc)
+        self.assertIn("## 1. Viewport / Scene View — `DONE`", doc)
+        self.assertIn("## 1. Viewport / Scene View — `DONE`", doc[doc.index("# Milestone Execution Log"):])
+        self.assertIn("EditorViewportSceneViewTests.py", doc)
+        self.assertIn("PlagCEnvironment.dds", doc)
 
 
 if __name__ == "__main__":

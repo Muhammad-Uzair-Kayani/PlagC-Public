@@ -46,7 +46,11 @@ public:
         renderer_.Initialize(engine.Graphics());
         layer_.Initialize(engine, *session_);
         preferences_.Initialize(engine);
+
+        editorPreviousEnvironment_ = engine.Graphics().Environment();
+        editorPreviousBackground_ = engine.Graphics().Settings().background;
         CreateEditorPreviewLights(engine);
+        UpdateEditorPreviewEnvironment(engine, true);
 
         closeConnection_ = engine.Events().Subscribe(PlagC::EventType::Close,
             [this, &engine](const PlagC::Event&) {
@@ -115,6 +119,7 @@ public:
         if (session_->Playing())
             engine.Graphics().SetCameraProjection(PlagC::CameraProjection::Perspective);
         UpdateEditorPreviewLights(engine);
+        UpdateEditorPreviewEnvironment(engine);
         layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);
         layer_.AppendTransformGizmo(engine, *session_, editorCamera_);
         HandleViewportPicking(engine);
@@ -132,6 +137,7 @@ public:
         closeConnection_.Reset();
         closePrompt_ = false;
         playRuntime_.Reset();
+        RestoreEditorPreviewEnvironment(engine);
         DestroyEditorPreviewLights(engine);
         preferences_.Shutdown();
         layer_.Shutdown();
@@ -189,6 +195,43 @@ private:
             light={};
         }
         editorPreviewLightsEnabled_=false;
+    }
+
+    void UpdateEditorPreviewEnvironment(PlagC::Engine& engine, bool force = false)
+    {
+        const bool enabled = !session_->Playing() && layer_.Viewport().previewLighting;
+        if (!force && enabled == editorPreviewEnvironmentEnabled_) return;
+
+        if (enabled)
+        {
+            // Editor-only sky/reflection environment: this makes PBS assets readable even in
+            // scenes that intentionally contain no authored lights or environment yet.
+            engine.Graphics().SetEnvironment({"PlagCEnvironment.dds", true, true});
+            auto settings = engine.Graphics().Settings();
+            settings.background = {0.055f, 0.070f, 0.095f};
+            engine.Graphics().SetSettings(settings);
+        }
+        else
+        {
+            engine.Graphics().SetEnvironment(editorPreviousEnvironment_);
+            auto settings = engine.Graphics().Settings();
+            settings.background = editorPreviousBackground_;
+            engine.Graphics().SetSettings(settings);
+        }
+        editorPreviewEnvironmentEnabled_ = enabled;
+    }
+
+    void RestoreEditorPreviewEnvironment(PlagC::Engine& engine) noexcept
+    {
+        try
+        {
+            engine.Graphics().SetEnvironment(editorPreviousEnvironment_);
+            auto settings = engine.Graphics().Settings();
+            settings.background = editorPreviousBackground_;
+            engine.Graphics().SetSettings(settings);
+        }
+        catch (...) {}
+        editorPreviewEnvironmentEnabled_ = false;
     }
 
     void HandleViewportPicking(PlagC::Engine& engine)
@@ -327,6 +370,9 @@ private:
     std::array<PlagC::LightHandle,3> editorPreviewLights_{};
     std::array<PlagC::LightDesc,3> editorPreviewLightDescs_{};
     bool editorPreviewLightsEnabled_=false;
+    PlagC::EnvironmentDesc editorPreviousEnvironment_{};
+    PlagC::Vec3 editorPreviousBackground_{};
+    bool editorPreviewEnvironmentEnabled_=false;
     std::unique_ptr<PlagC::Editor::EditorSession> session_;
     std::unique_ptr<PlagC::SceneRenderer> sceneRenderer_;
     std::unique_ptr<PlagC::AssetScene> assetScene_;

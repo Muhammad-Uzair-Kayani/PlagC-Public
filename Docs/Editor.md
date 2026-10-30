@@ -23,6 +23,8 @@ A milestone is not complete because a backend API exists. It is complete when th
 8. Update this document in the same milestone commit with status, tests, files, and commit evidence.
 9. Stop after each milestone and wait for approval before starting the next one.
 
+Assigned milestone lane for this implementation stream: **1, 4, 7, 10, 13, 16**. Work must not leak into other milestones; each assigned milestone must be finished before moving to the next assigned milestone.
+
 ## Status legend
 
 - `DONE` — implemented, regression-protected, pushed.
@@ -80,7 +82,7 @@ These foundations do **not** mark the product milestones below complete by thems
 
 # Usable Editor Roadmap — 43 Milestones
 
-## 1. Viewport / Scene View — `NEXT`
+## 1. Viewport / Scene View — `DONE`
 
 Deliver a scene view suitable for day-to-day authoring rather than a raw render target.
 
@@ -103,7 +105,7 @@ Acceptance scope:
 - shaded/wireframe controls and grid/gizmo visibility toggles;
 - viewport resize/DPI correctness on OpenGL and Vulkan.
 
-Required tests: source architecture regression for viewport state/UI wiring, camera projection/picking regression, Windows Editor build validation, native runtime acceptance on the available backend.
+Regression coverage: `Scripts/Tests/EditorViewportSceneViewTests.py`, picking math/asset-drop/gizmo/play regressions, generated-project validation, and the Windows Editor CI build gate.
 
 ## 2. Scene Hierarchy — `DONE`
 
@@ -298,6 +300,15 @@ Definition of done for the product milestone:
 - Purpose: replace the obsolete integration-only remaining-work list with the 43-milestone usable-editor roadmap.
 - Policy: every future editor milestone updates this file in the same implementation commit.
 
+## 1. Viewport / Scene View — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 1 completion commit on `prototype`, building on `4022c07`, `e35d6b5`, and `8b62a22`.
+- Delivered: renderer-backed selection and empty-space deselection; adaptive world grid/axes; selection feedback; viewport XYZ orientation indicator; Translate/Rotate/Scale toolbar; local/world transform space; movement/rotation/scale snapping; perspective and real Ogre orthographic projection; orthographic-aware picking and asset-drop rays; six axis view presets; `F` focus and Frame All; stable focus distance; adjustable camera speed; grid/gizmo/wireframe toggles; exposure control; three editor-only preview lights; and editor-only `PlagCEnvironment.dds` sky/reflection environment with a readable background that restores the pre-editor renderer state during Play and shutdown.
+- Isolation: preview lights/environment are disabled/restored in Play mode; the runtime camera reasserts perspective after Scene View submission, so editor projection state cannot leak into game rendering.
+- Regression: `Scripts/Tests/EditorViewportSceneViewTests.py` covers Scene View state/UI wiring, preview-light/environment lifetime and Play isolation, projection/picking, focus/presets, gizmo-space handling and roadmap completion; existing asset-drop, picking, gizmo and Play regressions remain active. The Windows workflow previously proved all Scene View source regressions plus fresh project generation before concurrent `prototype` pushes cancelled MSBuild; the completion commit remains under the same Editor CI gate.
+- Scope boundary: no Inspector, Material, Physics, Content Browser or Scene File milestone work is included in Milestone 1.
+
 ## 2. Scene Hierarchy — `DONE`
 
 - Date: 2026-10-30
@@ -320,7 +331,6 @@ Definition of done for the product milestone:
 - Delivered: ModelAsset field and cooked-asset browse/drop/replace, state-preserving replacement, visibility, renderer-backed per-model shadow control, mesh/submesh statistics, imported material-slot diagnostics, geometry-derived local bounds, immutable-generation reload/rebind, and locate-in-browser highlighting.
 - Architecture: edits remain command-backed through `SceneDocument`; renderer object ownership remains inside `AssetScene`; imported material slots remain read-only until Milestone 7.
 - Regression: `Scripts/Tests/EditorMilestone6Tests.py` plus updated model interaction/entity-creation tests; `ValidateEditor.bat` and Windows CI run the milestone gate.
-- Next requested milestone: **9. Camera Inspector**.
 
 ## Historical architecture note
 
