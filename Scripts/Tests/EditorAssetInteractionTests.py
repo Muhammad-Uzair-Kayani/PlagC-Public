@@ -45,19 +45,27 @@ class EditorAssetInteractionTests(unittest.TestCase):
         source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
         app = self.read("Editor/src/EditorApp.cpp")
         header = self.read("Editor/src/EditorLayer.h")
-        self.assertIn('ImGui::FindWindowByName("Viewport")', source)
+        self.assertIn('ImGui::Begin("Viewport")', source)
+        self.assertIn("ImGui::GetCurrentWindow()", source)
         self.assertIn('window->GetID("ViewportSurface")', source)
         self.assertIn("ImGui::BeginDragDropTargetCustom(rect, surface)", source)
         self.assertIn('ImGui::AcceptDragDropPayload(CookedModelPayload)', source)
         self.assertIn("DropPosition(editorCamera, rect, ImGui::GetIO().MousePos)", source)
         self.assertIn("CreateCookedModelEntity(engine, session", source)
-        self.assertNotIn('ImGui::Begin("Viewport")', source)
         self.assertIn("void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);", header)
         self.assertIn("viewportPresenter_.Draw(viewportTarget_->Handle());", app)
         self.assertIn("layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);", app)
         self.assertLess(
             app.index("viewportPresenter_.Draw(viewportTarget_->Handle());"),
             app.index("layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);"))
+
+    def test_viewport_drop_keeps_viewport_current_for_custom_target(self):
+        source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
+        self.assertIn("BeginDragDropTargetCustom uses ImGui's current window internally", source)
+        self.assertLess(
+            source.index('ImGui::Begin("Viewport")'),
+            source.index("ImGui::BeginDragDropTargetCustom(rect, surface)"))
+        self.assertIn("ImGui::End();", source)
 
     def test_viewport_drop_uses_ground_plane_with_forward_ray_fallback(self):
         source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
