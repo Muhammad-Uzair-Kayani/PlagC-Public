@@ -80,6 +80,16 @@ class EngineBoundaryTests(unittest.TestCase):
         self.assertIn("removefiles { original }", renderer)
         self.assertIn("files { output }", renderer)
 
+    def test_native_editor_ui_smoke_catches_unpresented_commands(self):
+        script = self.read("Scripts/TestEditorUI.bat")
+        self.assertIn("--renderer %BACKEND% --frames 12", script)
+        self.assertIn("vulkan", script)
+        self.assertIn("opengl", script)
+        self.assertIn("[PlagC UI] ERROR: submitted UI was not presented", script)
+        self.assertIn("[PlagC UI] explicit output=", script)
+        self.assertIn("vertices=0", script)
+        self.assertIn("commands=0", script)
+
     def test_runtime_staging_is_engine_only(self):
         manifest = self.read("Scripts/RuntimeAssetManifest.py")
         staging = self.read("Scripts/StageRuntimeAssets.py")
