@@ -225,22 +225,53 @@ public:
         if (!renderers_.insert(renderer).second)
             return;
 
-        if (renderers_.size() == 1u)
+        auto* root = Ogre::Root::getSingletonPtr();
+        if (!root || !root->getRenderSystem() || !root->getCompositorManager2())
         {
-            auto* root = Ogre::Root::getSingletonPtr();
-            if (!root || !root->getRenderSystem() || !root->getCompositorManager2())
-            {
-                renderers_.erase(renderer);
-                throw std::logic_error("Ogre is not ready for editor UI registration");
-            }
-            compositorManager_ = root->getCompositorManager2();
-            compositorManager_->addListener(this);
+            renderers_.erase(renderer);
+            throw std::logic_error("Ogre is not ready for editor UI registration");
         }
+    }
+
+    void AttachWorkspace(const Renderer* renderer, Ogre::CompositorWorkspace* workspace)
+    {
+        if (!renderer || !workspace || !renderers_.count(renderer))
+            return;
+
+        auto [it, inserted] = attachedWorkspaces_.emplace(renderer, workspace);
+        if (!inserted)
+        {
+            if (it->second == workspace)
+                return;
+            if (it->second)
+                it->second->removeListener(this);
+            it->second = workspace;
+        }
+        workspace->addListener(this);
+    }
+
+    void DetachWorkspace(const Renderer* renderer, Ogre::CompositorWorkspace* workspace) noexcept
+    {
+        auto it = attachedWorkspaces_.find(renderer);
+        if (it == attachedWorkspaces_.end())
+            return;
+        if (workspace && it->second != workspace)
+            return;
+        try
+        {
+            if (it->second)
+                it->second->removeListener(this);
+        }
+        catch (...)
+        {
+        }
+        attachedWorkspaces_.erase(it);
     }
 
     void SetOutput(const Renderer* renderer, Ogre::TextureGpu* target)
     {
-        if (renderers_.count(renderer)) outputs_[renderer] = target;
+        if (renderers_.count(renderer))
+            outputs_[renderer] = target;
         presented_.erase(renderer);
     }
 
@@ -254,11 +285,13 @@ public:
                     "[PlagC UI] ERROR: submitted UI was not presented; check main workspace/output registration",
                     Ogre::LML_CRITICAL);
         }
-        else reportedMissing_.erase(renderer);
+        else
+            reportedMissing_.erase(renderer);
     }
 
     void Unregister(const Renderer* renderer) noexcept
     {
+        DetachWorkspace(renderer, nullptr);
         renderers_.erase(renderer);
         outputs_.erase(renderer);
         presented_.erase(renderer);
@@ -277,7 +310,7 @@ public:
             return;
         const Ogre::String targetName = target->getNameStr();
         if (targetName.rfind("PlagC/Target", 0) == 0)
-            return; // Editor scene targets are sampled by the UI; never draw the UI into itself.
+            return;
 
         const Renderer* renderer = nullptr;
         const UiDrawData* frame = nullptr;
@@ -331,8 +364,10 @@ private:
     {
         try
         {
-            if (compositorManager_)
-                compositorManager_->removeListener(this);
+            for (auto& [renderer, workspace] : attachedWorkspaces_)
+                if (workspace)
+                    workspace->removeListener(this);
+            attachedWorkspaces_.clear();
 
             auto* root = Ogre::Root::getSingletonPtr();
             auto* renderSystem = root ? root->getRenderSystem() : nullptr;
@@ -352,11 +387,10 @@ private:
             backend_ = RendererBackend::Auto;
             lastTarget_ = nullptr;
             lastRenderedFrame_ = std::numeric_limits<std::size_t>::max();
-            compositorManager_ = nullptr;
         }
         catch (...)
         {
-            compositorManager_ = nullptr;
+            attachedWorkspaces_.clear();
             renderPass_ = nullptr;
             renderTarget_ = nullptr;
             samplerblock_ = nullptr;
@@ -564,9 +598,9 @@ private:
 
     std::unordered_set<const Renderer*> renderers_;
     std::unordered_map<const Renderer*, Ogre::TextureGpu*> outputs_;
+    std::unordered_map<const Renderer*, Ogre::CompositorWorkspace*> attachedWorkspaces_;
     std::string lastDimensions_;
     std::unordered_set<const Renderer*> presented_, reportedMissing_;
-    Ogre::CompositorManager2* compositorManager_ = nullptr;
     RendererBackend backend_ = RendererBackend::Auto;
     std::unique_ptr<Ogre::PsoCacheHelper> psoCache_;
     std::unique_ptr<UiBuffers> buffers_;
@@ -595,6 +629,16 @@ void CheckOgreUIOutput(const Renderer* renderer)
 void SetOgreUIOutput(const Renderer* renderer, Ogre::TextureGpu* target)
 {
     Backend().SetOutput(renderer, target);
+}
+
+void AttachOgreUIWorkspace(const Renderer* renderer, Ogre::CompositorWorkspace* workspace)
+{
+    Backend().AttachWorkspace(renderer, workspace);
+}
+
+void DetachOgreUIWorkspace(const Renderer* renderer, Ogre::CompositorWorkspace* workspace) noexcept
+{
+    Backend().DetachWorkspace(renderer, workspace);
 }
 
 void RegisterOgreUIRenderer(const Renderer* renderer)

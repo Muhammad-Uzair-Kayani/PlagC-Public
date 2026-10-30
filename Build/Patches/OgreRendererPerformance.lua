@@ -143,6 +143,7 @@ return function(source)
         mesh.uploadQueued = false;
     }
     p.pendingMeshUploads.clear();
+    Detail::OgreUIWorkspaceScope uiWorkspace(this, p.workspace);
     if (!p.root->renderOneFrame())]])
 
     -- UO_KEEP_PERSISTENT intentionally leaves Ogre's MappingState persistent even though no
