@@ -125,6 +125,14 @@ class EditorArchitectureTests(unittest.TestCase):
         self.assertIn("const auto replacement = renderer_.CreateTarget", viewport)
         self.assertNotIn("renderer_.ResizeTarget(handle_", viewport)
 
+    def test_ogre_ui_listener_is_workspace_local_for_vulkan(self):
+        backend = self.read("PlagC/src/Renderer/OgreUiBackend.cpp")
+        patch = self.read("Build/Patches/OgreRendererPerformance.lua")
+        self.assertIn("workspace->addListener(this)", backend)
+        self.assertIn("workspace->removeListener(this)", backend)
+        self.assertNotIn("compositorManager_->addListener(this)", backend)
+        self.assertIn("Detail::OgreUIWorkspaceScope uiWorkspace(this, p.workspace);", patch)
+
     def test_engine_backend_does_not_depend_on_imgui(self):
         paths = [
             ROOT / "PlagC/include/PlagC/Editor",
