@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include "EditorLayer.h"
+#include "EditorPreferences.h"
 #include "EditorViewportPresenter.h"
 #include "ImGuiInputBridge.h"
 #include "ImGuiRendererBridge.h"
@@ -39,6 +40,7 @@ public:
         input_.Initialize(engine.Events());
         renderer_.Initialize(engine.Graphics());
         layer_.Initialize(engine, *session_);
+        preferences_.Initialize(engine);
 
         engine.Logger().Write(
             PlagC::Severity::Info, "EDITOR",
@@ -69,7 +71,13 @@ public:
         io.DeltaTime = dt > 0.0 ? static_cast<float>(dt) : (1.0f / 60.0f);
 
         ImGui::NewFrame();
+        if (!io.WantTextInput && io.KeyCtrl && !io.KeyAlt &&
+            ImGui::IsKeyPressed(ImGuiKey_Comma, false))
+            preferences_.Toggle();
+
         layer_.Frame(engine, *session_);
+        preferences_.Draw(engine);
+
         const auto& viewport = layer_.Viewport();
         if (viewport.width > 1 && viewport.height > 1)
             viewportTarget_->Resize(
@@ -83,6 +91,7 @@ public:
 
     void OnStop(PlagC::Engine &engine) override
     {
+        preferences_.Shutdown();
         layer_.Shutdown();
         renderer_.Shutdown(engine.Graphics());
         if (sceneRenderer_)
@@ -140,6 +149,7 @@ private:
     PlagC::Editor::ImGuiInputBridge input_;
     PlagC::Editor::ImGuiRendererBridge renderer_;
     PlagC::Editor::EditorLayer layer_;
+    PlagC::Editor::EditorPreferences preferences_;
     PlagC::Editor::EditorViewportPresenter viewportPresenter_;
 };
 } // namespace
