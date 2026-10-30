@@ -23,8 +23,8 @@ public:
     const ViewportState& Viewport() const noexcept { return viewport_; }
     bool InspectorVisible() const noexcept { return showInspector_; }
     void AppendComponentInspector(Engine&, EditorSession&);
-    // Adds drag sources to Content Browser and cooked-model drop targets to
-    // Inspector/Viewport without bypassing SceneDocument command history.
+    // Adds actionable cooked assets to Content Browser and an undoable model
+    // assignment drop target to Inspector without bypassing SceneDocument history.
     void AppendAssetInteractions(Engine&, EditorSession&);
 
 private:
