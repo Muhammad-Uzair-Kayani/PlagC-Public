@@ -1,6 +1,8 @@
 #include "pgcpch.h"
 #include "EditorPreferences.h"
+#include "EditorRestart.h"
 #include <PlagC/Application.h>
+#include <PlagC/Editor/EditorSession.h>
 #include <PlagC/Renderer/BackendSelection.h>
 #include <imgui.h>
 
@@ -14,12 +16,27 @@ void EditorPreferences::Initialize(Engine& engine)
         preferred_ = active;
 }
 
-void EditorPreferences::Draw(Engine& engine)
+bool EditorPreferences::Restart(Engine& engine)
+{
+    std::string error;
+    if (!RestartEditorProcess(error))
+    {
+        engine.Logger().Write(Severity::Error, "EDITOR", error);
+        return false;
+    }
+
+    engine.Logger().Write(Severity::Info, "EDITOR", "Restarting Editor to apply renderer setting.");
+    engine.Stop();
+    open_ = false;
+    return true;
+}
+
+void EditorPreferences::Draw(Engine& engine, EditorSession& session)
 {
     if (!open_)
         return;
 
-    ImGui::SetNextWindowSize(ImVec2(460.0f, 260.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(460.0f, 300.0f), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("Preferences", &open_))
     {
         ImGui::End();
@@ -72,6 +89,60 @@ void EditorPreferences::Draw(Engine& engine)
                     "Renderer changed to %s. Restart the Editor to apply this setting.",
                     BackendName(preferred_));
                 ImGui::TextDisabled("The current session remains on %s.", BackendName(active));
+                ImGui::Spacing();
+
+                if (!session.Dirty())
+                {
+                    if (ImGui::Button("Restart Now"))
+                        Restart(engine);
+                }
+                else
+                {
+                    const bool canSave = session.HasPath() && session.EditingEnabled();
+                    ImGui::BeginDisabled(!canSave);
+                    if (ImGui::Button("Save & Restart"))
+                    {
+                        try
+                        {
+                            session.Save();
+                            Restart(engine);
+                        }
+                        catch (const std::exception& error)
+                        {
+                            engine.Logger().Write(Severity::Error, "EDITOR", error.what());
+                        }
+                    }
+                    ImGui::EndDisabled();
+                    if (!canSave)
+                    {
+                        if (!session.HasPath())
+                            ImGui::TextDisabled("Save As is required before Save & Restart.");
+                        else if (session.Playing())
+                            ImGui::TextDisabled("Stop Play mode before Save & Restart.");
+                        else
+                            ImGui::TextDisabled("Finish the active editor gesture before saving.");
+                    }
+
+                    if (ImGui::Button("Restart Without Saving"))
+                        ImGui::OpenPopup("Discard Changes And Restart?");
+
+                    if (ImGui::BeginPopupModal("Discard Changes And Restart?", nullptr,
+                                               ImGuiWindowFlags_AlwaysAutoResize))
+                    {
+                        ImGui::TextWrapped(
+                            "The current scene has unsaved changes. Restarting now will discard them.");
+                        ImGui::Spacing();
+                        if (ImGui::Button("Discard & Restart"))
+                        {
+                            if (Restart(engine))
+                                ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Cancel"))
+                            ImGui::CloseCurrentPopup();
+                        ImGui::EndPopup();
+                    }
+                }
             }
             else
             {

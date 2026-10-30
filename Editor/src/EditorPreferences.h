@@ -8,10 +8,12 @@ class Engine;
 
 namespace PlagC::Editor {
 
+class EditorSession;
+
 class EditorPreferences final {
 public:
     void Initialize(Engine&);
-    void Draw(Engine&);
+    void Draw(Engine&, EditorSession&);
     void Shutdown() noexcept;
 
     void Toggle() noexcept { open_ = !open_; }
@@ -22,6 +24,8 @@ public:
     }
 
 private:
+    bool Restart(Engine&);
+
     bool open_ = false;
     RendererBackend preferred_ = RendererBackend::Auto;
 };

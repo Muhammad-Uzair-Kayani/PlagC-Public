@@ -136,6 +136,7 @@ class EditorArchitectureTests(unittest.TestCase):
     def test_renderer_preferences_are_persistent_and_restart_gated(self):
         header = self.read("Editor/src/EditorPreferences.h")
         source = self.read("Editor/src/EditorPreferences.cpp")
+        restart = self.read("Editor/src/EditorRestart.cpp")
         app = self.read("Editor/src/EditorApp.cpp")
         self.assertIn("class EditorPreferences final", header)
         self.assertIn("RestartRequired(RendererBackend active)", header)
@@ -143,8 +144,16 @@ class EditorArchitectureTests(unittest.TestCase):
         self.assertIn('ImGui::Begin("Preferences"', source)
         self.assertIn('ImGui::BeginTabItem("Graphics")', source)
         self.assertIn("Restart the Editor to apply this setting", source)
+        self.assertIn('ImGui::Button("Restart Now")', source)
+        self.assertIn('ImGui::Button("Save & Restart")', source)
+        self.assertIn('ImGui::Button("Restart Without Saving")', source)
+        self.assertIn("session.Dirty()", source)
+        self.assertIn("session.Save()", source)
+        self.assertIn("CreateProcessW", restart)
+        self.assertIn('argument == L"--renderer"', restart)
+        self.assertIn("engine.Stop()", source)
         self.assertIn("ImGuiKey_Comma", app)
-        self.assertIn("preferences_.Draw(engine)", app)
+        self.assertIn("preferences_.Draw(engine, *session_)", app)
 
     def test_engine_backend_does_not_depend_on_imgui(self):
         paths = [
