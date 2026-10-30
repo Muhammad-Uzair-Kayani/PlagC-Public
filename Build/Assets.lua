@@ -8,6 +8,7 @@ for _,name in ipairs({"Assimp","Ozz","OpenAL"}) do
         kind "StaticLib"
         language "C++"
         cppdialect "C++20"
+        warnings "Off"
         common()
         for _,file in ipairs(config.sources) do files { path.join(assetRoot,file) } end
         for _,dir in ipairs(config.includes) do includedirs { path.join(assetRoot,dir) } end
