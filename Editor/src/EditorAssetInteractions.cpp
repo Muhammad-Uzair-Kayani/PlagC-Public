@@ -57,6 +57,20 @@ const AuthoringEntity* SelectedEntity(const std::vector<AuthoringEntity>& entiti
 
 } // namespace
 
+void EditorLayer::CreateCookedModelEntity(Engine& engine, EditorSession& session,
+                                          const char* assetPath, Vec3 position)
+{
+    const auto model = LoadModel(engine, assetPath);
+    EntityTemplate entity;
+    entity.name = std::filesystem::path(assetPath).stem().string();
+    entity.transform.position = position;
+    entity.model = ModelComponent{model, true};
+
+    auto& document = session.EditDocument();
+    const Entity created = document.Create(std::move(entity));
+    document.Select(created);
+}
+
 void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session)
 {
     if (!session.EditingEnabled())
@@ -68,7 +82,7 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
         {
             ImGui::SeparatorText("Cooked runtime assets");
             ImGui::TextDisabled(
-                "Drag a cooked ModelAsset onto Inspector to assign it, or double-click to create an entity at the origin.");
+                "Drag a cooked ModelAsset onto Inspector to assign it, drag it into Viewport to place it, or double-click to create it at the origin.");
             for (const auto& entry : dataPanels_.ContentSnapshot())
             {
                 if (entry.kind != EditorAssetKind::Cooked || entry.directory)
@@ -84,13 +98,7 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
                 {
                     try
                     {
-                        const auto model = LoadModel(engine, entry.path.c_str());
-                        EntityTemplate entity;
-                        entity.name = path.stem().string();
-                        entity.model = ModelComponent{model, true};
-                        auto& document = session.EditDocument();
-                        const Entity created = document.Create(std::move(entity));
-                        document.Select(created);
+                        CreateCookedModelEntity(engine, session, entry.path.c_str(), {});
                     }
                     catch (const std::exception& error)
                     {
