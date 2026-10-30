@@ -43,8 +43,11 @@ class EditorThumbnailCache {
 public:
     static constexpr unsigned PreviewSize = 128;
 
-    EditorThumbnailCache() = default;
-    ~EditorThumbnailCache() = default;
+    // Defined out-of-line after Entry is complete. entries_ owns unique_ptr<Entry>, so
+    // defaulting these special members in the header makes MSVC instantiate destruction
+    // while Entry is still an incomplete type.
+    EditorThumbnailCache();
+    ~EditorThumbnailCache();
     EditorThumbnailCache(const EditorThumbnailCache&) = delete;
     EditorThumbnailCache& operator=(const EditorThumbnailCache&) = delete;
 
