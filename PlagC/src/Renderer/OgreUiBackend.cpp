@@ -310,8 +310,8 @@ public:
         if (dimensions != lastDimensions_)
         {
             lastDimensions_ = dimensions;
-            const bool mismatch = std::lround(frame->width) != target->getWidth() ||
-                                  std::lround(frame->height) != target->getHeight();
+            const bool mismatch = std::lround(frame->width) != static_cast<long>(target->getWidth()) ||
+                                  std::lround(frame->height) != static_cast<long>(target->getHeight());
             Ogre::LogManager::getSingleton().logMessage(
                 std::string("[PlagC UI] explicit output=") + target->getNameStr() +
                 " pixels=" + dimensions + " vertices=" + std::to_string(frame->vertices.size()) +
