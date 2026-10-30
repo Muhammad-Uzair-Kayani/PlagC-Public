@@ -23,9 +23,10 @@ public:
     const ViewportState& Viewport() const noexcept { return viewport_; }
     bool InspectorVisible() const noexcept { return showInspector_; }
     void AppendComponentInspector(Engine&, EditorSession&);
-    // Adds actionable cooked assets to Content Browser and an undoable model
-    // assignment drop target to Inspector without bypassing SceneDocument history.
     void AppendAssetInteractions(Engine&, EditorSession&);
+    // Draws and drives a world-space transform gizmo on the existing Viewport window.
+    // Must be called after the viewport target image is appended so handles stay on top.
+    void AppendTransformGizmo(Engine&, EditorSession&, const CameraDesc& editorCamera);
 
 private:
     void DrawDockHost(Engine&, EditorSession&);
@@ -40,6 +41,7 @@ private:
     void SyncInspector(EditorSession&, const AuthoringEntity&);
     void PreviewInspectorTransform(Engine&, EditorSession&, const AuthoringEntity&);
     void FinishTransformEdit(Engine&, bool commit);
+    void FinishGizmoEdit(Engine&, bool commit);
 
     EditorFileController files_;
     EditorDataPanels dataPanels_;
@@ -64,6 +66,13 @@ private:
     std::optional<LightComponent> componentLight_;
     std::optional<PhysicsComponent> componentPhysics_;
     std::optional<AnimatorComponent> componentAnimator_;
+
+    std::unique_ptr<SceneDocument::TransformEdit> gizmoEdit_;
+    std::uint64_t gizmoPersistentID_ = 0;
+    int gizmoAxis_ = -1;
+    Transform gizmoStart_{};
+    float gizmoMouseStartX_ = 0.0f;
+    float gizmoMouseStartY_ = 0.0f;
 };
 
 } // namespace PlagC::Editor
