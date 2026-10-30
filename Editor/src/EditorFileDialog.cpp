@@ -23,9 +23,9 @@ namespace {
 #if defined(_WIN32)
 HWND OwnerWindow(NativeWindow owner)
 {
-    if (owner.kind != NativeWindow::Kind::Win32 || owner.handle == 0)
+    if (owner.kind != NativeWindow::Kind::Win32 || owner.value == 0)
         return nullptr;
-    return reinterpret_cast<HWND>(owner.handle);
+    return reinterpret_cast<HWND>(owner.value);
 }
 
 std::optional<std::filesystem::path> ShowDialog(NativeWindow owner, bool save)
@@ -61,7 +61,7 @@ std::optional<std::filesystem::path> ShowDialog(NativeWindow owner, bool save)
 bool NativeSceneFileDialogsAvailable(NativeWindow owner) noexcept
 {
 #if defined(_WIN32)
-    return owner.kind == NativeWindow::Kind::Win32 && owner.handle != 0;
+    return owner.kind == NativeWindow::Kind::Win32 && owner.value != 0;
 #else
     (void)owner;
     return false;
