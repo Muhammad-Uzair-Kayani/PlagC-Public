@@ -138,7 +138,16 @@ void ImGuiInputBridge::Initialize(EventBus& events)
                 ImGui::GetIO().AddMouseButtonEvent(button, false);
         });
     focus_ = events.Subscribe(EventType::Focus,
-        [](const Event& event) {
+        [this](const Event& event) {
+            if (!event.code)
+            {
+                // Releases may happen outside our window. Do not resurrect a
+                // stale modifier on the next ordinary key after focus returns.
+                leftShift_ = rightShift_ = false;
+                leftControl_ = rightControl_ = false;
+                leftAlt_ = rightAlt_ = false;
+                UpdateModifiers(KeyCode::Unknown, false);
+            }
             ImGui::GetIO().AddFocusEvent(event.code != 0);
         });
 }
