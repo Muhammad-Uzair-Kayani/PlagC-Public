@@ -70,8 +70,6 @@ void EditorSession::Open(const std::filesystem::path& path,
     if (path.empty())
         throw std::invalid_argument("Editor scene path is empty");
 
-    // Load constructs and validates a replacement document. Do not mutate
-    // current document/path until the complete operation succeeds.
     auto replacement = SceneDocument::Load(path, std::move(resolver));
     document_ = std::move(replacement);
     path_ = path;
@@ -95,8 +93,6 @@ void EditorSession::SaveAs(const std::filesystem::path& path) {
     if (path.empty())
         throw std::invalid_argument("Editor scene path is empty");
 
-    // SceneDocument::Save changes dirty state only after replacement succeeds;
-    // path_ follows the same rule.
     document_->Save(path);
     path_ = path;
 }
@@ -173,6 +169,11 @@ bool EditorSession::Playing() const {
 bool EditorSession::Paused() const {
     Thread::RequireMain();
     return play_.Paused();
+}
+
+std::uint64_t EditorSession::PlayGeneration() const {
+    Thread::RequireMain();
+    return play_.Generation();
 }
 
 const World& EditorSession::ViewWorld() const {
