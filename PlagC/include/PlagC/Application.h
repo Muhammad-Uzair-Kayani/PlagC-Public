@@ -17,8 +17,8 @@ namespace PlagC
 struct EngineConfig
 {
     RendererBackend rendererBackend = RendererBackend::Auto;
-    // Launchers may disable the startup selector and provide an explicit backend.
-    bool rendererSelectionPrompt = true;
+    // The console selector is a legacy/debug surface. Normal clients start without stdin.
+    bool rendererSelectionPrompt = false;
 
     std::string performanceCSV;
     unsigned performanceWarmup = 120;
