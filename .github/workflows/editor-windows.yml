@@ -1,0 +1,53 @@
+name: Editor Windows Validation
+
+on:
+  push:
+    branches: [prototype]
+  pull_request:
+    branches: [prototype, main]
+
+concurrency:
+  group: editor-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editor-msvc-opengl:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout pinned dependencies
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Run editor source regressions
+        shell: cmd
+        run: |
+          python Scripts\Tests\EngineBoundaryTests.py
+          python Scripts\Tests\RuntimeStagingTests.py
+          python Scripts\Tests\EditorArchitectureTests.py
+          python Scripts\Tests\EditorPlayRuntimeTests.py
+          python Scripts\Tests\EditorAssetInteractionTests.py
+          python Scripts\Tests\EditorGizmoTests.py
+
+      - name: Generate OpenGL VS2022 solution
+        shell: cmd
+        run: GenerateProjects.bat
+
+      - name: Build Editor Release
+        shell: cmd
+        run: msbuild Build\Generated\PlagC.sln /m /nologo /v:minimal /t:Editor /p:Configuration=Release /p:Platform=x64
+
+      - name: Run short offscreen Editor smoke
+        shell: cmd
+        run: Bin\windows-x86_64\Release\Editor.exe --offscreen --renderer opengl --frames 3 --workers 1 --no-audio
