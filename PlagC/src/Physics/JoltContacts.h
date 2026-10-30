@@ -6,15 +6,35 @@
 #include <Jolt/Physics/Body/Body.h>
 #include <map>
 #include <mutex>
+#include <shared_mutex>
 #include <unordered_map>
 namespace PlagC {
 struct JoltContacts final:JPH::ContactListener {
     using Pair=std::pair<std::uint64_t,std::uint64_t>; // Sensor/other for triggers; sorted handles for collisions.
     struct Contact {Pair pair;bool sensor=false;};
+    struct Filter {CollisionLayer layer=CollisionLayer::Dynamic;CollisionLayerMask mask=AllCollisionLayers;};
     std::mutex mutex;
     std::unordered_map<JPH::SubShapeIDPair,Contact> contacts;
     std::map<Pair,unsigned> counts; // Sensor overlap counts; zero-count pairs are retained for verification.
     std::map<Pair,bool> occupied;
+    mutable std::shared_mutex filterMutex;
+    std::unordered_map<std::uint64_t,Filter> filters;
+
+    void RegisterBody(std::uint64_t handle,CollisionLayer layer,CollisionLayerMask mask){
+        std::unique_lock lock(filterMutex);filters[handle]={layer,mask};
+    }
+    void UnregisterBody(std::uint64_t handle){
+        std::unique_lock lock(filterMutex);filters.erase(handle);
+    }
+
+    JPH::ValidateResult OnContactValidate(const JPH::Body& a,const JPH::Body& b,JPH::RVec3Arg,const JPH::CollideShapeResult&)override{
+        std::shared_lock lock(filterMutex);
+        const auto ia=filters.find(a.GetUserData()),ib=filters.find(b.GetUserData());
+        if(ia==filters.end()||ib==filters.end())return JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
+        const bool aAccepts=(ia->second.mask&CollisionLayerBit(ib->second.layer))!=0;
+        const bool bAccepts=(ib->second.mask&CollisionLayerBit(ia->second.layer))!=0;
+        return aAccepts&&bAccepts?JPH::ValidateResult::AcceptAllContactsForThisBodyPair:JPH::ValidateResult::RejectAllContactsForThisBodyPair;
+    }
 
     ~JoltContacts() override {
         std::lock_guard lock(mutex);
