@@ -104,9 +104,9 @@ struct MaterialDesc
         emissiveTexture;
     Vec3 emissive{};
     float normalScale = 1;
-    float alphaCutoff = 0; // Zero is opaque; positive values enable cutout alpha testing.
+    float alphaCutoff = 0;
     bool doubleSided = false;
-    bool overlay = false; // Immutable: no depth test/write; for camera-relative diagnostic text.
+    bool overlay = false;
 };
 enum class LightType
 {
@@ -124,7 +124,12 @@ struct CameraDesc
 {
     Vec3 position{8, 6, 10}, target{0, 0, 0};
     float fov = 60, nearClip = .1f, farClip = 1000;
-    float aspect = 0; // Zero follows the render viewport; positive values override it.
+    float aspect = 0;
+};
+enum class CameraProjection
+{
+    Perspective,
+    Orthographic
 };
 struct RenderSettings
 {
@@ -137,8 +142,6 @@ struct RenderSettings
     float exposure = 1;
     Vec3 background{.035f, .055f, .09f};
 };
-// Resource name in Assets/Textures. Empty cubemap disables the environment.
-// Supply a mipmapped DDS cubemap; sky and PBR specular reflections are independent.
 struct EnvironmentDesc
 {
     std::string cubemap;
@@ -151,7 +154,7 @@ struct RenderStats
     double cpuMilliseconds = 0;
     std::size_t textures = 0;
     std::size_t drawCalls = 0, triangles = 0,
-                instances = 0; // Ogre metrics across all rendered passes.
+                instances = 0;
 };
 struct RendererConfig
 {
@@ -159,7 +162,6 @@ struct RendererConfig
     std::string mediaRoot = "Vendor/ogre-next/Samples/Media", assetsRoot = "Assets";
     RendererBackend backend = RendererBackend::Auto;
 };
-// Owner-thread API. Handles are instance-specific and never reused.
 class Renderer
 {
   public:
@@ -176,8 +178,6 @@ class Renderer
     void UpdateMesh(MeshHandle, std::span<const Vertex>);
     TextureHandle CreateTexture(unsigned width, unsigned height, std::span<const std::uint8_t> rgba,
                                 bool srgb = true, bool mipmaps = true);
-    // Loads an image registered in Ogre's General resource group (Assets/Textures).  This is the
-    // runtime path for authored PBR maps; colour maps should use sRGB, data maps must not.
     TextureHandle LoadTexture(const std::string &resource, bool srgb = true, bool mipmaps = true);
     void DestroyTexture(TextureHandle);
     MeshHandle LoadModel(const std::string &, bool legacyMesh = true);
@@ -191,13 +191,14 @@ class Renderer
     void SetCastShadows(ObjectHandle, bool);
     void SetRenderQueue(ObjectHandle, std::uint8_t);
     void DestroyObject(ObjectHandle);
-    // Bounding-volume ray query against renderer-owned scene objects. The displacement
-    // controls both ray direction and maximum distance; results are nearest-first.
     std::vector<ObjectRayHit> RaycastObjects(Vec3 origin, Vec3 displacement) const;
     LightHandle CreateLight(const LightDesc &);
     void UpdateLight(LightHandle, const LightDesc &);
     void DestroyLight(LightHandle);
     void SetCamera(const CameraDesc &);
+    // Projection is renderer state rather than an authored CameraComponent property for now.
+    // The editor uses it for scene-view orthographic inspection; gameplay cameras stay perspective.
+    void SetCameraProjection(CameraProjection projection, float orthographicHeight = 10.0f);
     void SetSettings(const RenderSettings &);
     RenderSettings Settings() const;
     void SetVSync(bool enabled);
@@ -210,8 +211,6 @@ class Renderer
     void ResizeTarget(TargetHandle, unsigned, unsigned);
     void DestroyTarget(TargetHandle);
     void CaptureTarget(TargetHandle, const std::string &path);
-    // Replaces the pending immediate-mode UI frame. The data is consumed by the graphics backend
-    // during the next render and is never allowed to expose raw GL/Vulkan objects to callers.
     void SubmitUI(UiDrawData);
     void ClearUI();
     void Resize(unsigned, unsigned);

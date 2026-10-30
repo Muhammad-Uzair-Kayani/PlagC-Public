@@ -26,8 +26,9 @@ public:
     void AppendComponentInspector(Engine&, EditorSession&);
     void AppendAssetInteractions(Engine&, EditorSession&);
     void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);
-    // Draws and drives a world-space transform gizmo on the existing Viewport window.
-    // Must be called after the viewport target image is appended so handles stay on top.
+    void AppendViewportExperience(Engine&, EditorSession&, CameraDesc& editorCamera);
+    // Draws and drives a world-space/local-space transform gizmo on the existing Viewport window.
+    // Must be called after the viewport target image and scene-view overlays are appended.
     void AppendTransformGizmo(Engine&, EditorSession&, const CameraDesc& editorCamera);
 
 private:

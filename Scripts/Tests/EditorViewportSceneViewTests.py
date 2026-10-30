@@ -20,6 +20,8 @@ class EditorViewportSceneViewTests(unittest.TestCase):
             "bool gizmosVisible",
             "bool previewLighting",
             "bool selectionFeedback",
+            "bool orthographic",
+            "float orthographicHeight",
             "float cameraSpeed",
             "float translationSnap",
             "float rotationSnapDegrees",
@@ -40,6 +42,7 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         for required in (
             '"Translate"', '"Rotate"', '"Scale"', '"World"', '"Local"',
             '"Grid"', '"Gizmos"', '"Wire"', '"Preview Light"', '"Focus"',
+            '"Frame All"', '"Perspective"', '"Orthographic"',
             '"Front"', '"Back"', '"Left"', '"Right"', '"Top"', '"Bottom"',
             "DrawGrid", "DrawOrientation", "DrawSelectionFeedback",
         ):
@@ -54,13 +57,29 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         self.assertIn("engine.Graphics().CreateLight", app)
         self.assertIn("engine.Graphics().DestroyLight", app)
 
-    def test_camera_navigation_uses_scene_view_speed_and_focus(self):
+    def test_camera_navigation_uses_scene_view_speed_focus_and_presets(self):
         app = self.read("Editor/src/EditorApp.cpp")
         overlay = self.read("Editor/src/EditorViewportExperience.cpp")
         self.assertIn("viewport.cameraSpeed", app)
+        self.assertIn("SyncCameraLookFromEditorCamera", app)
         self.assertIn("ImGuiKey_F", overlay)
         self.assertIn("FocusSelection", overlay)
+        self.assertIn("FrameAll", overlay)
         self.assertIn("ApplyViewPreset", overlay)
+
+    def test_orthographic_projection_is_backend_neutral_and_picking_matches(self):
+        renderer = self.read("PlagC/include/PlagC/Renderer/Renderer.h")
+        projection = self.read("PlagC/src/Renderer/OgreCameraProjection.cpp")
+        picking = self.read("PlagC/src/Editor/PickingMath.cpp")
+        app = self.read("Editor/src/EditorApp.cpp")
+        self.assertIn("enum class CameraProjection", renderer)
+        self.assertIn("SetCameraProjection", renderer)
+        self.assertIn("Ogre::PT_ORTHOGRAPHIC", projection)
+        self.assertIn("setOrthoWindowHeight", projection)
+        self.assertIn("request.orthographic", picking)
+        self.assertIn("request.orthographicHeight", picking)
+        self.assertIn("request.orthographic = viewport.orthographic", app)
+        self.assertIn("CameraProjection::Perspective", app)
 
     def test_local_world_gizmo_and_visibility_are_respected(self):
         source = self.read("Editor/src/EditorTransformGizmo.cpp")
@@ -68,6 +87,13 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         self.assertIn("TransformSpace::Local", source)
         self.assertIn("RotateEuler", source)
         self.assertIn("axes[axis]", source)
+        self.assertIn("viewport_.orthographicHeight", source)
+
+    def test_orthographic_asset_drop_uses_parallel_cursor_ray(self):
+        source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
+        self.assertIn("viewport.orthographic", source)
+        self.assertIn("viewport.orthographicHeight", source)
+        self.assertIn("DropPosition(editorCamera,viewport_", source)
 
     def test_scene_view_updates_roadmap_status(self):
         doc = self.read("Docs/Editor.md")

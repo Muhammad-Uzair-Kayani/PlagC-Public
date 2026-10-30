@@ -17,13 +17,15 @@ class EditorGizmoTests(unittest.TestCase):
         gizmo = app.index("layer_.AppendTransformGizmo(engine, *session_, editorCamera_);")
         self.assertLess(presenter, gizmo)
 
-    def test_gizmo_uses_world_projection_and_axis_hit_testing(self):
+    def test_gizmo_uses_projection_and_axis_hit_testing(self):
         source = self.read("Editor/src/EditorTransformGizmo.cpp")
         self.assertIn("ProjectedPoint Project", source)
         self.assertIn("DistanceToSegment", source)
-        self.assertIn("Cross(forward,{0,1,0})", source)
+        self.assertIn("Cross(forward,reference)", source)
+        self.assertIn("std::fabs(Dot(forward,reference))", source)
         self.assertIn("axisWorldLength", source)
         self.assertIn("window->WorkRect", source)
+        self.assertIn("viewport_.orthographic", source)
 
     def test_translate_rotate_scale_and_snap_use_viewport_contract(self):
         source = self.read("Editor/src/EditorTransformGizmo.cpp")
@@ -37,6 +39,7 @@ class EditorGizmoTests(unittest.TestCase):
             "viewport_.translationSnap",
             "viewport_.rotationSnapDegrees",
             "viewport_.scaleSnap",
+            "TransformSpace::Local",
         ):
             self.assertIn(required, source)
 
@@ -59,9 +62,12 @@ class EditorGizmoTests(unittest.TestCase):
         self.assertNotIn("!io.WantCaptureMouse", source)
         self.assertIn("!gizmoActive", models)
 
-    def test_active_gizmo_survives_its_own_transient_edit(self):
+    def test_active_gizmo_is_cancelled_only_for_real_mode_or_visibility_changes(self):
         source = self.read("Editor/src/EditorTransformGizmo.cpp")
-        self.assertIn("session.Playing() || (!gizmoEdit_ && !session.EditingEnabled())", source)
+        self.assertIn("!viewport_.gizmosVisible", source)
+        self.assertIn("session.Playing()", source)
+        self.assertIn("!gizmoEdit_&&!session.EditingEnabled()", source)
+        self.assertIn("FinishGizmoEdit(engine,false)", source)
 
 
 if __name__ == "__main__":

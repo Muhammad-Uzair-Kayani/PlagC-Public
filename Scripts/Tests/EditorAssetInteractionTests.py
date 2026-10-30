@@ -57,31 +57,35 @@ class EditorAssetInteractionTests(unittest.TestCase):
         self.assertIn('ImGui::Begin("Viewport")', source)
         self.assertIn("ImGui::GetCurrentWindow()", source)
         self.assertIn('window->GetID("ViewportSurface")', source)
-        self.assertIn("ImGui::BeginDragDropTargetCustom(rect, surface)", source)
+        self.assertIn("ImGui::BeginDragDropTargetCustom(rect,surface)", source)
         self.assertIn('ImGui::AcceptDragDropPayload(CookedModelPayload)', source)
-        self.assertIn("DropPosition(editorCamera, rect, ImGui::GetIO().MousePos)", source)
-        self.assertIn("CreateCookedModelEntity(engine, session", source)
+        self.assertIn("DropPosition(editorCamera,viewport_,rect,ImGui::GetIO().MousePos)", source)
+        self.assertIn("CreateCookedModelEntity(engine,session", source)
         self.assertIn("void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);", header)
         self.assertIn("viewportPresenter_.Draw(viewportTarget_->Handle());", app)
         self.assertIn("layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);", app)
-        self.assertLess(
-            app.index("viewportPresenter_.Draw(viewportTarget_->Handle());"),
-            app.index("layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);"))
+        self.assertLess(app.index("viewportPresenter_.Draw(viewportTarget_->Handle());"),
+                        app.index("layer_.AppendViewportAssetDrop(engine, *session_, editorCamera_);"))
 
     def test_viewport_drop_keeps_viewport_current_for_custom_target(self):
         source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
-        self.assertIn("BeginDragDropTargetCustom uses ImGui's current window internally", source)
-        self.assertLess(
-            source.index('ImGui::Begin("Viewport")'),
-            source.index("ImGui::BeginDragDropTargetCustom(rect, surface)"))
+        self.assertLess(source.index('ImGui::Begin("Viewport")'),
+                        source.index("ImGui::BeginDragDropTargetCustom(rect,surface)"))
         self.assertIn("ImGui::End();", source)
 
     def test_viewport_drop_uses_ground_plane_with_forward_ray_fallback(self):
         source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
-        self.assertIn("const float t = -camera.position.y / direction.y", source)
-        self.assertIn("return Add(camera.position, Mul(direction, t))", source)
-        self.assertIn("fallbackDistance = Length(Sub(camera.target, camera.position))", source)
-        self.assertIn("return Add(camera.position, Mul(direction, fallbackDistance))", source)
+        self.assertIn("const float t=-origin.y/direction.y", source)
+        self.assertIn("return Add(origin,Mul(direction,t))", source)
+        self.assertIn("fallbackDistance=Length(Sub(camera.target,camera.position))", source)
+        self.assertIn("return Add(origin,Mul(direction,fallbackDistance))", source)
+
+    def test_orthographic_drop_offsets_origin_instead_of_ray_direction(self):
+        source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
+        self.assertIn("if(viewport.orthographic)", source)
+        self.assertIn("viewport.orthographicHeight", source)
+        self.assertIn("origin=Add(origin,Mul(right", source)
+        self.assertIn("origin=Add(origin,Mul(up", source)
 
 
 if __name__ == "__main__":

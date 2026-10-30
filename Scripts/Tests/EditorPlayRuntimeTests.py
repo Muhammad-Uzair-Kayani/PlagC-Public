@@ -64,10 +64,10 @@ class EditorPlayRuntimeTests(unittest.TestCase):
         self.assertIn("PlagC::CameraSystem runtimeCamera_", app)
         self.assertIn("runtimeCamera_.SetViewport(viewport.width, viewport.height)", app)
         self.assertIn("runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics())", app)
-        self.assertIn("Scenes without an active camera deliberately fall back to the frozen editor view", app)
         self.assertIn("engine.Graphics().SetCamera(editorCamera_)", app)
+        self.assertIn("CameraProjection::Perspective", app)
 
-        play = app.index("if (session_->Playing())")
+        play = app.index("if (session_->Playing())", app.index("void UpdateEditorCamera"))
         sync = app.index("runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics())", play)
         leave = app.index("return;", sync)
         movement = app.index("viewport.input.AcceptCameraMouse()", play)
