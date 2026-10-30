@@ -185,6 +185,8 @@ bool ToggleButton(const char* label,bool active)
 
 void EditorLayer::AppendViewportExperience(Engine& engine,EditorSession& session,CameraDesc& editorCamera)
 {
+    AppendCameraInspector(engine,session,editorCamera);
+
     ImGuiWindow* viewportWindow=ImGui::FindWindowByName("Viewport");
     if(!viewportWindow||!viewportWindow->WasActive||viewportWindow->Collapsed) return;
     const ImRect rect=viewportWindow->WorkRect;

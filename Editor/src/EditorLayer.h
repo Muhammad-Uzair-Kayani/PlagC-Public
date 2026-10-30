@@ -29,6 +29,7 @@ public:
     }
     void AppendComponentInspector(Engine&, EditorSession&);
     void AppendAssetInteractions(Engine&, EditorSession&);
+    void AppendCameraInspector(Engine&, EditorSession&, CameraDesc& editorCamera);
     void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);
     void AppendViewportExperience(Engine&, EditorSession&, CameraDesc& editorCamera);
     // Draws and drives a world-space/local-space transform gizmo on the existing Viewport window.
@@ -75,6 +76,10 @@ private:
     std::optional<LightComponent> componentLight_;
     std::optional<PhysicsComponent> componentPhysics_;
     std::optional<AnimatorComponent> componentAnimator_;
+
+    bool cameraPreview_ = false;
+    std::uint64_t cameraPreviewPersistentID_ = 0;
+    std::optional<CameraDesc> cameraPreviewRestore_;
 
     std::unique_ptr<SceneDocument::TransformEdit> gizmoEdit_;
     std::uint64_t gizmoPersistentID_ = 0;
