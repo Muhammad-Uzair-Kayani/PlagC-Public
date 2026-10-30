@@ -25,7 +25,6 @@ V3 Normalize(V3 a)
     return length>1e-6f ? Mul(a,1.0f/length) : V3{};
 }
 V3 ToV3(Vec3 v) { return {v.x,v.y,v.z}; }
-Vec3 ToVec3(V3 v) { return {v.x,v.y,v.z}; }
 
 struct ProjectedPoint { ImVec2 screen{}; float depth=0; bool visible=false; };
 
@@ -141,7 +140,7 @@ void EditorLayer::AppendTransformGizmo(Engine& engine, EditorSession& session,
 
     ImGuiIO& io=ImGui::GetIO();
     const bool viewportFocused=viewport_.input.viewportFocused;
-    if (!io.WantTextInput && viewportFocused && !io.KeyAlt && !io.KeyCtrl)
+    if (!gizmoEdit_ && !io.WantTextInput && viewportFocused && !io.KeyAlt && !io.KeyCtrl)
     {
         if (ImGui::IsKeyPressed(ImGuiKey_W,false)) viewport_.gizmo=GizmoMode::Translate;
         if (ImGui::IsKeyPressed(ImGuiKey_E,false)) viewport_.gizmo=GizmoMode::Rotate;
@@ -171,7 +170,9 @@ void EditorLayer::AppendTransformGizmo(Engine& engine, EditorSession& session,
     const bool mouseInside=rect.Contains(io.MousePos);
     int hoveredAxis=-1;
     float bestDistance=std::numeric_limits<float>::max();
-    if (!gizmoEdit_ && mouseInside && viewport_.input.viewportHovered && !io.WantCaptureMouse)
+    // Do not use ImGuiIO::WantCaptureMouse here. The viewport itself is an ImGui window,
+    // so global capture is expected while hovering it. Local viewport policy is authoritative.
+    if (!gizmoEdit_ && mouseInside && viewport_.input.viewportHovered && !viewport_.input.uiBlocksMouse)
     {
         for (int axis=0;axis<3;++axis)
         {
@@ -216,6 +217,11 @@ void EditorLayer::AppendTransformGizmo(Engine& engine, EditorSession& session,
             return;
         }
         const int axis=gizmoAxis_;
+        if (axis<0 || axis>=3 || !endpoints[axis].visible)
+        {
+            FinishGizmoEdit(engine,false);
+            return;
+        }
         const ImVec2 end=endpoints[axis].screen;
         const float sx=end.x-projectedOrigin.screen.x, sy=end.y-projectedOrigin.screen.y;
         const float screenLength=std::sqrt(sx*sx+sy*sy);
