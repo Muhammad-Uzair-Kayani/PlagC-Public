@@ -49,6 +49,28 @@ class EditorArchitectureTests(unittest.TestCase):
         self.assertIn("world_->SetRenderable", source)
         self.assertIn("world_->RemoveRenderable", source)
 
+    def test_component_inspector_uses_scene_document_commands(self):
+        header = self.read("Editor/src/EditorLayer.h")
+        source = self.read("Editor/src/EditorComponentInspector.cpp")
+        app = self.read("Editor/src/EditorApp.cpp")
+        self.assertIn("void AppendComponentInspector(Engine&, EditorSession&);", header)
+        self.assertIn("InspectorVisible() const noexcept", header)
+        self.assertIn('ImGui::Begin("Inspector")', source)
+        for required in (
+            "document.SetCamera", "document.RemoveCamera",
+            "document.SetLight", "document.RemoveLight",
+            "document.SetModelVisible", "document.RemoveModel",
+            "document.SetPhysics", "document.RemovePhysics",
+            "document.SetAnimator", "document.RemoveAnimator",
+        ):
+            self.assertIn(required, source)
+        for forbidden in (
+            "world_->SetCamera", "world_->SetLight", "world_->SetPhysics",
+            "world_->SetAnimator", ".Scene().Set",
+        ):
+            self.assertNotIn(forbidden, source)
+        self.assertIn("layer_.AppendComponentInspector(engine, *session_)", app)
+
     def test_world_hierarchy_is_engine_owned_and_world_space_compatible(self):
         header = self.read("PlagC/include/PlagC/World/World.h")
         source = self.read("PlagC/src/World/World.cpp")
