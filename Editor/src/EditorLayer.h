@@ -64,7 +64,7 @@ private:
     void CreateCookedModelEntity(Engine&, EditorSession&, const char* assetPath, Vec3 position);
 
     EditorFileController files_;
-    EditorDataPanels dataPanels_;
+    EditorPreviewDataPanels dataPanels_;
     EditorSceneHierarchy hierarchy_;
     EditorTransformInspector transformInspector_;
     std::uint64_t seenDocumentGeneration_ = 1;

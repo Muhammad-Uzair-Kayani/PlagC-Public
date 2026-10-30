@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EditorThumbnailCache.h"
 #include <PlagC/Editor/EditorModels.h>
 #include <array>
 #include <string>
@@ -13,8 +14,10 @@ namespace PlagC::Editor {
 class EditorDataPanels {
 public:
     void Initialize(Engine&);
+    void Shutdown(Engine&);
     void RefreshAssets(Engine&);
     void DrawContentBrowser(Engine&);
+    void DrawAssetPreview(Engine&);
     void DrawConsole(Engine&);
     void RevealAsset(std::string path);
     std::string ConsumeCookedModelActivation();
@@ -24,8 +27,9 @@ public:
         return assets_.Snapshot();
     }
 
-private:
+protected:
     AssetBrowserModel assets_;
+    EditorThumbnailCache thumbnails_;
     ConsoleFilter consoleFilter_{};
     std::array<char, 256> assetSearch_{};
     std::array<char, 256> consoleSearch_{};
@@ -39,8 +43,19 @@ private:
     bool assetSortAscending_ = true;
     bool assetGridView_ = true;
     bool showInternalAssets_ = false;
-    float assetCardWidth_ = 128.0f;
+    float assetCardWidth_ = 144.0f;
     bool autoScrollConsole_ = true;
+};
+
+// Composite used by EditorLayer. The M13 browser remains the owner of navigation/cards;
+// M14 appends preview output without duplicating its asset model or filesystem workflow.
+class EditorPreviewDataPanels final : public EditorDataPanels {
+public:
+    ~EditorPreviewDataPanels();
+    void Initialize(Engine&);
+    void DrawContentBrowser(Engine&);
+private:
+    Engine* engine_ = nullptr;
 };
 
 } // namespace PlagC::Editor

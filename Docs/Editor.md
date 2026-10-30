@@ -155,7 +155,7 @@ Node-based states, entry state, transitions, conditions, parameters, transition 
 
 Replace the registry-table presentation with folders, breadcrumbs, grid/list views, asset cards, search/filter/sort, context menus, drag/drop, double-click behavior, details, source-vs-cooked presentation and sensible filtering of internal files.
 
-## 14. Thumbnail / Preview System — `NOT STARTED`
+## 14. Thumbnail / Preview System — `DONE`
 
 Preview scene/camera/lighting, model/material/texture thumbnails, cache and invalidation, asynchronous generation and non-blocking placeholders.
 
@@ -422,6 +422,16 @@ Definition of done for the product milestone:
 - Scope boundary: asset cards remain textual placeholders; no thumbnail/preview cache or generation (14), no new import/reimport processing (15), no scene open/save workflow (16), and no Play Toolbar work (17) is included.
 - Regression: `Scripts/Tests/EditorMilestone13ContentBrowserTests.py` plus updated `EditorAssetInteractionTests.py` and Milestone 6 reveal coverage; `ValidateEditor.bat` and Windows Editor CI run the focused gate.
 - Next step: stop here and wait for explicit approval before starting Milestone 17.
+
+## 14. Thumbnail / Preview System — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 14 implementation commit on `prototype`.
+- Delivered: renderer-neutral 128×128 previews for models, materials and textures; a fixed studio preview camera plus three-light rig; model bounds fitting and CPU triangle rasterization; material-sphere previews using authored colour/roughness/metallic/emissive values; aspect-correct texture previews over an alpha checkerboard; selected-asset preview presentation and a non-blocking thumbnail cache strip in Content Browser; queued/generating/error placeholders; explicit regenerate-one/all controls; and clean cache shutdown.
+- Async/cache design: PlagC `JobSystem` workers load/import immutable source data and generate owned RGBA buffers only. At most two thumbnail jobs run concurrently; the cache is bounded to 256 entries. File timestamp/size plus asset generation form the invalidation fingerprint, request serials reject stale results, and worker completion is observed through `JobGroup::pending` before the task storage is retired. The main/editor thread alone creates/destroys UI textures.
+- Backend isolation: no Ogre/OpenGL/Vulkan object enters the thumbnail generator. Completed pixels use the existing renderer-neutral `CreateUiTexture` path, so the same preview cache feeds either renderer backend without a second Ogre root/scene or renderer-affine worker work.
+- Scope boundary: no source import/reimport workflow changes (15), scene serialization/workflow (16), Play Toolbar work (17), or general editor/game debug visualization (29/34) is included.
+- Regression: `Scripts/Tests/EditorMilestone14ThumbnailTests.py` plus the retained Milestone 13 browser regressions; `ValidateEditor.bat` and Windows Editor CI run the focused M14 gate.
 
 ## 15. Asset Import Workflow — `DONE`
 

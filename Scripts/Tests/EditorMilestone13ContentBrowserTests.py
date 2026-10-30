@@ -75,7 +75,7 @@ class EditorMilestone13ContentBrowserTests(unittest.TestCase):
         self.assertIn("MergeBrowserEntries", panel)
         self.assertIn("std::unordered_map<std::string, std::size_t> byPath", panel)
 
-    def test_m13_is_wired_and_scope_stops_before_thumbnail_and_import_work(self):
+    def test_m13_remains_wired_after_later_preview_milestones(self):
         local = self.read("ValidateEditor.bat")
         ci = self.read(".github/workflows/editor-windows.yml")
         docs = self.read("Docs/Editor.md")
@@ -83,9 +83,7 @@ class EditorMilestone13ContentBrowserTests(unittest.TestCase):
         self.assertIn("EditorMilestone13ContentBrowserTests.py", local)
         self.assertIn("EditorMilestone13ContentBrowserTests.py", ci)
         self.assertIn("## 13. Content Browser — `DONE`", docs)
-        self.assertIn("## 14. Thumbnail / Preview System — `NOT STARTED`", docs)
         self.assertIn("## 17. Play Toolbar — `FOUNDATION`", docs)
-        self.assertNotIn("CreateUiTexture", panel)
         self.assertNotIn("CookImportedAsset(", panel)
 
 
