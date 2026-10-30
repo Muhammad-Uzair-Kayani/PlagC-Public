@@ -37,6 +37,18 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("std::uint64_t{1} << 63", bridge)
         self.assertIn("PlagC/AssetTexture", source)
 
+    def test_ui_presentation_requires_an_executed_draw(self):
+        backend = self.read("PlagC/src/Renderer/OgreUiBackend.cpp")
+        self.assertIn("bool Render(const UiDrawData& frame", backend)
+        self.assertIn("if (Render(*frame, target, renderer->Backend()))", backend)
+        self.assertIn("presented_.erase(renderer);", backend)
+        self.assertIn("drew = true;", backend)
+        self.assertIn("return drew;", backend)
+        self.assertNotIn(
+            "Render(*frame, target, renderer->Backend());\n        presented_.insert(renderer);",
+            backend,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

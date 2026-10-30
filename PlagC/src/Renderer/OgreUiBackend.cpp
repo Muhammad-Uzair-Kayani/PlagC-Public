@@ -353,8 +353,10 @@ public:
                 (mismatch ? " SIZE MISMATCH: scaling UI to output" : " drawing"));
         }
         EnsureResources(renderer->Backend());
-        Render(*frame, target, renderer->Backend());
-        presented_.insert(renderer);
+        if (Render(*frame, target, renderer->Backend()))
+            presented_.insert(renderer);
+        else
+            presented_.erase(renderer);
         lastRenderedFrame_ = frameNumber;
         lastTarget_ = target;
     }
@@ -534,11 +536,11 @@ private:
         pass_->getVertexProgramParameters()->setNamedConstant("ProjectionMatrix", projection);
     }
 
-    void Render(const UiDrawData& frame, Ogre::TextureGpu* target, RendererBackend backend)
+    bool Render(const UiDrawData& frame, Ogre::TextureGpu* target, RendererBackend backend)
     {
         if (frame.width <= 0.0f || frame.height <= 0.0f ||
             frame.vertices.empty() || frame.indices.empty() || frame.commands.empty())
-            return;
+            return false;
 
         auto* renderSystem = Ogre::Root::getSingletonPtr()->getRenderSystem();
         EnsureRenderPass(target);
@@ -559,6 +561,7 @@ private:
 
         Ogre::Vector4 viewport(0.0f, 0.0f, 1.0f, 1.0f);
         bool passBegun = false;
+        bool drew = false;
         for (const UiDrawCommand& command : frame.commands)
         {
             Ogre::TextureGpu* texture = ResolveTexture(command.texture);
@@ -590,10 +593,12 @@ private:
             Ogre::v1::CbRenderOp draw(operation);
             renderSystem->_setRenderOperation(&draw);
             renderSystem->_render(operation);
+            drew = true;
         }
 
         if (passBegun)
             renderSystem->endRenderPassDescriptor();
+        return drew;
     }
 
     std::unordered_set<const Renderer*> renderers_;
