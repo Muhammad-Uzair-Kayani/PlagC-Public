@@ -215,8 +215,11 @@ private:
         {
             PlagC::Editor::RendererPickingProvider picker(engine.Graphics(), session_->EditDocument(), *sceneRenderer_, *assetScene_);
             auto& document = session_->EditDocument();
-            if (const auto hit = picker.Pick(request)) document.SelectPersistent(hit->persistentID);
-            else document.Select({});
+            if (const auto hit = picker.Pick(request);
+                hit && !layer_.HierarchyEntityLocked(hit->persistentID))
+                document.SelectPersistent(hit->persistentID);
+            else
+                document.Select({});
         }
         catch (const std::exception& error)
         {

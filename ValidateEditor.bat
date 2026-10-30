@@ -17,6 +17,7 @@ for %%T in (
     EditorAssetInteractionTests.py
     EditorMilestone3Tests.py
     EditorMilestone6Tests.py
+    EditorSceneHierarchyMilestoneTests.py
     EditorGizmoTests.py
     EditorUiTextureTests.py
 ) do (

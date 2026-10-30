@@ -105,7 +105,7 @@ Acceptance scope:
 
 Required tests: source architecture regression for viewport state/UI wiring, camera projection/picking regression, Windows Editor build validation, native runtime acceptance on the available backend.
 
-## 2. Scene Hierarchy — `FOUNDATION`
+## 2. Scene Hierarchy — `DONE`
 
 Replace the functional tree/debug presentation with a real hierarchy workflow: search/filter, type icons, expand/collapse, inline rename, context menu, visibility/lock controls, drag reparent/root drop, selection synchronization, stable expansion state and useful empty-scene presentation.
 
@@ -297,6 +297,14 @@ Definition of done for the product milestone:
 - Date: 2026-10-30
 - Purpose: replace the obsolete integration-only remaining-work list with the 43-milestone usable-editor roadmap.
 - Policy: every future editor milestone updates this file in the same implementation commit.
+
+## 2. Scene Hierarchy — `DONE`
+
+- Date: 2026-10-30
+- Commit evidence: this Milestone 2 implementation commit on `prototype`.
+- Delivered: name/type search, component-type badges, explicit expand/collapse with stable persistent-ID expansion state, `F2` and context inline rename, entity context actions, command-backed model/renderable visibility, editor-only locks that block hierarchy selection/reparent/destructive actions and viewport picking, drag reparent/root-drop, hierarchy↔viewport selection synchronization, read-only Play presentation, and useful empty-scene actions.
+- Architecture: hierarchy mutations continue through `SceneDocument`; visibility remains scene/runtime truth while lock/search/expansion remain editor-only presentation state and reset on document replacement.
+- Regression: `Scripts/Tests/EditorSceneHierarchyMilestoneTests.py` plus the existing backend `EditorHierarchyTests.cpp`; `ValidateEditor.bat` and Windows CI run the new source gate.
 
 ## 3. Entity Creation — `DONE`
 

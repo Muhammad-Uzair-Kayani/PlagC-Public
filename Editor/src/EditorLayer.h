@@ -2,6 +2,7 @@
 
 #include "EditorDataPanels.h"
 #include "EditorFileController.h"
+#include "EditorSceneHierarchy.h"
 #include <PlagC/Editor/EditorModels.h>
 #include <PlagC/Editor/EditorSession.h>
 #include <array>
@@ -23,6 +24,9 @@ public:
 
     const ViewportState& Viewport() const noexcept { return viewport_; }
     bool InspectorVisible() const noexcept { return showInspector_; }
+    bool HierarchyEntityLocked(std::uint64_t persistentID) const noexcept {
+        return hierarchy_.Locked(persistentID);
+    }
     void AppendComponentInspector(Engine&, EditorSession&);
     void AppendAssetInteractions(Engine&, EditorSession&);
     void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);
@@ -49,6 +53,7 @@ private:
 
     EditorFileController files_;
     EditorDataPanels dataPanels_;
+    EditorSceneHierarchy hierarchy_;
     std::uint64_t seenDocumentGeneration_ = 1;
     ViewportState viewport_{};
     bool showHierarchy_ = true;
