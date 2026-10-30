@@ -30,7 +30,13 @@ public:
     bool HierarchyEntityLocked(std::uint64_t persistentID) const noexcept {
         return hierarchy_.Locked(persistentID);
     }
+    Entity AnimatorPreviewEntity(const EditorSession& session) const {
+        if (!animatorPreviewEnabled_ || session.Playing() || !animatorPreviewPersistentID_)
+            return {};
+        return session.Document().FindByPersistentID(animatorPreviewPersistentID_);
+    }
     void AppendComponentInspector(Engine&, EditorSession&);
+    void AppendAnimatorInspector(Engine&, EditorSession&);
     void AppendAssetInteractions(Engine&, EditorSession&);
     void AppendCameraInspector(Engine&, EditorSession&, CameraDesc& editorCamera);
     void AppendPhysicsInspector(Engine&, EditorSession&, const CameraDesc& editorCamera);
@@ -82,6 +88,12 @@ private:
 
     bool physicsDebugVisible_ = true;
     bool physicsDebugAll_ = false;
+
+    std::uint64_t animatorInspectorPersistentID_ = 0;
+    std::uint64_t animatorPreviewPersistentID_ = 0;
+    bool animatorPreviewEnabled_ = false;
+    std::array<char, 512> animatorSourcePath_{};
+    std::string animatorInspectorStatus_;
 
     bool cameraPreview_ = false;
     std::uint64_t cameraPreviewPersistentID_ = 0;
