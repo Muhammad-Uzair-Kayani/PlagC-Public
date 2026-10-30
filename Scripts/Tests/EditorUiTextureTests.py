@@ -29,6 +29,12 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("ImGui font atlas white texel is not opaque white", bridge)
         self.assertIn("pixels[whiteOffset + 3] != 0xffu", bridge)
 
+    def test_imgui_font_texid_is_cleared_before_texture_destruction(self):
+        bridge = self.read("Editor/src/ImGuiRendererBridge.cpp")
+        clear_pos = bridge.index("io.Fonts->SetTexID(ImTextureID_Invalid)")
+        destroy_pos = bridge.index("DestroyUiTexture(renderer, fontTexture_)")
+        self.assertLess(clear_pos, destroy_pos)
+
     def test_ui_texture_contract_is_checked_at_runtime(self):
         source = self.read("PlagC/src/Renderer/OgreUiTexture.cpp")
         self.assertIn("texture->hasAutomaticBatching()", source)

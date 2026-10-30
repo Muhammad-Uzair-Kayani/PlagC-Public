@@ -167,16 +167,20 @@ void ImGuiRendererBridge::Submit(Renderer& renderer, const ImDrawData* drawData)
 void ImGuiRendererBridge::Shutdown(Renderer& renderer)
 {
     renderer.ClearUI();
+
+    if (ImGui::GetCurrentContext())
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        if (fontTexture_)
+            io.Fonts->SetTexID(ImTextureID_Invalid);
+        io.BackendRendererName = nullptr;
+        io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
+    }
+
     if (fontTexture_)
     {
         DestroyUiTexture(renderer, fontTexture_);
         fontTexture_ = {};
-    }
-    if (ImGui::GetCurrentContext())
-    {
-        ImGuiIO& io = ImGui::GetIO();
-        io.BackendRendererName = nullptr;
-        io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
     }
 }
 
