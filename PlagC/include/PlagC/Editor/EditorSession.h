@@ -55,6 +55,7 @@ public:
     PlaySession::State PlayState() const;
     bool Playing() const;
     bool Paused() const;
+    std::uint64_t PlayGeneration() const;
 
     // World the viewport should display. Runtime systems mutate RuntimeWorld()
     // only while Playing(); authoring edits use EditDocument() while stopped.
