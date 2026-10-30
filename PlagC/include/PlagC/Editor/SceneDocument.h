@@ -40,12 +40,10 @@ public:
     public:
         TransformEdit() = default;
         ~TransformEdit();
-
         TransformEdit(const TransformEdit&) = delete;
         TransformEdit& operator=(const TransformEdit&) = delete;
         TransformEdit(TransformEdit&&) noexcept;
         TransformEdit& operator=(TransformEdit&&) = delete;
-
         void Preview(const Transform&);
         void Commit();
         void Cancel();
@@ -53,11 +51,9 @@ public:
         Entity Target() const noexcept { return entity_; }
         const Transform& Before() const noexcept { return before_; }
         const Transform& Current() const noexcept { return current_; }
-
     private:
         friend class SceneDocument;
         TransformEdit(SceneDocument&, Entity, Transform);
-
         SceneDocument* document_ = nullptr;
         Entity entity_{};
         Transform before_{};
@@ -68,14 +64,12 @@ public:
 
     explicit SceneDocument(std::unique_ptr<World>, std::size_t historyCapacity = 256);
     ~SceneDocument();
-
     SceneDocument(const SceneDocument&) = delete;
     SceneDocument& operator=(const SceneDocument&) = delete;
 
     const World& Scene() const;
     std::vector<AuthoringEntity> Snapshot() const;
     std::uint64_t Revision() const;
-
     Entity Selection() const;
     void Select(Entity);
     void SelectPersistent(std::uint64_t);
@@ -86,19 +80,12 @@ public:
     Entity Create(EntityTemplate entity = {});
     void Destroy(Entity);
     Entity Duplicate(Entity);
-
     void Rename(Entity, std::string);
 
-    // World-space authoring remains the gizmo/runtime-facing contract.
     void SetTransform(Entity, const Transform&);
     TransformEdit BeginTransformEdit(Entity);
-
-    // Local-space authoring is intended for the Inspector on parented entities.
-    // It participates in the same persistent-ID-safe undo/redo history.
     Transform LocalTransform(Entity) const;
     void SetLocalTransform(Entity, const Transform&);
-
-    // Undoable relationship editing. Parent {} means root; reparent preserves world-space pose.
     void SetParent(Entity child, Entity parent);
     void ClearParent(Entity child);
 
@@ -117,6 +104,8 @@ public:
     void SetModelVisible(Entity, bool);
     void SetModelCastShadows(Entity, bool);
     void ReloadModelAsset(Entity, AssetHandle<ModelAsset>);
+    void SetModelMaterial(Entity, std::size_t slot, AssetHandle<MaterialAsset>);
+    void ClearModelMaterial(Entity, std::size_t slot);
     void SetActiveCamera(Entity);
     void ClearActiveCamera();
 
@@ -129,7 +118,6 @@ public:
     void MarkSaved();
     std::string_view UndoLabel() const;
     std::string_view RedoLabel() const;
-
     std::unique_ptr<SceneDocument> CloneForRuntime() const;
 
     std::string Serialize() const;
@@ -140,7 +128,6 @@ public:
 private:
     friend class PlaySession;
     friend class EditorSession;
-
     void RequireStableEditState() const;
     void PreviewTransform(Entity, const Transform&);
     void CommitTransformEdit(Entity, const Transform& before, const Transform& after);
@@ -149,13 +136,11 @@ private:
     std::uint64_t AllocatePersistentID();
 
     std::unique_ptr<World> world_;
-    CommandHistory history_; // destroyed before referenced world
+    CommandHistory history_;
     Entity selection_{};
-
     std::unordered_map<std::uint64_t, std::uint64_t> persistentIDs_;
     std::uint64_t revision_ = 1;
     std::uint64_t nextPersistentID_ = 1;
-
     bool transformEditActive_ = false;
     Entity transformEditEntity_{};
 };

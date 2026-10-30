@@ -15,10 +15,7 @@ namespace PlagC
 struct Entity
 {
     std::uint64_t value = 0;
-    explicit operator bool() const
-    {
-        return value != 0;
-    }
+    explicit operator bool() const { return value != 0; }
     bool operator==(const Entity &) const = default;
 };
 struct ModelComponent
@@ -26,6 +23,8 @@ struct ModelComponent
     AssetHandle<ModelAsset> asset;
     bool visible = true;
     bool castShadows = true;
+    // Per imported material slot. Empty handles preserve the model's imported material.
+    std::vector<AssetHandle<MaterialAsset>> materialOverrides;
 };
 struct RenderableComponent
 {
@@ -46,11 +45,7 @@ struct CameraComponent
     float fov = 60, nearClip = .1f, farClip = 1000;
     float aspect = 0; // Zero follows the render viewport; positive values override it.
 };
-struct TransformUpdate
-{
-    Entity entity;
-    Transform transform;
-};
+struct TransformUpdate { Entity entity; Transform transform; };
 struct EntityRecord
 {
     Entity entity;

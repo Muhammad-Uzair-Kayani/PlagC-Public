@@ -18,7 +18,9 @@ int main() {
     world->SetParent(model,plain);
     SceneDocument d(std::move(world));
     auto text=d.Serialize();
-    assert(text.find("\"version\":2")!=std::string::npos);
+    assert(text.find("\"version\":3")!=std::string::npos);
+    assert(text.find("\"castShadows\":true")!=std::string::npos);
+    assert(text.find("\"materials\":[]")!=std::string::npos);
     int loads=0;
     auto resolver=[&](const std::string &path) { ++loads; assert(path==asset->metadata.path); return AssetHandle<ModelAsset>(asset); };
     auto restored=SceneDocument::Deserialize(text,resolver);
@@ -33,8 +35,8 @@ int main() {
     Reject([&]{SceneDocument::Deserialize(text);});
     Reject([&]{SceneDocument::Deserialize(text,[](const std::string&){return AssetHandle<ModelAsset>{};});});
     auto replace=[&](std::string from,std::string to) {auto s=text; auto p=s.find(from); assert(p!=std::string::npos); s.replace(p,from.size(),to); return s;};
-    Reject([&]{SceneDocument::Deserialize(replace("\"version\":2","\"version\":3"),resolver);});
-    Reject([&]{SceneDocument::Deserialize(replace("\"version\":2","\"version\":2,\"version\":2"),resolver);});
+    Reject([&]{SceneDocument::Deserialize(replace("\"version\":3","\"version\":4"),resolver);});
+    Reject([&]{SceneDocument::Deserialize(replace("\"version\":3","\"version\":3,\"version\":3"),resolver);});
     Reject([&]{SceneDocument::Deserialize(replace("\"id\":\"2\"","\"id\":\"1\""),resolver);});
     Reject([&]{SceneDocument::Deserialize(replace("\"activeCamera\":\"1\"","\"activeCamera\":\"999\""),resolver);});
     Reject([&]{SceneDocument::Deserialize(replace("\"activeCamera\":\"1\"","\"activeCamera\":\"2\""),resolver);});

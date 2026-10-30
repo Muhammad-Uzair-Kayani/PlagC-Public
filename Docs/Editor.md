@@ -127,7 +127,7 @@ Professional X/Y/Z position/rotation/scale controls, color-coded axes, reset act
 
 Model asset field, browse/drop/replace, visibility, shadow controls, mesh/submesh information, material slots, bounds, reload and locate-in-browser actions.
 
-## 7. Material System + Inspector — `NOT STARTED`
+## 7. Material System + Inspector — `DONE`
 
 Authorable material assets and Ogre PBS mapping for base color, base-color texture, normal, metallic, roughness, AO, emissive, alpha/cutout, double-sided state, material slots, save/load and immediate viewport preview with correct color-space handling.
 
@@ -359,6 +359,18 @@ Definition of done for the product milestone:
 - Delivered: ModelAsset field and cooked-asset browse/drop/replace, state-preserving replacement, visibility, renderer-backed per-model shadow control, mesh/submesh statistics, imported material-slot diagnostics, geometry-derived local bounds, immutable-generation reload/rebind, and locate-in-browser highlighting.
 - Architecture: edits remain command-backed through `SceneDocument`; renderer object ownership remains inside `AssetScene`; imported material slots remain read-only until Milestone 7.
 - Regression: `Scripts/Tests/EditorMilestone6Tests.py` plus updated model interaction/entity-creation tests; `ValidateEditor.bat` and Windows CI run the milestone gate.
+
+## 7. Material System + Inspector — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 7 implementation commit on `prototype`.
+- Delivered: standalone versioned `.pgmaterial` assets; full renderer-neutral PBS values for base colour, base-colour texture, tangent-space normal/normal scale, metallic, roughness, AO, emissive, alpha cutout and double-sided state; per-model imported material-slot overrides; Save/Reload/Clear Override authoring; validation and explicit dirty/error feedback; hierarchy-lock and Play read-only policy; and immediate viewport preview through the existing `AssetScene` renderer path.
+- Rendering: material overrides create real Ogre PBS materials through `MaterialDesc`; base-colour and emissive maps are loaded as sRGB colour data while normal, metallic, roughness and AO maps remain linear. Override renderer resources are instance-owned and rebuilt when the immutable material handle changes, while imported model materials remain the fallback for unassigned slots.
+- Persistence: scene format v3 stores model shadow state and material override paths, while v1/v2 remain readable. Material assignments clone into the isolated Play world through the existing `ModelComponent` copy path. Standalone material files are validated and atomically replaced on save.
+- Architecture: generic `AssetManager` expansion is intentionally deferred to Milestone 31; Milestone 7 uses a dedicated immutable material-asset path and does not expose Ogre objects to `SceneDocument` or Inspector code.
+- Regression: `Scripts/Tests/EditorMilestone7MaterialTests.py`, updated scene serialization regression, `ValidateEditor.bat`, and Windows Editor CI cover the PBS surface, material persistence, slot commands, scene v3 compatibility, sRGB/linear mapping, live Inspector workflow and scope boundaries.
+- Scope boundary: no Milestone 10 physics-authoring depth, Milestone 13 Content Browser redesign, or Milestone 16 general scene-workflow UI is included; scene-format work is limited to the material-assignment persistence required by this milestone.
+- Next assigned milestone: **10. Physics Inspector** — do not begin until explicitly requested.
 
 ## 9. Camera Inspector — `DONE`
 

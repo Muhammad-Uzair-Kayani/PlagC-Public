@@ -47,6 +47,7 @@ private:
     void DrawHierarchy(Engine&, EditorSession&);
     void DrawViewport(EditorSession&);
     void DrawInspector(Engine&, EditorSession&);
+    void DrawMaterialInspector(Engine&, EditorSession&);
     void DrawContentBrowser(Engine&);
     void DrawConsole(Engine&);
     void DrawStatistics(Engine&, EditorSession&);

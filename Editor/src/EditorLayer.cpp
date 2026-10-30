@@ -62,7 +62,11 @@ void EditorLayer::Frame(Engine& engine, EditorSession& session)
     }
 
     DrawViewport(session);
-    if (showInspector_) DrawInspector(engine, session);
+    if (showInspector_)
+    {
+        DrawInspector(engine, session);
+        DrawMaterialInspector(engine, session);
+    }
     if (showHierarchy_) DrawHierarchy(engine, session);
     if (showContentBrowser_) DrawContentBrowser(engine);
     if (showConsole_) DrawConsole(engine);
@@ -285,7 +289,6 @@ void EditorLayer::DrawInspector(Engine& engine, EditorSession& session)
     const bool editing = session.EditingEnabled();
     const bool locked = hierarchy_.Locked(selected->persistentID);
 
-    // Entity header -----------------------------------------------------------
     ImGui::PushID("InspectorEntityHeader");
     ImGui::TextUnformatted(selected->record.name.c_str());
     ImGui::SameLine();
@@ -342,7 +345,6 @@ void EditorLayer::DrawInspector(Engine& engine, EditorSession& session)
     }
     else
     {
-        // Runtime uses the same Inspector surface, but authoring controls are deliberately read-only.
         const Transform& transform = selected->record.transform;
         ImGui::SeparatorText("Transform");
         if (ImGui::BeginTable("RuntimeTransform", 2,
@@ -366,10 +368,6 @@ void EditorLayer::DrawInspector(Engine& engine, EditorSession& session)
         ImGui::TextDisabled("Runtime world is isolated from the authoring document.");
     }
 
-    // Component cards are appended by AppendComponentInspector in the same logical
-    // Inspector window later in the frame. Keeping the entity header/Transform here
-    // preserves the Transform Inspector milestone while eliminating the old yes/no
-    // component debug summary.
     ImGui::End();
 }
 
