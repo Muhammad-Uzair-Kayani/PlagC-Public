@@ -14,6 +14,9 @@
 #include <OgreHardwareIndexBuffer.h>
 #include <OgreHardwareVertexBuffer.h>
 #include <OgreHighLevelGpuProgramManager.h>
+#include <OgreHighLevelGpuProgram.h>
+#include <OgreRenderOperation.h>
+#include <OgreVertexIndexData.h>
 #include <OgreHlmsManager.h>
 #include <OgreIdString.h>
 #include <OgreMaterialManager.h>
@@ -431,7 +434,7 @@ private:
         renderPass_->mColour[0].texture = target;
         renderPass_->mColour[0].loadAction = Ogre::LoadAction::Load;
         renderPass_->mColour[0].storeAction = Ogre::StoreAction::StoreAndMultisampleResolve;
-        renderPass_->entriesModified(Ogre::RenderPassDescriptor::All);
+        renderPass_->entriesModified(static_cast<Ogre::uint32>(Ogre::RenderPassDescriptor::All));
     }
 
     Ogre::TextureGpu* ResolveTexture(const UiTextureRef& ref) const
