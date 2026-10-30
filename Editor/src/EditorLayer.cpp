@@ -422,25 +422,19 @@ void EditorLayer::DrawHierarchy(Engine& engine, EditorSession& session)
     ImGui::End();
 }
 
-void EditorLayer::DrawViewport(EditorSession& session)
+void EditorLayer::DrawViewport(EditorSession&)
 {
     ImGui::Begin("Viewport");
     const ImVec2 available = ImGui::GetContentRegionAvail();
     viewport_.Resize(static_cast<unsigned>(std::max(1.0f, available.x)),
                      static_cast<unsigned>(std::max(1.0f, available.y)));
 
-    const ImGuiChildFlags childFlags = ImGuiChildFlags_Borders;
-    ImGui::BeginChild("ViewportSurface", available, childFlags,
-                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-    viewport_.input.viewportHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+    // The presenter appends the target image to this window's draw list.
+    // A child window would render above it and obscure the scene surface.
+    viewport_.input.viewportHovered = ImGui::IsWindowHovered();
     viewport_.input.viewportFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
-
-    ImGui::Spacing();
-    ImGui::TextDisabled("Ogre editor render target is not bound yet.");
-    ImGui::Text("%u x %u  |  %s",
-                viewport_.width, viewport_.height,
-                session.Playing() ? "Runtime" : "Authoring");
-    ImGui::EndChild();
+    ImGui::InvisibleButton("ViewportSurface",
+        ImVec2(static_cast<float>(viewport_.width), static_cast<float>(viewport_.height)));
     ImGui::End();
 }
 
