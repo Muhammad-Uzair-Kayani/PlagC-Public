@@ -37,11 +37,11 @@ class EditorMilestone30RenderingQualityTests(unittest.TestCase):
         self.assertIn('addTextureDefinition("HDRScene")', renderer)
         self.assertIn("Ogre::PFG_RGBA16_FLOAT", renderer)
         self.assertIn('tone->mMaterialName = "PlagC/ToneMap"', renderer)
-        self.assertIn('setNamedConstant("exposure", settings.exposure)', renderer)
-        self.assertIn('setNamedConstant("bloomStrength", settings.bloom ? settings.bloomStrength : 0.f)', renderer)
-        self.assertIn("settings.shadows ? Ogre::IdString(\"PlagCShadow\")", renderer)
+        self.assertIn('"exposure", settings.exposure', renderer)
+        self.assertIn('"bloomStrength", settings.bloom ? settings.bloomStrength : 0.f', renderer)
+        self.assertIn('settings.shadows ? Ogre::IdString("PlagCShadow")', renderer)
         self.assertIn("environmentTexture && environment.skybox", renderer)
-        self.assertIn("environment.reflections", renderer)
+        self.assertIn("desc.reflections ? next : nullptr", renderer)
 
     def test_quality_surface_exposes_live_renderer_controls(self):
         toolbar = self.read("Editor/src/EditorToolbar.cpp")
