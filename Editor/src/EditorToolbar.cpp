@@ -103,7 +103,7 @@ void EditorLayer::DrawEditorToolbar(Engine& engine, EditorSession& session)
         viewport_.pivot = centered ? TransformPivot::Pivot : TransformPivot::Center;
 
     ImGui::SameLine();
-    if (ToolbarButton("###ToolbarSnap", "Toggle transform snapping", authoring,
+    if (ToolbarButton("N##ToolbarSnap", "Toggle transform snapping", authoring,
                       viewport_.snapEnabled))
         viewport_.snapEnabled = !viewport_.snapEnabled;
 
