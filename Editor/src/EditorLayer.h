@@ -1,7 +1,7 @@
 #pragma once
 
 #include "EditorDataPanels.h"
-#include "EditorFileController.h"
+#include "EditorMenuController.h"
 #include "EditorSceneHierarchy.h"
 #include "EditorTransformInspector.h"
 #include <PlagC/Animation/AnimationControllerAsset.h>
@@ -20,6 +20,7 @@ namespace PlagC::Editor {
 
 class EditorLayer {
 public:
+    EditorLayer() : files_(*this) {}
     void Initialize(Engine&, EditorSession&);
     void Frame(Engine&, EditorSession&);
     void DrawModals(Engine&, EditorSession&);
@@ -49,6 +50,8 @@ public:
     void AppendTransformGizmo(Engine&, EditorSession&, const CameraDesc& editorCamera);
 
 private:
+    friend class EditorMenuController;
+
     enum class TransportAction {
         PlayStop,
         PauseResume,
@@ -72,7 +75,7 @@ private:
     void FinishGizmoEdit(Engine&, bool commit);
     void CreateCookedModelEntity(Engine&, EditorSession&, const char* assetPath, Vec3 position);
 
-    EditorFileController files_;
+    EditorMenuController files_;
     EditorPreviewDataPanels dataPanels_;
     EditorSceneHierarchy hierarchy_;
     EditorTransformInspector transformInspector_;
