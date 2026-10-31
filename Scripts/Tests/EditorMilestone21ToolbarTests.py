@@ -25,14 +25,16 @@ class EditorMilestone21ToolbarTests(unittest.TestCase):
     def test_toolbar_composes_existing_editor_actions(self):
         toolbar = self.read("Editor/src/EditorToolbar.cpp")
         file_header = self.read("Editor/src/EditorFileController.h")
-        self.assertIn('"S##ToolbarSave"', toolbar)
+        self.assertIn('"ToolbarSave"', toolbar)
         self.assertIn("files_.Save(engine, session)", toolbar)
         self.assertIn("bool Save(Engine&, EditorSession&);", file_header)
         self.assertIn("session.CanUndo()", toolbar)
         self.assertIn("session.Undo()", toolbar)
         self.assertIn("session.CanRedo()", toolbar)
         self.assertIn("session.Redo()", toolbar)
-        self.assertIn("DrawTransport(engine, session)", toolbar)
+        self.assertIn("TransportAction::PlayStop", toolbar)
+        self.assertIn("TransportAction::PauseResume", toolbar)
+        self.assertIn("TransportAction::Step", toolbar)
         self.assertIn("EditorPreferences::ToggleActive()", toolbar)
 
     def test_transform_tools_space_pivot_and_snap_share_viewport_state(self):
@@ -54,11 +56,12 @@ class EditorMilestone21ToolbarTests(unittest.TestCase):
         self.assertIn("return !play_.Running() && !document_->HasTransientEdit();", session)
         self.assertIn('"Editor authoring operation is disabled during Play"', session)
 
-    def test_icon_font_milestone_remains_a_separate_layer(self):
+    def test_icon_presentation_remains_layered_over_toolbar_actions(self):
         toolbar = self.read("Editor/src/EditorToolbar.cpp")
-        docs = self.read("Docs/Editor.md")
-        self.assertIn("embedded icon/font system lands in M24", toolbar)
-        self.assertIn("## 24. Icons / Fonts", docs)
+        self.assertIn("EditorVisualAssets::IconButton", toolbar)
+        self.assertIn("EditorIcon::Save", toolbar)
+        self.assertIn("EditorIcon::Translate", toolbar)
+        self.assertIn("EditorIcon::Settings", toolbar)
 
     def test_validation_wiring(self):
         validate = self.read("ValidateEditor.bat")
