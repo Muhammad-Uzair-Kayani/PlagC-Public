@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "EditorDragDrop.h"
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
 #include <imgui.h>
@@ -234,6 +235,41 @@ void EditorLayer::DrawMaterialInspector(Engine& engine, EditorSession& session)
             }
         }
         ImGui::EndCombo();
+    }
+
+    ImGui::Button("Drop .pgmaterial onto selected slot##MaterialSlotDrop", ImVec2(-FLT_MIN, 0.0f));
+    if (!readOnly && ImGui::BeginDragDropTarget())
+    {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DragDrop::MaterialAsset))
+        {
+            try
+            {
+                const std::string path = DragDrop::TextPayload(*payload);
+                (void)LogicalMaterialPath(path);
+                auto material = LoadMaterialAsset(path);
+                ValidateTextureFiles(*material);
+                session.EditDocument().SetModelMaterial(
+                    selected->entity, static_cast<std::size_t>(selectedSlot), material);
+                state.entity = 0;
+                state.dirty = false;
+                state.status = "Dropped material assigned to the selected slot.";
+            }
+            catch (const std::exception& error)
+            {
+                state.status = error.what();
+                LogMaterialError(engine, error);
+            }
+        }
+        ImGui::EndDragDropTarget();
+    }
+    if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
+    {
+        if (readOnly && payload->IsDataType(DragDrop::MaterialAsset))
+            ImGui::TextColored({0.95f, 0.42f, 0.38f, 1.0f}, "[NO] Material slot is read-only.");
+        else
+            DragDrop::DrawInlineFeedback(DragDrop::MaterialAsset,
+                                         "Assign material to selected slot",
+                                         "Material slot accepts .pgmaterial assets");
     }
 
     ImGui::TextDisabled(hasOverride
