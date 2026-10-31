@@ -83,6 +83,7 @@ void EditorLayer::Shutdown()
 {
     transformInspector_.Reset();
     hierarchy_.Reset();
+    statistics_.Reset();
     inspectorPersistentID_ = 0;
     inspectorRevision_ = 0;
     viewport_ = {};
@@ -496,22 +497,7 @@ void EditorLayer::DrawConsole(Engine& engine)
 
 void EditorLayer::DrawStatistics(Engine& engine, EditorSession& session)
 {
-    if (!ImGui::Begin("Statistics", &showStatistics_)) { ImGui::End(); return; }
-    const FrameProfile& frame = engine.Profile().Latest();
-    const JobStats jobs = engine.Jobs().Stats();
-    const auto assets = engine.Assets().Registry();
-    ImGui::Text("FPS: %.1f", frame.fps);
-    ImGui::Text("Frame: %.3f ms", frame.frameMs);
-    ImGui::Text("Render submit: %.3f ms", frame.renderSubmitMs);
-    ImGui::Text("Renderer CPU: %.3f ms", frame.rendererCpuMs);
-    ImGui::Separator();
-    ImGui::Text("Entities: %zu", session.ViewWorld().Size());
-    ImGui::Text("Assets: %zu", assets.size());
-    ImGui::Text("Jobs submitted: %llu", static_cast<unsigned long long>(jobs.submitted));
-    ImGui::Text("Jobs executed: %llu", static_cast<unsigned long long>(jobs.executed));
-    ImGui::Text("Jobs stolen: %llu", static_cast<unsigned long long>(jobs.stolen));
-    ImGui::Text("Job failures: %llu", static_cast<unsigned long long>(jobs.failed));
-    ImGui::End();
+    statistics_.Draw(engine, session);
 }
 
 } // namespace PlagC::Editor

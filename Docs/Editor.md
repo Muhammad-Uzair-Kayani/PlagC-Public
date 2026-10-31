@@ -180,7 +180,7 @@ Define gameplay update/lifecycle hooks, editor-vs-game input routing, physics st
 
 Severity styling/icons, compact entries, expandable details, category/search filtering, repeated-message collapsing, copy/context actions and separation of giant profiler dumps from normal logs.
 
-## 20. Statistics / Profiler — `FOUNDATION`
+## 20. Statistics / Profiler — `DONE`
 
 Frame/FPS graphs, CPU/GPU/scene/physics/animation/asset/UI timings, job utilization, draw calls, triangles, counts, backend/GPU info, history and profiler freeze controls.
 
@@ -402,12 +402,13 @@ Definition of done for the product milestone:
 ## Milestone 16 — Scene File Workflow — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 16 completion commit on `prototype`.
+- Commit evidence: `43e5caa6d58005db25549baeaef8c8e893d60db5` on `prototype`.
 - Delivered: New/Open/Save/Save As/Open Recent; persistent recent-scene history; scene identity and dirty indicator; Save/Discard/Cancel handling for replacement/exit; untitled Save As during both normal save and window-close flow; actionable file errors; and transactional document replacement that leaves the current authoring scene intact when loading fails.
 - Persistence: scene format v4 keeps v1/v2/v3 readable and persists hierarchy, transforms, active camera, cameras, lights, model references, shadow/visibility state, material overrides, physics bodies/colliders including geometry-backed collider data, animator source/playback/controller parameters/state and upper-body state. Loaded persistent IDs advance the allocator before new authoring entities are created.
 - Safety: raw renderer `RenderableComponent` handles remain explicitly non-serializable rather than being silently discarded; scene saves retain atomic replacement semantics and only mark history saved after the replacement succeeds.
 - Architecture: the M22 menu and M21 toolbar continue to reuse `EditorFileController`; no parallel save/open subsystem was introduced. Scene persistence remains renderer/Jolt neutral at the editor contract boundary.
-- Regression: `Scripts/Tests/EditorMilestone16SceneFileTests.py`, expanded `EditorSerializationTests.cpp`, and compatibility updates for prior scene-version assertions; local and Windows validation include the M16 gate.
+- Regression: `Scripts/Tests/EditorMilestone16SceneFileTests.py`, expanded `EditorSerializationTests.cpp`, compatibility updates for prior scene-version assertions, and fail-fast Windows source validation.
+- Validation: source regressions, fresh OpenGL VS2022 generation, Release MSVC Editor build, and offscreen Editor smoke all passed before merge.
 - Scope boundary: no M20 profiler, M23 theme, M26 selection or M29 preview-rendering implementation is included.
 
 ## 17. Play Toolbar — `DONE`
@@ -430,6 +431,17 @@ Definition of done for the product milestone:
 - Delivered: severity styling, compact/expandable messages, category/search filters, repeated-message collapsing, copy/context actions and separate profiler-report presentation.
 - Architecture: consumes immutable `Log::Snapshot()` data and does not replace the logger or M20 profiler ownership.
 - Regression: `Scripts/Tests/EditorMilestone19ConsoleTests.py`.
+
+## 20. Statistics / Profiler — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 20 completion commit on `prototype`.
+- Delivered: bounded Frame/FPS/GPU/job-utilization history graphs; Freeze and Clear History controls; frame p95/p99/max and hitch counters; CPU/subsystem timing table for events, asset pumping, application/editor work, scene sync, physics, animation, audio, render submit, renderer CPU, pacing and unaccounted time; animation and renderer breakdowns; live render counts including draw calls and triangles; scene/entity and asset counts; renderer backend and GPU-timing capability/latency; and job-system counters/utilization.
+- Job utilization: `JobSystem` now exposes cumulative lock-free worker busy nanoseconds and current outstanding work. The panel derives utilization from busy-time deltas divided by wall-clock worker capacity rather than inferring load from submitted/executed counts.
+- Architecture: the existing engine `Profiler`, renderer statistics and job system remain authoritative. `EditorStatisticsPanel` is presentation-only and contains no Ogre/Jolt implementation types; engine scheduler telemetry remains ImGui-free.
+- History policy: the panel consumes published profiler snapshots into a fixed 240-sample ring. Freeze holds the displayed snapshot/history while engine profiling continues; unfreeze re-bases utilization sampling.
+- Regression: `Scripts/Tests/EditorMilestone20StatisticsTests.py`; local and Windows validation run the focused gate.
+- Scope boundary: no M23 theme, M26 selection, M29 editor-preview policy, or general M34 debug visualization is included.
 
 ## 21. Editor Toolbar — `DONE`
 
@@ -495,4 +507,4 @@ Earlier revisions contained longer backend handoff notes. Their binding contract
 
 ## Current execution stop
 
-Milestone **16** is complete in implementation scope. Continue this explicitly assigned batch with **20 → 23 → 26 → 29**, pushing each milestone independently after validation.
+Milestones **16** and **20** are complete in the requested batch. Continue with **23 → 26 → 29**, pushing each milestone independently after validation.

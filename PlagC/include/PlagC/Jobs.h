@@ -13,7 +13,12 @@ struct JobGroup {
 };
 using JobFunction = void (*)(void*);
 enum class SubmitResult { Accepted, Full, Stopped };
-struct JobStats { std::uint64_t submitted, executed, stolen, failed; };
+struct JobStats {
+    std::uint64_t submitted = 0, executed = 0, stolen = 0, failed = 0;
+    // Cumulative worker execution time and the current accepted-but-not-completed count.
+    // Both are telemetry-only atomics; they do not participate in scheduler synchronization.
+    std::uint64_t busyNanoseconds = 0, outstanding = 0;
+};
 class JobSystem {
 public:
     explicit JobSystem(unsigned workers = 0);
@@ -50,7 +55,7 @@ private:
     std::array<std::atomic<Job*>, Capacity> incoming_{};
     std::vector<std::unique_ptr<Worker>> workers_;
     std::atomic<std::uint64_t> admission_{0}, outstanding_{0}, epoch_{0};
-    std::atomic<std::uint64_t> submitted_{0}, executed_{0}, stolen_{0}, failed_{0};
+    std::atomic<std::uint64_t> submitted_{0}, executed_{0}, stolen_{0}, failed_{0}, busyNanoseconds_{0};
     std::atomic<std::size_t> poolCursor_{0}, inboxCursor_{0};
     std::atomic<bool> stopping_{false};
     const std::thread::id owner_;

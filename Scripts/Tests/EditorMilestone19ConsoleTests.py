@@ -61,14 +61,14 @@ class EditorMilestone19ConsoleTests(unittest.TestCase):
         self.assertIn("BuildConsoleGroups(filtered, consoleCategory_, false", panel)
         self.assertIn('BuildConsoleGroups(filtered, "All", true', panel)
 
-    def test_m19_is_wired_and_roadmap_preserves_unowned_milestones(self):
+    def test_m19_remains_wired_after_m20_profiler_completion(self):
         local = self.read("ValidateEditor.bat")
         ci = self.read(".github/workflows/editor-windows.yml")
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone19ConsoleTests.py", local)
         self.assertIn("EditorMilestone19ConsoleTests.py", ci)
         self.assertIn("## 19. Console — `DONE`", docs)
-        self.assertIn("## 20. Statistics / Profiler — `FOUNDATION`", docs)
+        self.assertIn("## 20. Statistics / Profiler — `DONE`", docs)
 
 
 if __name__ == "__main__":

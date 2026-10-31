@@ -3,6 +3,7 @@
 #include "EditorDataPanels.h"
 #include "EditorMenuController.h"
 #include "EditorSceneHierarchy.h"
+#include "EditorStatisticsPanel.h"
 #include "EditorTransformInspector.h"
 #include "EditorWorkspace.h"
 #include <PlagC/Animation/AnimationControllerAsset.h>
@@ -83,6 +84,7 @@ private:
     EditorPreviewDataPanels dataPanels_;
     EditorSceneHierarchy hierarchy_;
     EditorTransformInspector transformInspector_;
+    EditorStatisticsPanel statistics_;
     std::uint64_t seenDocumentGeneration_ = 1;
     ViewportState viewport_{};
     bool showHierarchy_ = true;
