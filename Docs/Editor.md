@@ -14,17 +14,17 @@ A milestone is not complete because a backend API exists. It is complete when th
 ## Execution rules
 
 1. `prototype` is the source of truth. Do not restart completed work on parallel `fix/*` branches.
-2. Work on one numbered milestone at a time unless a prerequisite is strictly required by that milestone.
+2. Work on one numbered milestone at a time unless a prerequisite is strictly required by that milestone or the user explicitly assigns a batch.
 3. Before implementation, write/confirm the design and acceptance criteria.
 4. Implement against existing engine/editor contracts instead of duplicating systems in the UI.
 5. Add focused regression coverage for every milestone.
 6. Run source regressions, project generation, and the Windows Editor build gate where applicable.
 7. Push the milestone to `prototype`.
-8. Update this document in the same milestone commit with status, tests, files, and commit evidence.
-9. Stop after each milestone and wait for approval before starting the next one.
+8. Update this document in the same implementation stream with status, tests, files, and commit evidence.
+9. Stop after the explicitly assigned milestone or batch and wait for approval before starting unrelated work.
 
 Assigned milestone lane for the completed implementation stream: **1, 4, 7, 10, 13, 17**.
-Current requested execution lane: **19, 22, 25, 28**. Work remains milestone-scoped and each requested milestone is pushed before the next begins.
+Current requested execution lane: **21, 24, 27, 30**. Concurrent completed work on **19, 22, 25, 28** is preserved in the same `prototype` history.
 
 ## Status legend
 
@@ -184,7 +184,7 @@ Severity styling/icons, compact entries, expandable details, category/search fil
 
 Frame/FPS graphs, CPU/GPU/scene/physics/animation/asset/UI timings, job utilization, draw calls, triangles, counts, backend/GPU info, history and profiler freeze controls.
 
-## 21. Editor Toolbar — `FOUNDATION`
+## 21. Editor Toolbar — `DONE`
 
 Save/undo/redo, transform tools, local/world, pivot/center, snap, Play transport, settings and icon-based presentation.
 
@@ -196,7 +196,7 @@ Complete File/Edit/Entity/Assets/View/Window/Debug/Help menus, shortcuts and con
 
 A deliberate PlagC visual language: typography, spacing, component cards, headers, selection/hover/disabled colors, padding, borders, toolbar/dock styling and strong contrast instead of raw ImGui defaults.
 
-## 24. Icons / Fonts — `NOT STARTED`
+## 24. Icons / Fonts — `DONE`
 
 Consistent embedded icon/font assets for entities, folders, assets, cameras, lights, physics, transport and transform tools without shipping raw font source files.
 
@@ -208,7 +208,7 @@ Strong default layout, save/restore/reset workspace, sane panel locations and su
 
 Hierarchy↔viewport synchronization, independent asset selection, Inspector tracking, safe deletion behavior and later Ctrl/Shift multi-selection.
 
-## 27. Undo / Redo — `FOUNDATION`
+## 27. Undo / Redo — `DONE`
 
 Cover transform, rename, create/delete/duplicate, reparent, component add/remove/edit, model/material/light/camera/physics changes with correct command labels and transaction coalescing.
 
@@ -220,7 +220,7 @@ Asset→viewport, asset→Inspector, hierarchy reparenting, material→slot, ani
 
 Explicit editor-vs-game visualization policy: preview lighting, grid, icons, selection, colliders, camera/light gizmos and debug views never leak into game output.
 
-## 30. Rendering Quality — `FOUNDATION`
+## 30. Rendering Quality — `DONE`
 
 Validate PBS materials, texture color spaces, normal/metallic/roughness, HDR/tone mapping, shadows, environment/IBL, MSAA, Vulkan/OpenGL parity, resizing, DPI and UI compositing.
 
@@ -299,215 +299,189 @@ Definition of done for the product milestone:
 
 - Date: 2026-10-30
 - Purpose: replace the obsolete integration-only remaining-work list with the 43-milestone usable-editor roadmap.
-- Policy: every future editor milestone updates this file in the same implementation commit.
+- Policy: every future editor milestone updates this file in the same implementation stream.
 
 ## 1. Viewport / Scene View — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 1 completion commit on `prototype`, building on `4022c07`, `e35d6b5`, and `8b62a22`.
-- Delivered: renderer-backed selection and empty-space deselection; adaptive world grid/axes; selection feedback; viewport XYZ orientation indicator; Translate/Rotate/Scale toolbar; local/world transform space; movement/rotation/scale snapping; perspective and real Ogre orthographic projection; orthographic-aware picking and asset-drop rays; six axis view presets; `F` focus and Frame All; stable focus distance; adjustable camera speed; grid/gizmo/wireframe toggles; exposure control; three editor-only preview lights; and editor-only `PlagCEnvironment.dds` sky/reflection environment with a readable background that restores the pre-editor renderer state during Play and shutdown.
-- Isolation: preview lights/environment are disabled/restored in Play mode; the runtime camera reasserts perspective after Scene View submission, so editor projection state cannot leak into game rendering.
-- Regression: `Scripts/Tests/EditorViewportSceneViewTests.py` covers Scene View state/UI wiring, preview-light/environment lifetime and Play isolation, projection/picking, focus/presets, gizmo-space handling and roadmap completion; existing asset-drop, picking, gizmo and Play regressions remain active. The Windows workflow previously proved all Scene View source regressions plus fresh project generation before concurrent `prototype` pushes cancelled MSBuild; the completion commit remains under the same Editor CI gate.
-- Scope boundary: no Inspector, Material, Physics, Content Browser or Scene File milestone work is included in Milestone 1.
+- Delivered: renderer-backed selection and empty-space deselection; adaptive world grid/axes; selection feedback; viewport XYZ orientation indicator; Translate/Rotate/Scale toolbar; local/world transform space; movement/rotation/scale snapping; perspective and real Ogre orthographic projection; orthographic-aware picking and asset-drop rays; six axis view presets; focus/frame controls; adjustable camera speed; grid/gizmo/wireframe toggles; exposure control; and editor-only preview lighting/environment.
+- Isolation: preview lighting/environment is suppressed in Play; runtime projection remains independent.
+- Regression: `Scripts/Tests/EditorViewportSceneViewTests.py` plus picking/gizmo/play validation.
 
 ## 2. Scene Hierarchy — `DONE`
 
 - Date: 2026-10-30
-- Commit evidence: this Milestone 2 implementation commit on `prototype`.
-- Delivered: name/type search, component-type badges, explicit expand/collapse with stable persistent-ID expansion state, `F2` and context inline rename, entity context actions, command-backed model/renderable visibility, editor-only locks that block hierarchy selection/reparent/destructive actions and viewport picking, drag reparent/root-drop, hierarchy↔viewport selection synchronization, read-only Play presentation, and useful empty-scene actions.
-- Architecture: hierarchy mutations continue through `SceneDocument`; visibility remains scene/runtime truth while lock/search/expansion remain editor-only presentation state and reset on document replacement.
-- Regression: `Scripts/Tests/EditorSceneHierarchyMilestoneTests.py` plus the existing backend `EditorHierarchyTests.cpp`; `ValidateEditor.bat` and Windows CI run the new source gate.
+- Delivered: name/type search, component-type presentation, expand/collapse, inline rename, context actions, visibility/lock controls, drag reparent/root-drop, selection synchronization and empty-scene actions.
+- Architecture: scene mutation remains in `SceneDocument`; hierarchy UI state remains editor-only.
+- Regression: `Scripts/Tests/EditorSceneHierarchyMilestoneTests.py` plus backend hierarchy tests.
 
 ## 3. Entity Creation — `DONE`
 
 - Date: 2026-10-30
-- Commit evidence: `75eab676cda60ce6d5393bfd91a6e06d7c85a359` on `prototype`.
-- Delivered: command-backed creation for Empty, cooked ModelAsset, Camera, all three light types, renderer-backed primitives and useful static/dynamic/kinematic physics presets with contextual placement.
-- Regression: `Scripts/Tests/EditorMilestone3Tests.py`, `EditorAssetInteractionTests.py`, Windows Editor CI wiring.
+- Commit evidence: `75eab676cda60ce6d5393bfd91a6e06d7c85a359`.
+- Delivered: command-backed Empty, model, camera, lights, primitives and physics presets.
+- Regression: `Scripts/Tests/EditorMilestone3Tests.py` and asset interaction tests.
 
 ## 4. Inspector — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 4 implementation commit on `prototype`.
-- Delivered: a coherent entity header with rename/status/parent context; removal of the raw component yes/no debug summary; reusable collapsible component cards; aligned two-column property rows; centralized `+ Add Component`; per-card `Reset` and `Remove Component` actions; validation messages and property tooltips; Camera/Light/Model/Physics/Animator baseline authoring; hierarchy-lock protection; and the same Inspector surface presented read-only for the isolated Play runtime.
-- Architecture: Inspector mutations remain command-backed through `SceneDocument`; no editor-facing control mutates renderer/Jolt/EnTT implementation objects directly. Existing specialized Transform, Model/Mesh and Camera inspectors remain their milestone owners and are composed into the Inspector rather than reimplemented here.
-- Regression: `Scripts/Tests/EditorMilestone4InspectorTests.py` is wired into both `ValidateEditor.bat` and the Windows Editor workflow, covering card structure, read-only policy, validation/help, command-backed mutation, roadmap completion and scope boundaries.
-- Scope boundary: Milestone 4 does not add Milestone 5 transform depth, Milestone 7 material authoring, Milestone 10's complete physics layer/mask/debug workflow, Milestone 13 Content Browser work, or Milestone 16 scene-file work.
-- Next assigned milestone: **7. Material System + Inspector** — do not begin until explicitly requested.
+- Delivered: coherent entity header; component cards; add/remove/reset actions; validation/tooltips; hierarchy-lock protection; read-only runtime presentation; command-backed mutation.
+- Regression: `Scripts/Tests/EditorMilestone4InspectorTests.py`.
 
-## Milestone 5 — Transform Inspector — `DONE`
+## 5. Transform Inspector — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 5 implementation commit on `prototype`.
-- Delivered: professional Position/Rotation/Scale rows with color-coded X/Y/Z controls, Local/World editing, parent-space context, proportional uniform scaling, per-row and full-transform reset actions, immediate viewport previews, hierarchy-lock and dynamic-physics read-only handling, and one continuous drag recorded as one undo command.
-- Architecture: transform authoring continues through `SceneDocument::BeginTransformEdit`/`TransformEdit::Preview`/`Commit`; Local mode resolves through canonical `ComposeTransform`, World mode remains the engine-facing transform contract, and no general Inspector/component-card work from Milestone 4 is included.
-- Regression: `Scripts/Tests/EditorMilestone5Tests.py` plus the existing transaction coverage in `EditorDocumentTests.cpp`; `ValidateEditor.bat` and Windows CI run the milestone gate.
-
-## 8. Lighting Inspector — `DONE`
-
-- Date: 2026-10-31
-- Commit evidence: this Milestone 8 implementation commit on `prototype`.
-- Delivered: complete Directional/Point/Spot authoring with type-specific controls, world-space direction where applicable, colour, renderer intensity, point/spot range, validated spot inner/outer cones, the existing renderer-wide Scene Shadows pass, hierarchy-lock read-only behavior, and immediate `SceneDocument::SetLight` updates while controls are manipulated.
-- Viewport: editor-only light gizmos are integrated into Scene View using the existing editor camera projection path; directional lights show direction arrows, point lights show 3-axis range rings, spot lights show inner/outer cone guides, selected lights receive stronger feedback, and all light visualization obeys the viewport Gizmos toggle and is suppressed during Play.
-- Architecture: no parallel light/runtime model was introduced. Authored values remain `LightComponent`/`LightDesc`, scene mutation remains command-backed through `SceneDocument`, rendering continues through `SceneRenderer`, and shadows use the already-owned renderer `RenderSettings::shadows` contract rather than leaking renderer implementation types into editor code.
-- Scope boundary: no Material (7), Camera (9), Physics (10), general Debug Visualization (34), or Rendering Quality (30) milestone work is included beyond the light-specific Scene View guides required by Milestone 8.
-- Regression: `Scripts/Tests/EditorMilestone8Tests.py`; `ValidateEditor.bat` and Windows Editor CI run the focused milestone gate.
+- Delivered: X/Y/Z controls, local/world editing, uniform scaling, reset actions, immediate previews, lock/physics ownership handling and one-gesture/one-undo transactions.
+- Regression: `Scripts/Tests/EditorMilestone5Tests.py` plus document transaction coverage.
 
 ## 6. Model / Mesh Inspector — `DONE`
 
 - Date: 2026-10-30
-- Commit evidence: this Milestone 6 implementation commit on `prototype`.
-- Delivered: ModelAsset field and cooked-asset browse/drop/replace, state-preserving replacement, visibility, renderer-backed per-model shadow control, mesh/submesh statistics, imported material-slot diagnostics, geometry-derived local bounds, immutable-generation reload/rebind, and locate-in-browser highlighting.
-- Architecture: edits remain command-backed through `SceneDocument`; renderer object ownership remains inside `AssetScene`; imported material slots remain read-only until Milestone 7.
-- Regression: `Scripts/Tests/EditorMilestone6Tests.py` plus updated model interaction/entity-creation tests; `ValidateEditor.bat` and Windows CI run the milestone gate.
+- Delivered: model asset browse/drop/replace, visibility/shadows, mesh statistics, material diagnostics, bounds, reload and locate.
+- Regression: `Scripts/Tests/EditorMilestone6Tests.py`.
 
 ## 7. Material System + Inspector — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 7 implementation commit on `prototype`.
-- Delivered: standalone versioned `.pgmaterial` assets; full renderer-neutral PBS values for base colour, base-colour texture, tangent-space normal/normal scale, metallic, roughness, AO, emissive, alpha cutout and double-sided state; per-model imported material-slot overrides; Save/Reload/Clear Override authoring; validation and explicit dirty/error feedback; hierarchy-lock and Play read-only policy; and immediate viewport preview through the existing `AssetScene` renderer path.
-- Rendering: material overrides create real Ogre PBS materials through `MaterialDesc`; base-colour and emissive maps are loaded as sRGB colour data while normal, metallic, roughness and AO maps remain linear. Override renderer resources are instance-owned and rebuilt when the immutable material handle changes, while imported model materials remain the fallback for unassigned slots.
-- Persistence: scene format v3 stores model shadow state and material override paths, while v1/v2 remain readable. Material assignments clone into the isolated Play world through the existing `ModelComponent` copy path. Standalone material files are validated and atomically replaced on save.
-- Architecture: generic `AssetManager` expansion is intentionally deferred to Milestone 31; Milestone 7 uses a dedicated immutable material-asset path and does not expose Ogre objects to `SceneDocument` or Inspector code.
-- Regression: `Scripts/Tests/EditorMilestone7MaterialTests.py`, updated scene serialization regression, `ValidateEditor.bat`, and Windows Editor CI cover the PBS surface, material persistence, slot commands, scene v3 compatibility, sRGB/linear mapping, live Inspector workflow and scope boundaries.
-- Scope boundary: no Milestone 10 physics-authoring depth, Milestone 13 Content Browser redesign, or Milestone 16 general scene-workflow UI is included; scene-format work is limited to the material-assignment persistence required by this milestone.
-- Next assigned milestone: **10. Physics Inspector** — do not begin until explicitly requested.
+- Delivered: versioned `.pgmaterial`, renderer-neutral PBS values, per-slot overrides, persistence, validation, live preview and correct sRGB/linear texture mapping.
+- Architecture: material authoring remains renderer-neutral; Ogre resources remain inside rendering/asset presentation.
+- Regression: `Scripts/Tests/EditorMilestone7MaterialTests.py`.
+
+## 8. Lighting Inspector — `DONE`
+
+- Date: 2026-10-31
+- Delivered: Directional/Point/Spot authoring, colour/intensity/range/cones/shadows and editor-only light visualization.
+- Regression: `Scripts/Tests/EditorMilestone8Tests.py`.
 
 ## 9. Camera Inspector — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: `45bd0fb450b715d51101ef845bcd1fe92cc7df74` on `prototype`.
-- Delivered: command-backed FOV, near/far clip and aspect-override editing; active-camera set/clear controls; renderer-neutral selected-camera frustum visualization; camera preview through the selected authored camera; and bidirectional Align Camera to View / Align View to Camera workflows.
-- Architecture: camera authoring remains in `CameraComponent`/`CameraDesc` and `SceneDocument`; no Ogre camera implementation object is exposed to editor-facing code. Preview state is restored when selection changes or Play begins.
-- Regression: `Scripts/Tests/EditorMilestone9Tests.py` covers projection fields, active-camera controls, frustum overlay, preview, bidirectional alignment, Scene View integration and the renderer-neutral boundary; it is wired into `ValidateEditor.bat` and Windows CI.
-- Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 9.
+- Commit evidence: `45bd0fb450b715d51101ef845bcd1fe92cc7df74`.
+- Delivered: FOV/clips/aspect, active camera, frustum, preview and align-camera/view workflows.
+- Regression: `Scripts/Tests/EditorMilestone9Tests.py`.
 
-## Milestone 10 — Physics Inspector — `DONE`
+## 10. Physics Inspector — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 10 completion commit on `prototype`.
-- Delivered: complete Static/Kinematic/Dynamic body authoring; mass and gravity scale; linear/angular damping; sleep and continuous-CCD controls; primitive collider type/dimensions; friction, restitution and center-of-mass offset; collision layer, per-body mask, trigger and collision-group controls; actionable validation; and editor-only selected/all collider visualization in Scene View.
-- Runtime integration: `RigidBodyComponent` now carries renderer-neutral `CollisionLayerMask` state. Jolt registers each body's layer/mask and rejects a candidate contact in `OnContactValidate` unless both bodies' masks accept the other body layer. The existing global `CollisionMatrix` remains the broad, cheap policy; the per-body mask is an additional narrow restriction, with the lookup protected for worker-thread contact validation.
-- Architecture: Inspector mutations remain command-backed through `SceneDocument::SetPhysics`; no Jolt/Ogre implementation object is exposed to Editor code. Geometry-backed collider data is retained rather than fabricated, while safe primitive collider authoring remains available. Collider visualization is editor-only and suppressed during Play.
-- Validation: layer/body/trigger consistency, unknown mask bits, mass/damping/material ranges, collider dimensions, primitive scale restrictions, geometry presence and static-only mesh/heightfield rules are surfaced before committing invalid authoring state.
-- Scope boundary: no Milestone 13 Content Browser, Milestone 16 scene-file persistence/workflow, constraint/character-controller editor tooling, or Milestone 34 general debug-visualization system is included. Scene v3 still explicitly rejects physics persistence, leaving that ownership with Milestone 16.
-- Regression: `Scripts/Tests/EditorMilestone10Tests.py`; `ValidateEditor.bat` and Windows Editor CI cover the authoring surface, command-backed edits, runtime mask wiring, validation, editor-only collider visualization and scope boundaries.
-- Next assigned milestone: **13. Content Browser** — do not begin until explicitly requested.
+- Delivered: body/collider authoring, physical properties, layers/masks/triggers, validation and editor-only collider visualization.
+- Runtime integration: per-body masks participate in Jolt contact validation without leaking Jolt objects into editor contracts.
+- Regression: `Scripts/Tests/EditorMilestone10Tests.py`.
 
 ## 11. Animator Inspector — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 11 implementation commit on `prototype`.
-- Delivered: cooked `ModelAsset` animation-source assignment by path or drag/drop with skeleton-layout compatibility checks; fallback to the rendered model's embedded skeleton/clips; named clip selection with duration; Play/Pause/Restart/Stop, loop/speed, and time scrubbing; selected-entity-only edit-mode Scene View animation preview; existing `.pgcontroller` assignment/clear; controller state selection and typed Float/Bool/Trigger parameter editing; and clip, skeleton hierarchy and import-warning diagnostics.
-- Runtime integration: `Animator` now samples clips from an optional compatible animation-source asset while the rendered model continues to own the target skeleton, mesh geometry, inverse-bind data and skinning output. `AssetScene` rebuilds animated instances when that source changes and can advance only one selected authoring animator during editor preview; normal Play still advances the isolated runtime world as before.
-- Architecture: Animator authoring remains command-backed through `SceneDocument::SetAnimator`; M12 remains the owner of graph topology/state-machine asset authoring and M11 only assigns/operates those controller assets. No Ogre/Ozz implementation object is exposed through editor-facing contracts.
-- Persistence boundary: scene-format support for Animator components remains Milestone 16 work; M11 does not broaden scene serialization merely to claim persistence.
-- Scope boundary: no Animation State Machine graph redesign (12), Thumbnail/Preview System (14), Scene File Workflow (16), or general skeleton Debug Visualization (34) is included.
-- Regression: `Scripts/Tests/EditorMilestone11Tests.py`; `ValidateEditor.bat` and Windows Editor CI run the focused milestone gate.
+- Delivered: animation source/clip/controller assignment, playback controls, loop/speed/scrub, preview, parameter editing and skeleton diagnostics.
+- Regression: `Scripts/Tests/EditorMilestone11Tests.py`.
 
 ## 12. Animation State Machine Editor — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: `55a424a06c6c380ca122290ac1eb72ea986eba4b` on `prototype`.
-- Delivered: persistent `.pgcontroller` controller assets; draggable node states and node positions; entry state; typed Float/Bool/Trigger parameters; transitions and typed conditions; transition/crossfade duration; state/parameter/condition inspectors; runtime active-state presentation; Save/Load/Apply authoring; and compilation into the engine's existing executable `AnimationController` rather than a duplicate editor runtime.
-- Architecture: runtime transition evaluation and crossfading continue through the engine animation controller/animator path; Play-mode graph authoring is locked and the editor does not expose renderer implementation objects.
-- Regression: `Scripts/Tests/EditorMilestone12Tests.py` covers controller persistence/validation, graph authoring, parameters, transitions/conditions, duration, runtime compilation/crossfade execution, active-state presentation, Play locking and Save/Load/Apply; it is wired into `ValidateEditor.bat` and Windows CI.
-- Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 12.
+- Commit evidence: `55a424a06c6c380ca122290ac1eb72ea986eba4b`.
+- Delivered: persistent controller graph, states, entry state, parameters, transitions/conditions, blend duration, runtime compilation and active-state presentation.
+- Regression: `Scripts/Tests/EditorMilestone12Tests.py`.
 
 ## 13. Content Browser — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 13 implementation commit on `prototype`.
-- Delivered: hierarchical folders with Up and clickable breadcrumb navigation; grid/list asset-card views; subtree search; Source/Cooked/Project origin filtering; model/texture/audio/material/scene/controller/shader/cooked/other type filtering; name/type/size sorting; explicit internal-file visibility control with manifests, shaders, compositor/support/import-receipt files hidden by default; selected-asset details with runtime type/state/generation/errors; source↔cooked relationships from the existing import receipts; context actions for select/copy/reveal/reload/refresh; canonical filesystem/registry path deduplication; and preserved cooked-model double-click creation plus the existing Inspector/Viewport drag payload.
-- Architecture: the browser consumes the existing `AssetBrowserModel` snapshot, `AssetManager` registry and Milestone 15 import receipts instead of duplicating asset/import systems. Model Inspector reveal, Inspector assignment, viewport placement and Milestone 3 model creation continue through their existing editor/document contracts.
-- Scope boundary: asset cards remain textual placeholders; no thumbnail/preview cache or generation (14), no new import/reimport processing (15), no scene open/save workflow (16), and no Play Toolbar work (17) is included.
-- Regression: `Scripts/Tests/EditorMilestone13ContentBrowserTests.py` plus updated `EditorAssetInteractionTests.py` and Milestone 6 reveal coverage; `ValidateEditor.bat` and Windows CI run the focused gate.
-- Next step: stop here and wait for explicit approval before starting Milestone 17.
+- Delivered: hierarchy/breadcrumb navigation, grid/list cards, search/filter/sort, source/cooked relationship, details, context actions, internal-file filtering and deduplication.
+- Regression: `Scripts/Tests/EditorMilestone13ContentBrowserTests.py` plus retained interaction tests.
 
 ## 14. Thumbnail / Preview System — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 14 implementation commit on `prototype`.
-- Delivered: renderer-neutral 128×128 previews for models, materials and textures; a fixed studio preview camera plus three-light rig; model bounds fitting and CPU triangle rasterization; material-sphere previews using authored colour/roughness/metallic/emissive values; aspect-correct texture previews over an alpha checkerboard; selected-asset preview presentation and a non-blocking thumbnail cache strip in Content Browser; queued/generating/error placeholders; explicit regenerate-one/all controls; and clean cache shutdown.
-- Async/cache design: PlagC `JobSystem` workers load/import immutable source data and generate owned RGBA buffers only. At most two thumbnail jobs run concurrently; the cache is bounded to 256 entries. File timestamp/size plus asset generation form the invalidation fingerprint, request serials reject stale results, and worker completion is observed through `JobGroup::pending` before the task storage is retired. The main/editor thread alone creates/destroys UI textures.
-- Backend isolation: no Ogre/OpenGL/Vulkan object enters the thumbnail generator. Completed pixels use the existing renderer-neutral `CreateUiTexture` path, so the same preview cache feeds either renderer backend without a second Ogre root/scene or renderer-affine worker work.
-- Scope boundary: no source import/reimport workflow changes (15), scene serialization/workflow (16), Play Toolbar work (17), or general editor/game debug visualization (29/34) is included.
-- Regression: `Scripts/Tests/EditorMilestone14ThumbnailTests.py` plus the retained Milestone 13 browser regressions; `ValidateEditor.bat` and Windows Editor CI run the focused M14 gate.
+- Delivered: renderer-neutral model/material/texture previews, fixed studio setup, async bounded cache, generation rejection, placeholders, invalidation and main-thread UI texture upload.
+- Regression: `Scripts/Tests/EditorMilestone14ThumbnailTests.py`.
 
 ## 15. Asset Import Workflow — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: `2bf403438f38d6672a8cbccdc622197c4db6d2b3` on `prototype`.
-- Delivered: source-to-cooked model and texture import/reimport UI; persisted import receipts retaining source, cooked destination and import settings; configurable scale, coordinate/handedness conversion, UV orientation, normal generation/preservation, tangent/material/animation inclusion, texture vertical flip; standalone PNG/JPEG import as first-class `TextureAsset`; actionable visible/logged import errors; and immutable-generation reload of known cooked assets after reimport.
-- Architecture: source processing and cooked serialization remain in the asset layer/`AssetManager`; the editor orchestrates the workflow without Ogre-specific coupling.
-- Regression: `Scripts/Tests/EditorMilestone15Tests.py` covers the import options, texture asset path, receipt persistence, import/reimport execution, editor settings surface, error handling and normal editor-frame integration; it is wired into `ValidateEditor.bat` and Windows CI.
-- Validation note: the exact Windows run for the original Milestone 15 commit was cancelled by CI concurrency after newer `prototype` pushes, not failed; the implementation remains covered by the branch-level Windows Editor validation gate.
-- Review: re-audited against the current `prototype` implementation before this documentation correction; no acceptance-scope work remains for Milestone 15.
+- Commit evidence: `2bf403438f38d6672a8cbccdc622197c4db6d2b3`.
+- Delivered: model/texture import/reimport, receipts, scale/coordinate/normal/tangent/material/animation/UV settings, texture import and surfaced errors.
+- Regression: `Scripts/Tests/EditorMilestone15Tests.py`.
 
 ## 17. Play Toolbar — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 17 completion commit on `prototype`.
-- Delivered: an always-visible centered transport with explicit `EDIT`, `PLAYING`, and `PAUSED` state; stable Play/Pause-or-Resume/Step/Stop controls with context-sensitive enabled states; and transport shortcuts `F5` Play/Stop, `F6` Pause/Resume, and `F7` single-step while paused.
-- Shortcut routing: transport shortcuts are suppressed while typing, while an ImGui item is active, while modal/popup UI is open, or while Ctrl/Alt/Super modifiers are held, preventing editor transport commands from leaking through text/modal workflows.
-- Runtime presentation: Scene View receives a play-state border and compact `PLAYING`/`PAUSED` banner that explicitly identifies authoring as locked and shows the applicable transport shortcuts. The runtime state is therefore visible even when focus is in the viewport rather than the menu bar.
-- Transition semantics: entering Play commits any active Transform Inspector or viewport-gizmo transaction before cloning the runtime scene. `PlaySession` continues to clone the authoring document, authoring mutation remains rejected through `EditorSession::RequireStopped`, and Stop destroys the runtime clone so the unchanged authoring document becomes visible again.
-- Runtime integration: Milestone 17 reuses the existing `EditorPlayRuntime`/Milestone 18 lifecycle rather than creating a second simulation path. Runtime camera selection/fallback, physics fixed stepping, gameplay callbacks, animation update ordering, Pause/Step semantics and audio maintenance remain owned by their existing systems.
-- Scope boundary: no Console (19), Statistics/Profiler (20), general Editor Toolbar redesign (21), Menu Bar expansion (22), icon/font system (24), or broad Keyboard Shortcuts milestone (35) work is included beyond the transport-specific shortcuts required here.
-- Regression: `Scripts/Tests/EditorMilestone17PlayToolbarTests.py` plus the existing `EditorPlayRuntimeTests.py`; `ValidateEditor.bat` and Windows Editor CI run the focused gate.
-- Next step: stop here and wait for explicit approval before starting any other milestone.
+- Commit evidence: `5e6aea8446a7c6121a16f2c803fc21068d124a88`.
+- Delivered: state-driven Play/Pause/Resume/Step/Stop transport, F5/F6/F7 routing, runtime state presentation, authoring lock, committed pre-Play edit transactions and clean return to authoring.
+- Runtime integration: existing `PlaySession`/`EditorPlayRuntime` owns camera, physics, animation/gameplay lifecycle and isolated runtime state.
+- Regression: `Scripts/Tests/EditorMilestone17PlayToolbarTests.py` plus runtime tests.
 
 ## 18. Runtime / Game Logic — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 18 implementation commit on `prototype`.
-- Delivered: engine-owned `GameplayRuntime`/`GameplaySystem` lifecycle hooks for Start/Stop/Pause/Resume, routed input, variable Update, physics-scheduled FixedUpdate, trigger/collision callbacks and LateUpdate; isolated gameplay input state with keyboard/mouse capture gates and focus-loss reset; fixed-step gameplay callbacks executed through the existing `PhysicsSystem::Advance` scheduler; deterministic non-sensor collision Enter/Stay/Exit routing by stable physics/entity identity; and explicit Play-frame ordering of gameplay input/update → fixed gameplay/physics → physics events → animation → late gameplay/audio maintenance.
-- Pause/Step semantics: a paused frame with no Step performs no gameplay Update/FixedUpdate/LateUpdate and only synchronizes structure; Step consumes exactly one configured fixed interval and advances gameplay, physics, physics events and animation once while remaining paused. Pause/Resume lifecycle callbacks fire only on state transitions.
-- Architecture: Play continues to simulate the isolated runtime clone, never the authoring `World`; Jolt callbacks only update an internal thread-safe contact registry and never execute ECS or user gameplay code; collision events are translated back through `PhysicsSystem` after workers finish; no Jolt/EnTT/Ogre implementation object leaks into `GameplaySystem` contracts.
-- Regression: `Scripts/Tests/EditorMilestone18Tests.py` covers lifecycle, editor-vs-game input isolation, fixed-step callback ordering, Pause/Step semantics, trigger/collision routing, animation/audio ordering, validation wiring and the Milestone 19 scope boundary. Existing `EditorPlayRuntimeTests.py` was updated for the fixed-step gameplay callback path. Both are wired into `ValidateEditor.bat` and Windows Editor CI.
-- Scope boundary: no Console (19), profiler UI (20), toolbar redesign (21), menu work (22), theme/icons, scripting language, audio authoring or later editor milestone work is included.
-- Next step: stop here and wait for explicit approval before starting any other milestone.
+- Delivered: gameplay lifecycle, isolated input routing, variable/fixed/late update hooks, contact event routing, pause/step semantics and animation/audio ordering over the isolated runtime world.
+- Regression: `Scripts/Tests/EditorMilestone18Tests.py` and `EditorPlayRuntimeTests.py`.
 
 ## 19. Console — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 19 implementation commit on `prototype`.
-- Delivered: severity-specific compact badges and styling; compact single-line messages with click-to-expand full details; timestamp/category/thread/sequence diagnostics; dynamic category selection plus existing search/severity filtering; consecutive repeated-message collapsing with repeat counts and first/last timing; per-entry context actions for copying message/details/category; clear and auto-scroll controls; and a dedicated Profiler tab that keeps giant `PROFILER` reports out of the normal diagnostic stream.
-- Architecture: the Console continues to consume immutable `Log::Snapshot()` records and the existing backend `FilterLogRecords` contract. Milestone 19 adds presentation/grouping only; it does not mutate engine log records, introduce a second logger, or absorb Statistics/Profiler ownership from Milestone 20.
-- Scope boundary: no Statistics/Profiler graphs (20), Editor Toolbar redesign (21), Menu Bar expansion (22), theme/icon system (23/24), or notification/toast framework (39) is included.
-- Regression: `Scripts/Tests/EditorMilestone19ConsoleTests.py`; existing M17/M18 roadmap assertions were relaxed so completed downstream work no longer invalidates their historical scope tests. `ValidateEditor.bat` and Windows Editor CI run the focused M19 gate.
+- Delivered: severity styling, compact/expandable messages, category/search filters, repeated-message collapsing, copy/context actions and separate profiler-report presentation.
+- Architecture: consumes immutable `Log::Snapshot()` data and does not replace the logger or M20 profiler ownership.
+- Regression: `Scripts/Tests/EditorMilestone19ConsoleTests.py`.
+
+## 21. Editor Toolbar — `DONE`
+
+- Date: 2026-10-31
+- Delivered: a global toolbar between the menu bar and dockspace with Save/dirty state, command-aware Undo/Redo, Translate/Rotate/Scale, World/Local, Pivot/Center, Snap, the existing M17 transport and access to persistent Editor settings.
+- Composition: the toolbar reuses `EditorFileController`, `EditorSession`/`SceneDocument`, shared `ViewportState`, M17 transport actions and `EditorPreferences`; it does not duplicate any authoring/runtime subsystem.
+- Presentation: M24 supplies the final vector-icon presentation without changing M21 action semantics.
+- Scope boundary: no M23 theme redesign, M22 menu ownership or broad M35 shortcut redesign is included.
+- Regression: `Scripts/Tests/EditorMilestone21ToolbarTests.py`; local and Windows validation run the focused gate.
 
 ## 22. Menu Bar — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 22 implementation series on `prototype`.
-- Delivered: the full File/Edit/Entity/Assets/View/Window/Debug/Help menu surface; existing context-safe file/edit shortcuts; authoring-aware entity create/duplicate/delete/clear-selection actions; asset-browser refresh and import/state-machine access; centralized panel visibility under Window; viewport/physics editor diagnostics under Debug; and editor shortcut/documentation discovery under Help.
-- Composition: File remains owned by `EditorFileController`; Edit and the existing View compatibility surface remain in `EditorLayer`; `EditorMenuController` composes the missing menu groups and reuses `SceneDocument`, hierarchy locks, asset-panel state and viewport/debug state instead of introducing parallel command systems. The legacy Scene menu is retained as a compatibility alias while Entity is the authoritative M22 authoring menu.
-- Context policy: destructive authoring commands are disabled during Play, during transient document edits, with no selection, or when the hierarchy entity is locked as applicable. Import authoring is Play-gated while pure presentation/window/debug actions remain available.
-- Scope boundary: no workspace persistence/reset behavior (25), new icon/font system (24), broad shortcut redesign (35), or drag/drop redesign (28) is included.
-- Regression: `Scripts/Tests/EditorMilestone22MenuBarTests.py`; M19's historical downstream-status assertion was relaxed, and both local and Windows validation gates include M22.
+- Delivered: File/Edit/Entity/Assets/View/Window/Debug/Help menus, context-sensitive authoring actions and existing shortcut integration.
+- Composition: existing controllers remain owners; `EditorMenuController` composes the menu surface without parallel mutation systems.
+- Regression: `Scripts/Tests/EditorMilestone22MenuBarTests.py`.
+
+## 24. Icons / Fonts — `DONE`
+
+- Date: 2026-10-31
+- Delivered: a renderer-neutral `EditorVisualAssets` catalog covering entities, folders/assets, model/texture/material, camera/light/physics, Save/Undo/Redo, transform-space/pivot/snap, Play transport and settings; reusable vector-drawn `IconButton`/inline icon primitives; and accessible icon names for non-text surfaces.
+- Fonts: editor text uses Dear ImGui's built-in embedded default font through `ImGui::GetFont()`; PlagC ships no raw TTF/OTF source font as part of this milestone.
+- Rendering boundary: icons are ImGui draw-list primitives only; no Ogre/OpenGL/Vulkan resource is exposed to the icon system. The M21 toolbar uses this catalog for its authoring and transport presentation.
+- Scope boundary: no M23 theme/spacing/color-system redesign is included.
+- Regression: `Scripts/Tests/EditorMilestone24IconFontTests.py`; local and Windows validation run the focused gate.
 
 ## 25. Docking / Workspace — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 25 implementation series on `prototype`.
-- Delivered: retained strong default workspace with hierarchy-left, inspector/statistics-right, content/console-bottom and viewport-center; explicit Save Workspace, Restore Saved Workspace and Reset to Default Layout actions under Window → Workspace; automatic startup restore when a saved layout exists; ImGui docking/window geometry persistence plus PlagC panel-visibility persistence; automatic save when ImGui marks workspace settings dirty; and local-only workspace storage under `User/Editor/`.
-- Detached/docked policy: only the full-screen DockHost is `NoDocking`; editor tool windows remain ordinary dockable windows, so detached positions and docking relationships are serialized by Dear ImGui and restored with the workspace.
-- Ownership: Dear ImGui remains the owner of window/docking serialization; `EditorWorkspace` owns lifecycle, local file paths, panel visibility and reset orchestration. Workspace state is presentation-only and never enters scene/runtime serialization.
-- Scope boundary: no selection changes (26), undo/redo expansion (27), drag/drop redesign (28), theme work (23) or icon/font work (24) is included.
-- Regression: `Scripts/Tests/EditorMilestone25WorkspaceTests.py`; historical M19/M22 downstream assertions were relaxed and the M25 gate preserves concurrently added M24/M27 regressions in local and Windows validation.
+- Delivered: strong default layout, Save/Restore/Reset Workspace actions, startup restore, ImGui docking/window persistence, PlagC panel visibility persistence and local `User/Editor/` storage.
+- Ownership: workspace state is presentation-only; Dear ImGui owns docking geometry while `EditorWorkspace` owns lifecycle and reset orchestration.
+- Regression: `Scripts/Tests/EditorMilestone25WorkspaceTests.py`.
+
+## 27. Undo / Redo — `DONE`
+
+- Date: 2026-10-31
+- Delivered: verified command-backed create/delete/duplicate/rename/reparent, camera/light/model/physics/material and component changes; action-aware `Add`/`Edit`/`Remove` labels for renderer/physics/animator component commands; and command labels surfaced through both menu and toolbar history controls.
+- Transaction semantics: transform Inspector and viewport-gizmo gestures continue to preview transiently and commit exactly one `TransformCommand` through `RecordApplied`; history branching, bounded capacity, saved/dirty cursor state and re-entry protection remain canonical in `CommandHistory`.
+- Runtime isolation: `EditorSession` rejects authoring history mutation while Play is active; no second history layer was introduced.
+- Regression: `Scripts/Tests/EditorMilestone27UndoRedoTests.py` plus existing document/transform regressions; local and Windows validation run the focused gate.
 
 ## 28. Drag & Drop — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 28 implementation series on `prototype`.
-- Delivered: preserved cooked-model asset→Viewport placement and asset→Inspector model replacement; preserved persistent-ID hierarchy reparent/root-drop; added first-class `.pgmaterial` drag sources from Content Browser previews and command-backed material→selected-slot assignment; preserved cooked model/animation-source drag into Animator with clip, skeleton-layout and controller-graph validation; and added a shared frontend payload contract with defensive text decoding plus explicit green/red drop feedback for asset-facing targets.
-- Validation: viewport drops reject Play-mode authoring and malformed text payloads; model assignment continues to require cooked `ModelAsset` resources under `Assets://Cooked`; material slots validate `.pgmaterial` paths, load the material and validate referenced textures before `SceneDocument::SetModelMaterial`; Animator source drops require a rendered model, at least one clip, skeleton compatibility and a valid controller graph; hierarchy reparent payloads require the expected persistent-ID size and reject locked/self targets while `SceneDocument` remains the final cycle/parent authority.
-- Feedback: viewport targets receive a visible accept/reject border and message; material slots show explicit `[DROP]`/`[NO]` feedback including locked/Play read-only rejection; existing ImGui hierarchy/model/animator drop targets retain their native target highlighting while their validation messages flow through the existing editor log/status surfaces.
-- Architecture: drag/drop payloads remain frontend identifiers only. All resulting scene mutations continue through `SceneDocument`; asset resolution stays in `AssetManager`/material loaders; no Ogre/Jolt/EnTT implementation type crosses the drag/drop boundary.
-- Scope boundary: no Selection System multi-select work (26), general Editor Preview Rendering (29), notification/toast framework (39), or Asset Manager lifecycle redesign (31) is included.
-- Regression: `Scripts/Tests/EditorMilestone28DragDropTests.py` plus existing asset-interaction, hierarchy, material and Animator regressions; local and Windows editor validation both include the M28 gate while preserving concurrent M30 coverage.
+- Delivered: cooked-model asset→Viewport and asset→Inspector placement/replacement; hierarchy reparent/root-drop; `.pgmaterial`→slot assignment; animation-source→Animator; validation and visible accept/reject feedback through a shared frontend payload contract.
+- Architecture: payloads are frontend identifiers only; all mutations remain in `SceneDocument` and asset resolution remains in asset/material systems.
+- Regression: `Scripts/Tests/EditorMilestone28DragDropTests.py` plus existing asset/hierarchy/material/Animator tests.
+
+## 30. Rendering Quality — `DONE`
+
+- Date: 2026-10-31
+- Delivered: a renderer-neutral `RenderQuality` audit contract plus a live toolbar quality surface for HDR/tone mapping, bloom, scene shadows, exposure, bloom strength/threshold, environment state, logical/framebuffer dimensions, DPI scale, MSAA reporting and validation notices/errors.
+- PBS validation: the existing material path is regression-protected for base colour, normal, metallic, roughness, AO/occlusion and emissive inputs; base-colour/emissive maps are treated as sRGB while normal/metallic/roughness/AO maps remain linear.
+- HDR/environment validation: the Ogre path uses an RGBA16F scene target, bloom passes, tone mapping/exposure, shadow-node gating, skybox/environment handling and PBS reflection binding. The same renderer/editor quality contracts cover Ogre OpenGL and the pinned Vulkan build path.
+- Resize/UI validation: Editor viewport targets are sized in framebuffer pixels using `DisplayFramebufferScale`; ImGui submission also consumes framebuffer scaling and submits through the renderer-neutral UI path.
+- MSAA boundary: the current Editor target is deliberately reported as a validated **1× baseline**. The audit recognizes canonical 1/2/4/8 sample counts but does not claim unsupported multisampling; adding a selectable multisampled target remains a renderer capability expansion rather than a false M30 claim.
+- Scope boundary: no M29 editor-preview policy, M34 general debug visualization or M23 visual theme work is included.
+- Regression: `Scripts/Tests/EditorMilestone30RenderingQualityTests.py`; local and Windows validation run the focused gate.
 
 ## Historical architecture note
 
-Earlier revisions of this document contained a much longer backend handoff description. Its important contracts are condensed above and remain binding: owner-thread authoring, persistent IDs, command-backed edits, isolated Play runtime, renderer-neutral editor contracts, generation-safe asynchronous data, and no ImGui dependency in engine hot paths.
+Earlier revisions contained longer backend handoff notes. Their binding contracts remain represented above: owner-thread authoring, persistent IDs, command-backed edits, isolated Play runtime, renderer-neutral editor contracts, generation-safe asynchronous data, and no ImGui dependency in engine hot paths.
+
+## Current execution stop
+
+The explicitly requested batch **21, 24, 27, 30** is complete in implementation scope. Stop here after exact branch validation and wait for explicit approval before starting another milestone.
