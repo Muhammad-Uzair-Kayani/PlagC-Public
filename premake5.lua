@@ -174,9 +174,6 @@ project "Sandbox"
     filter { "system:windows", "configurations:Dist" }
         kind "WindowedApp"
         entrypoint "mainCRTStartup"
-        postbuildcommands {
-            'python "' .. root .. '/Scripts/PruneDistOutput.py" --output "%{cfg.targetdir}"'
-        }
 
     filter "system:linux"
         links { "pthread", "dl", "m" }
@@ -226,9 +223,6 @@ project "Editor"
     filter { "system:windows", "configurations:Dist" }
         kind "WindowedApp"
         entrypoint "mainCRTStartup"
-        postbuildcommands {
-            'python "' .. root .. '/Scripts/PruneDistOutput.py" --output "%{cfg.targetdir}"'
-        }
 
     filter "system:linux"
         links { "pthread", "dl", "m" }
