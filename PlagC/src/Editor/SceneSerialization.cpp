@@ -201,7 +201,7 @@ AnimationStateMachine ReadAnimationGraph(const Value& value) {
         Fail("Invalid animation controller array");
     for(const auto& item:parameters.GetArray()) {
         Fields(item,{"name","type","initial"});
-        const auto type=Get(item,"type");
+        const auto& type=Get(item,"type");
         if(!type.IsInt() || type.GetInt()<0 || type.GetInt()>static_cast<int>(AnimationParameterType::Trigger))
             Fail("Invalid animation parameter type");
         graph.parameters.push_back({String(Get(item,"name")),static_cast<AnimationParameterType>(type.GetInt()),Number(Get(item,"initial"))});
@@ -219,7 +219,7 @@ AnimationStateMachine ReadAnimationGraph(const Value& value) {
         if(!conditions.IsArray() || conditions.Size()>MaxAnimationItems) Fail("Invalid animation condition array");
         for(const auto& conditionValue:conditions.GetArray()) {
             Fields(conditionValue,{"parameter","compare","value"});
-            const auto compare=Get(conditionValue,"compare");
+            const auto& compare=Get(conditionValue,"compare");
             if(!compare.IsInt() || compare.GetInt()<0 || compare.GetInt()>static_cast<int>(AnimationCompare::NotEqual))
                 Fail("Invalid animation condition comparison");
             transition.conditions.push_back({String(Get(conditionValue,"parameter")),static_cast<AnimationCompare>(compare.GetInt()),Number(Get(conditionValue,"value"))});
@@ -327,7 +327,7 @@ std::shared_ptr<const ColliderGeometry> ReadGeometry(const Value& value) {
     geometry->indices.reserve(indices.Size()); for(const auto& item:indices.GetArray()) geometry->indices.push_back(Unsigned(item));
     geometry->children.reserve(children.Size());
     for(const auto& item:children.GetArray()) {
-        Fields(item,{"type","dimensions","transform"}); const auto type=Get(item,"type");
+        Fields(item,{"type","dimensions","transform"}); const auto& type=Get(item,"type");
         if(!type.IsInt() || type.GetInt()<0 || type.GetInt()>static_cast<int>(ColliderType::Heightfield)) Fail("Invalid child collider type");
         ColliderChild child; child.type=static_cast<ColliderType>(type.GetInt()); child.dimensions=Vector(Get(item,"dimensions"));
         child.transform=TransformValue(Get(item,"transform")); geometry->children.push_back(std::move(child));
@@ -355,7 +355,7 @@ void WritePhysics(Writer& w,const PhysicsComponent& physics) {
 PhysicsComponent ReadPhysics(const Value& value) {
     Fields(value,{"motion","layer","mask","mass","gravityScale","linearDamping","angularDamping","allowSleep","continuous","sensor","group","collider"});
     PhysicsComponent physics;
-    const auto motion=Get(value,"motion"); const auto layer=Get(value,"layer");
+    const auto& motion=Get(value,"motion"); const auto& layer=Get(value,"layer");
     if(!motion.IsInt() || motion.GetInt()<0 || motion.GetInt()>static_cast<int>(MotionType::Kinematic)) Fail("Invalid physics motion type");
     if(!layer.IsInt() || layer.GetInt()<0 || layer.GetInt()>=static_cast<int>(CollisionLayer::Count)) Fail("Invalid physics collision layer");
     physics.body.motion=static_cast<MotionType>(motion.GetInt()); physics.body.layer=static_cast<CollisionLayer>(layer.GetInt());
@@ -366,7 +366,7 @@ PhysicsComponent ReadPhysics(const Value& value) {
     physics.body.allowSleep=Boolean(Get(value,"allowSleep")); physics.body.continuous=Boolean(Get(value,"continuous")); physics.body.sensor=Boolean(Get(value,"sensor"));
     physics.body.collisionGroup=Unsigned(Get(value,"group"));
     const auto& collider=Get(value,"collider"); Fields(collider,{"type","dimensions","friction","restitution","center","geometry"});
-    const auto type=Get(collider,"type");
+    const auto& type=Get(collider,"type");
     if(!type.IsInt() || type.GetInt()<0 || type.GetInt()>static_cast<int>(ColliderType::Heightfield)) Fail("Invalid collider type");
     physics.collider.type=static_cast<ColliderType>(type.GetInt()); physics.collider.dimensions=Vector(Get(collider,"dimensions"));
     physics.collider.material.friction=Number(Get(collider,"friction")); physics.collider.material.restitution=Number(Get(collider,"restitution"));
