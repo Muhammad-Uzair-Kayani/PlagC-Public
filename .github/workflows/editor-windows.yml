@@ -59,6 +59,7 @@ jobs:
           python Scripts\Tests\EditorMilestone24IconFontTests.py
           python Scripts\Tests\EditorMilestone25WorkspaceTests.py
           python Scripts\Tests\EditorMilestone27UndoRedoTests.py
+          python Scripts\Tests\EditorMilestone28DragDropTests.py
           python Scripts\Tests\EditorMilestone30RenderingQualityTests.py
           python Scripts\Tests\EditorGizmoTests.py
           python Scripts\Tests\EditorUiTextureTests.py
