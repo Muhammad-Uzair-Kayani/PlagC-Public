@@ -4,6 +4,7 @@
 #include <PlagC/Editor/EditorModels.h>
 #include <array>
 #include <string>
+#include <unordered_set>
 
 namespace PlagC {
 class Engine;
@@ -48,14 +49,18 @@ protected:
 };
 
 // Composite used by EditorLayer. The M13 browser remains the owner of navigation/cards;
-// M14 appends preview output without duplicating its asset model or filesystem workflow.
+// M14 appends preview output and M19 upgrades the Console without duplicating engine data.
 class EditorPreviewDataPanels final : public EditorDataPanels {
 public:
     ~EditorPreviewDataPanels();
     void Initialize(Engine&);
     void DrawContentBrowser(Engine&);
+    void DrawConsole(Engine&);
 private:
     Engine* engine_ = nullptr;
+    std::string consoleCategory_{"All"};
+    std::unordered_set<std::uint64_t> expandedConsole_;
+    bool collapseConsoleRepeats_ = true;
 };
 
 } // namespace PlagC::Editor
