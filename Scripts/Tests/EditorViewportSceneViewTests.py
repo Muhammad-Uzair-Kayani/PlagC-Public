@@ -15,29 +15,31 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         source = self.read("Editor/src/EditorViewportExperience.cpp")
         for token in (
             '"Translate"', '"Rotate"', '"Scale"',
-            '"Local"', '"World"',
-            '"Move Snap"', '"Rotate Snap"', '"Scale Snap"',
+            '"Local"', '"World"', '"Snap"',
             '"Perspective"', '"Orthographic"',
             '"Front"', '"Back"', '"Left"', '"Right"', '"Top"', '"Bottom"',
-            '"Focus"', '"Frame All"', '"Camera Speed"',
-            '"Grid"', '"Gizmos"', '"Wireframe"', '"Preview Light"', '"Exposure"',
+            '"Focus"', '"Frame All"', '"Speed"',
+            '"Grid"', '"Gizmos"', '"Wire"', '"Preview Light"', '"Exposure"',
+            '"Move"', '"Angle"', '"Scale Snap"',
         ):
             self.assertIn(token, source)
 
     def test_scene_view_draws_adaptive_grid_axes_and_orientation_indicator(self):
         source = self.read("Editor/src/EditorViewportExperience.cpp")
-        self.assertIn("DrawAdaptiveGrid", source)
-        self.assertIn("DrawWorldAxes", source)
-        self.assertIn("DrawOrientationIndicator", source)
-        self.assertIn("NiceGridStep", source)
-        self.assertIn("ProjectPoint", source)
-        self.assertIn("IM_COL32", source)
+        self.assertIn("AdaptiveGridSpacing", source)
+        self.assertIn("DrawGrid", source)
+        self.assertIn("DrawOrientation", source)
+        self.assertIn("camera.target.x/spacing", source)
+        self.assertIn("IM_COL32(210,70,70,160)", source)
+        self.assertIn("IM_COL32(70,120,225,160)", source)
 
-    def test_scene_view_selection_feedback_uses_persistent_selection(self):
+    def test_scene_view_selection_feedback_uses_document_selection_snapshot(self):
         source = self.read("Editor/src/EditorViewportExperience.cpp")
-        self.assertIn("entity.selected", source)
-        self.assertIn("DrawSelectionBounds", source)
-        self.assertIn("document.PersistentID", source)
+        self.assertIn("session.ViewDocument().Snapshot()", source)
+        self.assertIn("e.selected", source)
+        self.assertIn("DrawSelectionFeedback", source)
+        self.assertIn("state.selectionFeedback", source)
+        self.assertIn("selected->record.name.c_str()", source)
 
     def test_viewport_picking_and_empty_space_deselection_are_renderer_backed(self):
         app = self.read("Editor/src/EditorApp.cpp")
@@ -52,22 +54,23 @@ class EditorViewportSceneViewTests(unittest.TestCase):
     def test_scene_view_exposes_perspective_and_real_orthographic_projection(self):
         viewport = self.read("PlagC/include/PlagC/Editor/EditorModels.h")
         renderer = self.read("PlagC/include/PlagC/Renderer/Renderer.h")
-        ogre = self.read("PlagC/src/Renderer/OgreRenderer.cpp")
+        projection = self.read("PlagC/src/Renderer/OgreCameraProjection.cpp")
         app = self.read("Editor/src/EditorApp.cpp")
         self.assertIn("bool orthographic = false", viewport)
         self.assertIn("float orthographicHeight", viewport)
         self.assertIn("CameraProjection", renderer)
         self.assertIn("SetCameraProjection", renderer)
-        self.assertIn("Ogre::PT_ORTHOGRAPHIC", ogre)
-        self.assertIn("setOrthoWindowHeight", ogre)
+        self.assertIn("Ogre::PT_ORTHOGRAPHIC", projection)
+        self.assertIn("setOrthoWindowHeight", projection)
         self.assertIn("viewport.orthographic ? PlagC::CameraProjection::Orthographic", app)
 
-    def test_focus_and_frame_all_use_scene_bounds(self):
+    def test_focus_and_frame_all_use_current_scene_entities(self):
         source = self.read("Editor/src/EditorViewportExperience.cpp")
-        self.assertIn("FocusSelected", source)
+        self.assertIn("FocusSelection", source)
         self.assertIn("FrameAll", source)
-        self.assertIn("BoundsForEntity", source)
-        self.assertIn("CombinedBounds", source)
+        self.assertIn("selected->record.transform.position", source)
+        self.assertIn("entities.front().record.transform.position", source)
+        self.assertIn("camera.target=P(center)", source)
 
     def test_editor_preview_lighting_and_environment_are_play_isolated(self):
         app = self.read("Editor/src/EditorApp.cpp")
@@ -79,11 +82,11 @@ class EditorViewportSceneViewTests(unittest.TestCase):
     def test_wireframe_and_exposure_are_real_renderer_settings(self):
         source = self.read("Editor/src/EditorViewportExperience.cpp")
         ogre = self.read("PlagC/src/Renderer/OgreRenderer.cpp")
-        self.assertIn("settings.wireframe=viewport_.wireframe", source)
-        self.assertIn("settings.exposure=viewport_.exposure", source)
-        self.assertIn("SetSettings(settings)", source)
-        self.assertIn("Ogre::SCENE_WIREFRAME", ogre)
-        self.assertIn("mToneMapParams.x=p.settings.exposure", ogre)
+        self.assertIn("settings.wireframe=!settings.wireframe", source)
+        self.assertIn('ImGui::DragFloat("Exposure",&settings.exposure', source)
+        self.assertIn("engine.Graphics().SetSettings(settings)", source)
+        self.assertIn("Ogre::PM_WIREFRAME", ogre)
+        self.assertIn("setNamedConstant(\"exposure\", settings.exposure)", ogre)
 
     def test_orthographic_asset_drop_uses_parallel_cursor_ray(self):
         source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
