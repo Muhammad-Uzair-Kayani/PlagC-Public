@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "EditorDragDrop.h"
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
 #include <imgui.h>
@@ -9,7 +10,6 @@
 namespace PlagC::Editor {
 namespace {
 
-constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL";
 Vec3 Add(Vec3 a, Vec3 b){ return {a.x+b.x,a.y+b.y,a.z+b.z}; }
 Vec3 Sub(Vec3 a, Vec3 b){ return {a.x-b.x,a.y-b.y,a.z-b.z}; }
 Vec3 Mul(Vec3 value,float scalar){ return {value.x*scalar,value.y*scalar,value.z*scalar}; }
@@ -95,16 +95,28 @@ void EditorLayer::AppendViewportAssetDrop(Engine& engine,EditorSession& session,
 
     DrawPlayStateOverlay(session,rect,*window->DrawList);
 
+    if(ImGui::GetDragDropPayload())
+    {
+        DragDrop::DrawRectFeedback(
+            rect.Min,rect.Max,
+            session.EditingEnabled()?DragDrop::CookedModel:nullptr,
+            "Drop cooked model into scene",
+            session.EditingEnabled()
+                ? "Viewport accepts cooked model assets"
+                : "Stop Play before dropping assets into the scene");
+    }
+
     if(!session.EditingEnabled()){ ImGui::End(); return; }
     const ImGuiID surface=window->GetID("ViewportSurface");
     if(ImGui::BeginDragDropTargetCustom(rect,surface))
     {
-        if(const ImGuiPayload* payload=ImGui::AcceptDragDropPayload(CookedModelPayload))
+        if(const ImGuiPayload* payload=ImGui::AcceptDragDropPayload(DragDrop::CookedModel))
         {
             try
             {
+                const std::string assetPath=DragDrop::TextPayload(*payload);
                 const auto position=DropPosition(editorCamera,viewport_,rect,ImGui::GetIO().MousePos);
-                CreateCookedModelEntity(engine,session,static_cast<const char*>(payload->Data),position);
+                CreateCookedModelEntity(engine,session,assetPath.c_str(),position);
             }
             catch(const std::exception& error)
             {
