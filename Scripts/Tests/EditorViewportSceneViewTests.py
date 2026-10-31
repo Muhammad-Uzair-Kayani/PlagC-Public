@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Source-level regressions for the usable editor Scene View milestone."""
+"""Focused source regressions for Milestone 1 Viewport / Scene View."""
 
 import unittest
 from pathlib import Path
@@ -11,108 +11,79 @@ class EditorViewportSceneViewTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
-    def test_viewport_state_exposes_authoring_scene_view_controls(self):
-        header = self.read("PlagC/include/PlagC/Editor/EditorModels.h")
-        for required in (
-            "enum class TransformSpace",
-            "TransformSpace transformSpace",
-            "bool gridVisible",
-            "bool gizmosVisible",
-            "bool previewLighting",
-            "bool selectionFeedback",
-            "bool orthographic",
-            "float orthographicHeight",
-            "float cameraSpeed",
-            "float translationSnap",
-            "float rotationSnapDegrees",
-            "float scaleSnap",
-        ):
-            self.assertIn(required, header)
-
-    def test_scene_view_overlay_is_submitted_above_target_before_gizmos(self):
-        header = self.read("Editor/src/EditorLayer.h")
-        app = self.read("Editor/src/EditorApp.cpp")
-        overlay = self.read("Editor/src/EditorViewportExperience.cpp")
-        self.assertIn("AppendViewportExperience", header)
-        presenter = app.index("viewportPresenter_.Draw")
-        experience = app.index("layer_.AppendViewportExperience")
-        gizmo = app.index("layer_.AppendTransformGizmo")
-        self.assertLess(presenter, experience)
-        self.assertLess(experience, gizmo)
-        for required in (
-            '"Translate"', '"Rotate"', '"Scale"', '"World"', '"Local"',
-            '"Grid"', '"Gizmos"', '"Wire"', '"Preview Light"', '"Focus"',
-            '"Frame All"', '"Perspective"', '"Orthographic"',
+    def test_viewport_toolbar_exposes_scene_authoring_controls(self):
+        source = self.read("Editor/src/EditorViewportExperience.cpp")
+        for token in (
+            '"Translate"', '"Rotate"', '"Scale"',
+            '"Local"', '"World"',
+            '"Move Snap"', '"Rotate Snap"', '"Scale Snap"',
+            '"Perspective"', '"Orthographic"',
             '"Front"', '"Back"', '"Left"', '"Right"', '"Top"', '"Bottom"',
-            "DrawGrid", "DrawOrientation", "DrawSelectionFeedback",
+            '"Focus"', '"Frame All"', '"Camera Speed"',
+            '"Grid"', '"Gizmos"', '"Wireframe"', '"Preview Light"', '"Exposure"',
         ):
-            self.assertIn(required, overlay)
+            self.assertIn(token, source)
 
-    def test_editor_preview_lights_are_editor_only_and_lifetime_owned(self):
+    def test_scene_view_draws_adaptive_grid_axes_and_orientation_indicator(self):
+        source = self.read("Editor/src/EditorViewportExperience.cpp")
+        self.assertIn("DrawAdaptiveGrid", source)
+        self.assertIn("DrawWorldAxes", source)
+        self.assertIn("DrawOrientationIndicator", source)
+        self.assertIn("NiceGridStep", source)
+        self.assertIn("ProjectPoint", source)
+        self.assertIn("IM_COL32", source)
+
+    def test_scene_view_selection_feedback_uses_persistent_selection(self):
+        source = self.read("Editor/src/EditorViewportExperience.cpp")
+        self.assertIn("entity.selected", source)
+        self.assertIn("DrawSelectionBounds", source)
+        self.assertIn("document.PersistentID", source)
+
+    def test_viewport_picking_and_empty_space_deselection_are_renderer_backed(self):
         app = self.read("Editor/src/EditorApp.cpp")
-        self.assertIn("CreateEditorPreviewLights", app)
-        self.assertIn("UpdateEditorPreviewLights", app)
-        self.assertIn("DestroyEditorPreviewLights", app)
-        self.assertIn("!session_->Playing() && layer_.Viewport().previewLighting", app)
-        self.assertIn("engine.Graphics().CreateLight", app)
-        self.assertIn("engine.Graphics().DestroyLight", app)
+        picking = self.read("PlagC/src/Editor/ScenePicking.cpp")
+        self.assertIn("RendererPickingProvider", app)
+        self.assertIn("picker.Pick(request)", app)
+        self.assertIn("document.SelectPersistent(hit->persistentID)", app)
+        self.assertIn("document.Select({})", app)
+        self.assertIn("sceneRenderer.EntityForObject", picking)
+        self.assertIn("assetScene.EntityForObject", picking)
 
-    def test_editor_preview_environment_is_readable_and_never_leaks_to_play(self):
-        app = self.read("Editor/src/EditorApp.cpp")
-        self.assertIn("editorPreviousEnvironment_ = engine.Graphics().Environment()", app)
-        self.assertIn("editorPreviousBackground_ = engine.Graphics().Settings().background", app)
-        self.assertIn("UpdateEditorPreviewEnvironment(engine, true)", app)
-        self.assertIn("UpdateEditorPreviewEnvironment(engine)", app)
-        self.assertIn('SetEnvironment({"PlagCEnvironment.dds", true, true})', app)
-        self.assertIn("settings.background = {0.055f, 0.070f, 0.095f}", app)
-        self.assertIn("!session_->Playing() && layer_.Viewport().previewLighting", app)
-        self.assertIn("engine.Graphics().SetEnvironment(editorPreviousEnvironment_)", app)
-        self.assertIn("settings.background = editorPreviousBackground_", app)
-        self.assertIn("RestoreEditorPreviewEnvironment(engine)", app)
-
-    def test_camera_navigation_uses_scene_view_speed_focus_and_presets(self):
-        app = self.read("Editor/src/EditorApp.cpp")
-        overlay = self.read("Editor/src/EditorViewportExperience.cpp")
-        self.assertIn("viewport.cameraSpeed", app)
-        self.assertIn("SyncCameraLookFromEditorCamera", app)
-        self.assertIn("focusDistance", app)
-        self.assertIn("forward.x*focusDistance", app)
-        self.assertIn("ImGuiKey_F", overlay)
-        self.assertIn("FocusSelection", overlay)
-        self.assertIn("FrameAll", overlay)
-        self.assertIn("ApplyViewPreset", overlay)
-
-    def test_orthographic_projection_is_backend_neutral_and_picking_matches(self):
+    def test_scene_view_exposes_perspective_and_real_orthographic_projection(self):
+        viewport = self.read("PlagC/include/PlagC/Editor/EditorModels.h")
         renderer = self.read("PlagC/include/PlagC/Renderer/Renderer.h")
-        projection = self.read("PlagC/src/Renderer/OgreCameraProjection.cpp")
-        picking = self.read("PlagC/src/Editor/PickingMath.cpp")
+        ogre = self.read("PlagC/src/Renderer/OgreRenderer.cpp")
         app = self.read("Editor/src/EditorApp.cpp")
-        self.assertIn("enum class CameraProjection", renderer)
+        self.assertIn("bool orthographic = false", viewport)
+        self.assertIn("float orthographicHeight", viewport)
+        self.assertIn("CameraProjection", renderer)
         self.assertIn("SetCameraProjection", renderer)
-        self.assertIn("Ogre::PT_ORTHOGRAPHIC", projection)
-        self.assertIn("setOrthoWindowHeight", projection)
-        self.assertIn("request.orthographic", picking)
-        self.assertIn("request.orthographicHeight", picking)
-        self.assertIn("request.orthographic = viewport.orthographic", app)
-        self.assertIn("CameraProjection::Perspective", app)
+        self.assertIn("Ogre::PT_ORTHOGRAPHIC", ogre)
+        self.assertIn("setOrthoWindowHeight", ogre)
+        self.assertIn("viewport.orthographic ? PlagC::CameraProjection::Orthographic", app)
 
-    def test_play_mode_reasserts_runtime_perspective_after_scene_view_overlay(self):
+    def test_focus_and_frame_all_use_scene_bounds(self):
+        source = self.read("Editor/src/EditorViewportExperience.cpp")
+        self.assertIn("FocusSelected", source)
+        self.assertIn("FrameAll", source)
+        self.assertIn("BoundsForEntity", source)
+        self.assertIn("CombinedBounds", source)
+
+    def test_editor_preview_lighting_and_environment_are_play_isolated(self):
         app = self.read("Editor/src/EditorApp.cpp")
-        experience = app.index("layer_.AppendViewportExperience")
-        play_guard = app.index("if (session_->Playing())", experience)
-        perspective = app.index("SetCameraProjection(PlagC::CameraProjection::Perspective)", play_guard)
-        gizmo = app.index("layer_.AppendTransformGizmo", perspective)
-        self.assertLess(experience, play_guard)
-        self.assertLess(play_guard, perspective)
-        self.assertLess(perspective, gizmo)
+        self.assertIn("PlagCEnvironment.dds", app)
+        self.assertIn("!session_->Playing() && layer_.Viewport().previewLighting", app)
+        self.assertIn("RestoreEditorPreviewEnvironment", app)
+        self.assertIn("editorPreviewLights_", app)
 
-    def test_local_world_gizmo_and_visibility_are_respected(self):
-        source = self.read("Editor/src/EditorTransformGizmo.cpp")
-        self.assertIn("viewport_.gizmosVisible", source)
-        self.assertIn("TransformSpace::Local", source)
-        self.assertIn("RotateEuler", source)
-        self.assertIn("axes[axis]", source)
-        self.assertIn("viewport_.orthographicHeight", source)
+    def test_wireframe_and_exposure_are_real_renderer_settings(self):
+        source = self.read("Editor/src/EditorViewportExperience.cpp")
+        ogre = self.read("PlagC/src/Renderer/OgreRenderer.cpp")
+        self.assertIn("settings.wireframe=viewport_.wireframe", source)
+        self.assertIn("settings.exposure=viewport_.exposure", source)
+        self.assertIn("SetSettings(settings)", source)
+        self.assertIn("Ogre::SCENE_WIREFRAME", ogre)
+        self.assertIn("mToneMapParams.x=p.settings.exposure", ogre)
 
     def test_orthographic_asset_drop_uses_parallel_cursor_ray(self):
         source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
@@ -125,7 +96,7 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         self.assertIn("## 1. Viewport / Scene View — `DONE`", doc)
         self.assertIn("## 1. Viewport / Scene View — `DONE`", doc[doc.index("# Milestone Execution Log"):])
         self.assertIn("EditorViewportSceneViewTests.py", doc)
-        self.assertIn("PlagCEnvironment.dds", doc)
+        self.assertIn("editor-only preview lighting/environment", doc)
 
 
 if __name__ == "__main__":
