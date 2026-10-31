@@ -8,12 +8,23 @@
 
 namespace PlagC::Editor {
 
+EditorPreferences* EditorPreferences::active_ = nullptr;
+
 void EditorPreferences::Initialize(Engine& engine)
 {
+    active_ = this;
     const auto active = engine.Graphics().Backend();
     preferred_ = LoadRendererPreference(DefaultRendererPreferencePath(), active);
     if (preferred_ != RendererBackend::OpenGL && preferred_ != RendererBackend::Vulkan)
         preferred_ = active;
+}
+
+bool EditorPreferences::ToggleActive() noexcept
+{
+    if (!active_)
+        return false;
+    active_->Toggle();
+    return true;
 }
 
 bool EditorPreferences::Restart(Engine& engine)
@@ -161,6 +172,8 @@ void EditorPreferences::Draw(Engine& engine, EditorSession& session)
 
 void EditorPreferences::Shutdown() noexcept
 {
+    if (active_ == this)
+        active_ = nullptr;
     open_ = false;
     preferred_ = RendererBackend::Auto;
 }
