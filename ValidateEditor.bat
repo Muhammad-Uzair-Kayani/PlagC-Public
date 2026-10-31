@@ -35,6 +35,7 @@ for %%T in (
     EditorMilestone20StatisticsTests.py
     EditorMilestone21ToolbarTests.py
     EditorMilestone22MenuBarTests.py
+    EditorMilestone23ThemeTests.py
     EditorMilestone24IconFontTests.py
     EditorMilestone25WorkspaceTests.py
     EditorMilestone27UndoRedoTests.py
