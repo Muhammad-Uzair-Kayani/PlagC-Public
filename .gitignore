@@ -6,6 +6,7 @@
 /Tools/*
 !/Tools/AssetCooker/
 /Logs/
+/User/
 *.user
 *.suo
 .vs/
