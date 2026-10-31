@@ -24,7 +24,8 @@ A milestone is not complete because a backend API exists. It is complete when th
 9. Stop after the explicitly assigned milestone or batch and wait for approval before starting unrelated work.
 
 Assigned milestone lane for the completed implementation stream: **1, 4, 7, 10, 13, 17**.
-Current requested execution lane: **21, 24, 27, 30**. Concurrent completed work on **19, 22, 25, 28** is preserved in the same `prototype` history.
+Previously completed requested/concurrent lanes include **19, 22, 25, 28** and **21, 24, 27, 30**.
+Current explicitly authorized execution lane: **16, 20, 23, 26, 29**. Work remains milestone-scoped and each milestone is pushed before the next begins.
 
 ## Status legend
 
@@ -164,7 +165,7 @@ Preview scene/camera/lighting, model/material/texture thumbnails, cache and inva
 
 Import/reimport UI for supported model/texture formats, source-to-cooked relationship, scale/coordinate/normal/tangent/material/animation options and surfaced import errors.
 
-## 16. Scene File Workflow — `FOUNDATION`
+## 16. Scene File Workflow — `DONE`
 
 New/Open/Save/Save As/Recent scenes, dirty indicator, transactional replacement, unsaved prompts, scene-version validation, persistent hierarchy/components/material assignments and useful load/save errors.
 
@@ -399,6 +400,21 @@ Definition of done for the product milestone:
 - Delivered: model/texture import/reimport, receipts, scale/coordinate/normal/tangent/material/animation/UV settings, texture import and surfaced errors.
 - Regression: `Scripts/Tests/EditorMilestone15Tests.py`.
 
+## 16. Scene File Workflow — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 16 completion commit on `prototype`.
+- File workflow: New/Open/Save/Save As retain native dialogs and shortcuts; the File menu exposes dirty state, current scene identity, persistent Open Recent history (up to eight paths), Clear Recent and the last actionable file error. Recent opens use the same Save/Discard/Cancel policy as New/Open, and missing entries are removed without replacing the current document.
+- Close workflow: the window-close Save & Exit action routes through the same `EditorFileController::Save` path as File/toolbar Save. Untitled dirty scenes therefore open Save As and the window closes only after a successful save; cancel/failure leaves the editor open.
+- Transactional safety: `EditorSession::Open` loads and validates a replacement document before swapping it into the session. Scene saves stage complete output before destination replacement; history is marked saved only after successful replacement. Failed open/save keeps the current scene and dirty state intact.
+- Persistence: scene format v4 persists hierarchy/persistent IDs, transforms, cameras, lights, models, visibility/shadows, material overrides, physics bodies/layers/masks/collider/material/geometry state, animation source/playback, controller graph/current state/typed values and upper-body animation state while retaining v1/v2/v3 readers.
+- Persistent-ID correctness: load advances `nextPersistentID_` past the highest restored ID so post-load entity creation cannot collide with restored IDs.
+- Stable-resource boundary: raw `RenderableComponent` renderer handles remain explicitly nonserializable. Save fails with an actionable message directing authoring code to a stable `ModelComponent` asset reference; unsupported state is never silently dropped.
+- Validation: strict version/field/ID/hierarchy/path checks remain active; physics is revalidated on load and controller state is reconstructed against the resolved clip source. File errors are surfaced through `EDITOR-FILE` without destructive replacement.
+- Integration: the M21 toolbar and editor-close flow reuse the same file controller rather than introducing parallel save semantics.
+- Regression: `Scripts/Tests/EditorMilestone16SceneFileTests.py` is wired into local/Windows validation; `Scripts/Tests/EditorSerializationTests.cpp` covers v4 hierarchy/model/material/physics/animator/controller round-trip, fresh post-load IDs, unsupported raw-renderable rejection and failed-save rollback.
+- Scope boundary: no Play transport redesign (17), generic asset move/rename semantics (31), theme (23), selection (26), or preview-rendering policy (29) is included.
+
 ## 17. Play Toolbar — `DONE`
 
 - Date: 2026-10-31
@@ -482,6 +498,6 @@ Definition of done for the product milestone:
 
 Earlier revisions contained longer backend handoff notes. Their binding contracts remain represented above: owner-thread authoring, persistent IDs, command-backed edits, isolated Play runtime, renderer-neutral editor contracts, generation-safe asynchronous data, and no ImGui dependency in engine hot paths.
 
-## Current execution stop
+## Current execution sequence — `IN PROGRESS`
 
-The explicitly requested batch **21, 24, 27, 30** is complete in implementation scope. Stop here after exact branch validation and wait for explicit approval before starting another milestone.
+The user explicitly authorized **16 → 20 → 23 → 26 → 29**. Milestone 16 is completed by this commit; continue to Milestone 20 only after this commit passes validation and is pushed to `prototype`.

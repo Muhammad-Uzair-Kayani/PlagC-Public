@@ -98,12 +98,12 @@ class EditorMilestone10Tests(unittest.TestCase):
         self.assertIn("physicsDebugVisible_", self.layer)
         self.assertIn("physicsDebugAll_", self.layer)
 
-    def test_milestone_16_scene_file_scope_is_not_taken_over(self):
-        self.assertIn(
-            "Scene v3 cannot save renderable, physics or animator components yet",
-            self.scene,
-        )
-        self.assertIn("## 16. Scene File Workflow — `FOUNDATION`", self.docs)
+    def test_milestone_16_owns_scene_persistence_without_regressing_physics(self):
+        self.assertIn("CurrentSceneVersion = 4", self.scene)
+        self.assertIn('w.Key("physics"); WritePhysics', self.scene)
+        self.assertIn("ReadPhysics", self.scene)
+        self.assertIn("ValidatePhysicsBody", self.scene)
+        self.assertIn("## 16. Scene File Workflow — `DONE`", self.docs)
 
     def test_roadmap_marks_milestone_complete(self):
         self.assertIn("## 10. Physics Inspector — `DONE`", self.docs)
