@@ -65,6 +65,7 @@ class Engine
         double animationMs = 0.0;
         double sceneSyncMs = 0.0;
         double audioMs = 0.0;
+        double uiMs = 0.0;
     } timings;
 
     Log &Logger() { return logger_; }
