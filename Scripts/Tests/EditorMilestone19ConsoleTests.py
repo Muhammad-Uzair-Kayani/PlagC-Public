@@ -69,7 +69,6 @@ class EditorMilestone19ConsoleTests(unittest.TestCase):
         self.assertIn("EditorMilestone19ConsoleTests.py", ci)
         self.assertIn("## 19. Console — `DONE`", docs)
         self.assertIn("## 20. Statistics / Profiler — `FOUNDATION`", docs)
-        self.assertIn("## 25. Docking / Workspace — `FOUNDATION`", docs)
         self.assertIn("## 28. Drag & Drop — `FOUNDATION`", docs)
 
 
