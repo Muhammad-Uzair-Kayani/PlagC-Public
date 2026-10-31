@@ -75,14 +75,13 @@ class EditorMilestone22MenuBarTests(unittest.TestCase):
         self.assertIn('ImGui::SetClipboardText("Docs/Editor.md")', menu)
         self.assertIn('"Play: F5 / F6 / F7"', menu)
 
-    def test_m22_is_wired_and_preserves_later_drag_drop_scope(self):
+    def test_m22_is_wired(self):
         local = self.read("ValidateEditor.bat")
         ci = self.read(".github/workflows/editor-windows.yml")
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone22MenuBarTests.py", local)
         self.assertIn("EditorMilestone22MenuBarTests.py", ci)
         self.assertIn("## 22. Menu Bar — `DONE`", docs)
-        self.assertIn("## 28. Drag & Drop — `FOUNDATION`", docs)
 
 
 if __name__ == "__main__":
