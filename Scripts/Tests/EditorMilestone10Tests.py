@@ -33,40 +33,20 @@ class EditorMilestone10Tests(unittest.TestCase):
 
     def test_complete_rigidbody_authoring_surface_is_present(self):
         for text in (
-            '"Body Type"',
-            '"Mass"',
-            '"Gravity Scale"',
-            '"Trigger"',
-            '"Layer"',
-            '"Collision Mask"',
-            '"Linear Damping"',
-            '"Angular Damping"',
-            '"Allow Sleep"',
-            '"Continuous CCD"',
-            '"Collision Group"',
+            '"Body Type"', '"Mass"', '"Gravity Scale"', '"Trigger"', '"Layer"',
+            '"Collision Mask"', '"Linear Damping"', '"Angular Damping"',
+            '"Allow Sleep"', '"Continuous CCD"', '"Collision Group"',
         ):
             self.assertIn(text, self.inspector)
         for motion in ("MotionType::Static", "MotionType::Dynamic", "MotionType::Kinematic"):
             self.assertIn(motion, self.inspector)
 
     def test_collider_and_material_authoring_is_command_backed(self):
-        for text in (
-            '"Collider Type"',
-            '"Dimensions"',
-            '"Friction"',
-            '"Restitution"',
-            '"Center of Mass"',
-        ):
+        for text in ('"Collider Type"', '"Dimensions"', '"Friction"', '"Restitution"', '"Center of Mass"'):
             self.assertIn(text, self.inspector)
         for collider in (
-            "ColliderType::Box",
-            "ColliderType::Sphere",
-            "ColliderType::Capsule",
-            "ColliderType::Cylinder",
-            "ColliderType::ConvexHull",
-            "ColliderType::Compound",
-            "ColliderType::Mesh",
-            "ColliderType::Heightfield",
+            "ColliderType::Box", "ColliderType::Sphere", "ColliderType::Capsule", "ColliderType::Cylinder",
+            "ColliderType::ConvexHull", "ColliderType::Compound", "ColliderType::Mesh", "ColliderType::Heightfield",
         ):
             self.assertIn(collider, self.inspector)
         self.assertIn("session.EditDocument().SetPhysics(selected->entity,physics)", self.inspector)
@@ -107,7 +87,8 @@ class EditorMilestone10Tests(unittest.TestCase):
 
     def test_roadmap_marks_milestone_complete(self):
         self.assertIn("## 10. Physics Inspector — `DONE`", self.docs)
-        self.assertIn("## Milestone 10 — Physics Inspector — `DONE`", self.docs)
+        execution = self.docs[self.docs.index("# Milestone Execution Log"):]
+        self.assertIn("## 10. Physics Inspector — `DONE`", execution)
 
 
 if __name__ == "__main__":
