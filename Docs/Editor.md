@@ -188,7 +188,7 @@ Frame/FPS graphs, CPU/GPU/scene/physics/animation/asset/UI timings, job utilizat
 
 Save/undo/redo, transform tools, local/world, pivot/center, snap, Play transport, settings and icon-based presentation.
 
-## 22. Menu Bar — `FOUNDATION`
+## 22. Menu Bar — `DONE`
 
 Complete File/Edit/Entity/Assets/View/Window/Debug/Help menus, shortcuts and context-sensitive enable/disable behavior.
 
@@ -476,6 +476,16 @@ Definition of done for the product milestone:
 - Architecture: the Console continues to consume immutable `Log::Snapshot()` records and the existing backend `FilterLogRecords` contract. Milestone 19 adds presentation/grouping only; it does not mutate engine log records, introduce a second logger, or absorb Statistics/Profiler ownership from Milestone 20.
 - Scope boundary: no Statistics/Profiler graphs (20), Editor Toolbar redesign (21), Menu Bar expansion (22), theme/icon system (23/24), or notification/toast framework (39) is included.
 - Regression: `Scripts/Tests/EditorMilestone19ConsoleTests.py`; existing M17/M18 roadmap assertions were relaxed so completed downstream work no longer invalidates their historical scope tests. `ValidateEditor.bat` and Windows Editor CI run the focused M19 gate.
+
+## 22. Menu Bar — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 22 implementation series on `prototype`.
+- Delivered: the full File/Edit/Entity/Assets/View/Window/Debug/Help menu surface; existing context-safe file/edit shortcuts; authoring-aware entity create/duplicate/delete/clear-selection actions; asset-browser refresh and import/state-machine access; centralized panel visibility under Window; viewport/physics editor diagnostics under Debug; and editor shortcut/documentation discovery under Help.
+- Composition: File remains owned by `EditorFileController`; Edit and the existing View compatibility surface remain in `EditorLayer`; `EditorMenuController` composes the missing menu groups and reuses `SceneDocument`, hierarchy locks, asset-panel state and viewport/debug state instead of introducing parallel command systems. The legacy Scene menu is retained as a compatibility alias while Entity is the authoritative M22 authoring menu.
+- Context policy: destructive authoring commands are disabled during Play, during transient document edits, with no selection, or when the hierarchy entity is locked as applicable. Import authoring is Play-gated while pure presentation/window/debug actions remain available.
+- Scope boundary: no workspace persistence/reset behavior (25), new icon/font system (24), broad shortcut redesign (35), or drag/drop redesign (28) is included.
+- Regression: `Scripts/Tests/EditorMilestone22MenuBarTests.py`; M19's historical downstream-status assertion was relaxed, and both local and Windows validation gates include M22.
 
 ## Historical architecture note
 
