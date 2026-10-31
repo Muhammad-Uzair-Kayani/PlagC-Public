@@ -16,6 +16,9 @@ void LogMenuError(Engine& engine, const std::exception& error)
 
 void EditorMenuController::DrawMenu(Engine& engine, EditorSession& session)
 {
+    try { owner_.workspace_.Tick(owner_); }
+    catch (const std::exception& error) { LogMenuError(engine, error); }
+
     // Preserve File ownership and its existing context-safe Ctrl+N/O/S routing.
     EditorFileController::DrawMenu(engine, session);
 
@@ -100,6 +103,40 @@ void EditorMenuController::DrawMenu(Engine& engine, EditorSession& session)
         ImGui::MenuItem("Animation State Machine", nullptr,
                         &owner_.showAnimationStateMachine_);
         ImGui::MenuItem("Asset Import", nullptr, &owner_.showAssetImport_);
+        ImGui::Separator();
+
+        if (ImGui::BeginMenu("Workspace"))
+        {
+            if (ImGui::MenuItem("Save Workspace"))
+            {
+                try
+                {
+                    owner_.workspace_.Save(owner_);
+                    engine.Logger().Write(Severity::Info, "EDITOR-WORKSPACE",
+                                          "Editor workspace saved.");
+                }
+                catch (const std::exception& error) { LogMenuError(engine, error); }
+            }
+
+            if (ImGui::MenuItem("Restore Saved Workspace", nullptr, false,
+                                owner_.workspace_.HasSavedWorkspace()))
+            {
+                owner_.workspace_.RequestRestore();
+                engine.Logger().Write(Severity::Info, "EDITOR-WORKSPACE",
+                                      "Workspace restore requested.");
+            }
+            if (ImGui::MenuItem("Reset to Default Layout"))
+            {
+                owner_.workspace_.RequestReset();
+                engine.Logger().Write(Severity::Info, "EDITOR-WORKSPACE",
+                                      "Default workspace reset requested.");
+            }
+
+            ImGui::Separator();
+            const std::string path = owner_.workspace_.LayoutPath().generic_string();
+            ImGui::TextDisabled("Saved locally: %s", path.c_str());
+            ImGui::EndMenu();
+        }
         ImGui::EndMenu();
     }
 
