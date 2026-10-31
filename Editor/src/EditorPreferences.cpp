@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include "EditorPreferences.h"
+#include "EditorProfilerPanel.h"
 #include "EditorRestart.h"
 #include <PlagC/Application.h>
 #include <PlagC/Editor/EditorSession.h>
@@ -44,6 +45,10 @@ bool EditorPreferences::Restart(Engine& engine)
 
 void EditorPreferences::Draw(Engine& engine, EditorSession& session)
 {
+    // M20 extends the existing Statistics window after EditorLayer has drawn it.
+    // This preserves Window-menu/workspace ownership while keeping profiler history isolated.
+    DrawEditorProfilerPanel(engine, session);
+
     if (!open_)
         return;
 

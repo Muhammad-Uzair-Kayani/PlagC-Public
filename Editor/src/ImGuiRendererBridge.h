@@ -15,6 +15,7 @@ public:
 
     static std::uint64_t TextureID(TextureHandle) noexcept;
     static std::uint64_t TargetID(TargetHandle) noexcept;
+    static double LastSubmitMilliseconds() noexcept;
 
 private:
     TextureHandle fontTexture_{};

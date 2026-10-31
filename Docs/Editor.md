@@ -180,7 +180,7 @@ Define gameplay update/lifecycle hooks, editor-vs-game input routing, physics st
 
 Severity styling/icons, compact entries, expandable details, category/search filtering, repeated-message collapsing, copy/context actions and separation of giant profiler dumps from normal logs.
 
-## 20. Statistics / Profiler — `FOUNDATION`
+## 20. Statistics / Profiler — `DONE`
 
 Frame/FPS graphs, CPU/GPU/scene/physics/animation/asset/UI timings, job utilization, draw calls, triangles, counts, backend/GPU info, history and profiler freeze controls.
 
@@ -431,6 +431,18 @@ Definition of done for the product milestone:
 - Architecture: consumes immutable `Log::Snapshot()` data and does not replace the logger or M20 profiler ownership.
 - Regression: `Scripts/Tests/EditorMilestone19ConsoleTests.py`.
 
+## 20. Statistics / Profiler — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 20 completion commit on `prototype`.
+- Delivered: bounded 120-sample history with live Frame/FPS/application-CPU/GPU/UI-submit/job-utilization graphs; Freeze/Resume and Clear History controls; frame P95/P99/max and hitch counters; and a complete CPU timing breakdown for platform/events, asset pump, application, physics, animation, scene sync, audio, renderer submission/pacing and unaccounted time.
+- GPU/rendering: exposes active backend, asynchronous GPU timing state/total/P99/max/query latency/sample count, draw calls, triangles, instances, objects, meshes, materials, lights and textures using existing renderer-neutral `FrameProfile`/`RenderStats` data.
+- Jobs: `JobSystem` now maintains a lock-free cumulative worker busy-time counter; the Editor derives real interval utilization from busy-time deltas, elapsed wall time and worker count rather than guessing utilization from submitted/executed counts.
+- UI timing: `ImGuiRendererBridge` records renderer-neutral UI submission cost without leaking Ogre/OpenGL/Vulkan objects into editor code.
+- Composition: the profiler appends to the existing `Statistics` window and preserves M22 Window-menu/M25 workspace ownership; engine profiler, renderer and job system remain owners of runtime metrics.
+- Regression: `Scripts/Tests/EditorMilestone20StatisticsTests.py`; local and Windows validation include the M20 gate.
+- Scope boundary: no M23 theme, M26 selection or M29 preview-rendering implementation is included.
+
 ## 21. Editor Toolbar — `DONE`
 
 - Date: 2026-10-31
@@ -495,4 +507,4 @@ Earlier revisions contained longer backend handoff notes. Their binding contract
 
 ## Current execution stop
 
-Milestone **16** is complete in implementation scope. Continue this explicitly assigned batch with **20 → 23 → 26 → 29**, pushing each milestone independently after validation.
+Milestone **20** is complete in implementation scope. Continue this explicitly assigned batch with **23 → 26 → 29**, pushing each milestone independently after validation.

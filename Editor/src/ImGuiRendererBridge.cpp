@@ -3,6 +3,8 @@
 #include <PlagC/Renderer/UiTexture.h>
 #include <imgui.h>
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <limits>
 #include <span>
 #include <stdexcept>
@@ -10,6 +12,16 @@
 namespace PlagC::Editor {
 namespace {
 constexpr std::uint64_t TargetBit = std::uint64_t{1} << 63;
+std::atomic<std::uint64_t> lastUiSubmitNanoseconds{0};
+
+void PublishUiSubmit(std::chrono::steady_clock::time_point start) noexcept
+{
+    const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now() - start).count();
+    lastUiSubmitNanoseconds.store(
+        elapsed > 0 ? static_cast<std::uint64_t>(elapsed) : 0u,
+        std::memory_order_relaxed);
+}
 
 UiTextureRef DecodeTexture(ImTextureID id)
 {
@@ -28,6 +40,12 @@ std::uint64_t ImGuiRendererBridge::TextureID(TextureHandle handle) noexcept
 std::uint64_t ImGuiRendererBridge::TargetID(TargetHandle handle) noexcept
 {
     return handle.value ? (TargetBit | handle.value) : 0;
+}
+
+double ImGuiRendererBridge::LastSubmitMilliseconds() noexcept
+{
+    return static_cast<double>(lastUiSubmitNanoseconds.load(std::memory_order_relaxed)) /
+           1'000'000.0;
 }
 
 void ImGuiRendererBridge::Initialize(Renderer& renderer)
@@ -70,10 +88,12 @@ void ImGuiRendererBridge::Initialize(Renderer& renderer)
 
 void ImGuiRendererBridge::Submit(Renderer& renderer, const ImDrawData* drawData)
 {
+    const auto submitStart = std::chrono::steady_clock::now();
     if (!drawData || drawData->CmdListsCount == 0 ||
         drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
     {
         renderer.SubmitUI({});
+        PublishUiSubmit(submitStart);
         return;
     }
 
@@ -162,11 +182,13 @@ void ImGuiRendererBridge::Submit(Renderer& renderer, const ImDrawData* drawData)
     }
 
     renderer.SubmitUI(std::move(frame));
+    PublishUiSubmit(submitStart);
 }
 
 void ImGuiRendererBridge::Shutdown(Renderer& renderer)
 {
     renderer.ClearUI();
+    lastUiSubmitNanoseconds.store(0, std::memory_order_relaxed);
 
     if (ImGui::GetCurrentContext())
     {
