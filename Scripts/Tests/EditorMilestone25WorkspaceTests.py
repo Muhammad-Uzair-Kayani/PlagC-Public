@@ -62,14 +62,13 @@ class EditorMilestone25WorkspaceTests(unittest.TestCase):
         self.assertNotIn('ImGui::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoDocking', layer)
         self.assertIn("/User/", ignore)
 
-    def test_m25_is_wired_and_drag_drop_remains_next_requested_foundation(self):
+    def test_m25_is_wired(self):
         local = self.read("ValidateEditor.bat")
         ci = self.read(".github/workflows/editor-windows.yml")
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone25WorkspaceTests.py", local)
         self.assertIn("EditorMilestone25WorkspaceTests.py", ci)
         self.assertIn("## 25. Docking / Workspace — `DONE`", docs)
-        self.assertIn("## 28. Drag & Drop — `FOUNDATION`", docs)
 
 
 if __name__ == "__main__":
