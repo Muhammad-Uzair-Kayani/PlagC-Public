@@ -56,6 +56,7 @@ private:
     };
 
     void DrawDockHost(Engine&, EditorSession&);
+    void DrawEditorToolbar(Engine&, EditorSession&);
     void BuildDefaultLayout(unsigned width, unsigned height);
     void DrawHierarchy(Engine&, EditorSession&);
     void DrawViewport(EditorSession&);
