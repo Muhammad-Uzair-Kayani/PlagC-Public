@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "EditorDragDrop.h"
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
 #include <PlagC/Assets/AssetManager.h>
@@ -12,8 +13,6 @@
 
 namespace PlagC::Editor {
 namespace {
-
-constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL";
 
 std::string CookedAssetKey(std::string path)
 {
@@ -612,14 +611,17 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
             ImGui::SeparatorText("Model Asset Drop Target");
             if (selected)
             {
-                ImGui::TextDisabled("Drop a cooked ModelAsset here to assign or replace the selected entity model.");
+                ImGui::Button("Drop cooked ModelAsset here##ModelAssetDrop", ImVec2(-1.0f, 0.0f));
+                const ImVec2 dropMin = ImGui::GetItemRectMin();
+                const ImVec2 dropMax = ImGui::GetItemRectMax();
                 if (ImGui::BeginDragDropTarget())
                 {
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(CookedModelPayload))
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DragDrop::CookedModel))
                     {
                         try
                         {
-                            auto model = LoadModel(engine, static_cast<const char*>(payload->Data));
+                            const std::string path = DragDrop::TextPayload(*payload);
+                            auto model = LoadModel(engine, path.c_str());
                             session.EditDocument().SetModel(selected->entity,
                                 ReplacementModel(*selected, std::move(model)));
                         }
@@ -630,10 +632,20 @@ void EditorLayer::AppendAssetInteractions(Engine& engine, EditorSession& session
                     }
                     ImGui::EndDragDropTarget();
                 }
+                if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
+                {
+                    const bool accepted = payload->IsDataType(DragDrop::CookedModel);
+                    DragDrop::DrawRectFeedback(dropMin, dropMax, accepted,
+                                               "Assign cooked model to selected entity",
+                                               "Model Inspector accepts cooked ModelAsset assets");
+                }
             }
             else
             {
                 ImGui::TextDisabled("Select an entity before assigning a model.");
+                if (ImGui::GetDragDropPayload())
+                    DragDrop::DrawInlineFeedback(false, "",
+                                                 "Select an entity before assigning a model");
             }
         }
         ImGui::End();

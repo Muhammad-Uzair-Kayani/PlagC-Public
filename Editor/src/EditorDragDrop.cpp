@@ -23,10 +23,38 @@ std::string TextPayload(const ImGuiPayload& payload)
     return std::string(data, size - 1);
 }
 
+std::uint64_t EntityIDPayload(const ImGuiPayload& payload)
+{
+    if (!payload.Data)
+        throw std::invalid_argument("entity drag payload is empty");
+    if (payload.DataSize != static_cast<int>(sizeof(std::uint64_t)))
+        throw std::invalid_argument("entity drag payload has an invalid size");
+
+    std::uint64_t id = 0;
+    std::memcpy(&id, payload.Data, sizeof(id));
+    if (!id)
+        throw std::invalid_argument("entity drag payload contains an invalid persistent id");
+    return id;
+}
+
 bool Active(const char* acceptedType) noexcept
 {
     const ImGuiPayload* payload = ImGui::GetDragDropPayload();
     return payload && acceptedType && payload->IsDataType(acceptedType);
+}
+
+void DrawInlineFeedback(bool accepted,
+                        const char* acceptedText,
+                        const char* rejectedText)
+{
+    if (!ImGui::GetDragDropPayload())
+        return;
+
+    const ImVec4 colour = accepted
+        ? ImVec4{0.34f, 0.86f, 0.48f, 1.0f}
+        : ImVec4{0.95f, 0.42f, 0.38f, 1.0f};
+    ImGui::TextColored(colour, "%s %s", accepted ? "[DROP]" : "[NO]",
+                       accepted ? acceptedText : rejectedText);
 }
 
 void DrawInlineFeedback(const char* acceptedType,
@@ -36,25 +64,18 @@ void DrawInlineFeedback(const char* acceptedType,
     const ImGuiPayload* payload = ImGui::GetDragDropPayload();
     if (!payload)
         return;
-
-    const bool accepted = acceptedType && payload->IsDataType(acceptedType);
-    const ImVec4 colour = accepted
-        ? ImVec4{0.34f, 0.86f, 0.48f, 1.0f}
-        : ImVec4{0.95f, 0.42f, 0.38f, 1.0f};
-    ImGui::TextColored(colour, "%s %s", accepted ? "[DROP]" : "[NO]",
-                       accepted ? acceptedText : rejectedText);
+    DrawInlineFeedback(acceptedType && payload->IsDataType(acceptedType),
+                       acceptedText, rejectedText);
 }
 
 void DrawRectFeedback(ImVec2 minimum, ImVec2 maximum,
-                      const char* acceptedType,
+                      bool accepted,
                       const char* acceptedText,
                       const char* rejectedText)
 {
-    const ImGuiPayload* payload = ImGui::GetDragDropPayload();
-    if (!payload)
+    if (!ImGui::GetDragDropPayload())
         return;
 
-    const bool accepted = acceptedType && payload->IsDataType(acceptedType);
     const ImU32 colour = accepted
         ? IM_COL32(72, 220, 122, 230)
         : IM_COL32(235, 82, 76, 230);
@@ -70,6 +91,19 @@ void DrawRectFeedback(ImVec2 minimum, ImVec2 maximum,
     draw->AddRectFilled(boxMin, boxMax, IM_COL32(20, 24, 31, 235), 4.0f);
     draw->AddRect(boxMin, boxMax, colour, 4.0f);
     draw->AddText({boxMin.x + padding.x, boxMin.y + padding.y}, colour, text);
+}
+
+void DrawRectFeedback(ImVec2 minimum, ImVec2 maximum,
+                      const char* acceptedType,
+                      const char* acceptedText,
+                      const char* rejectedText)
+{
+    const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+    if (!payload)
+        return;
+    DrawRectFeedback(minimum, maximum,
+                     acceptedType && payload->IsDataType(acceptedType),
+                     acceptedText, rejectedText);
 }
 
 } // namespace PlagC::Editor::DragDrop

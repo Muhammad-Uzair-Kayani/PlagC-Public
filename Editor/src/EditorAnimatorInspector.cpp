@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "EditorDragDrop.h"
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
 #include <PlagC/Assets/AssetManager.h>
@@ -12,8 +13,6 @@
 
 namespace PlagC::Editor {
 namespace {
-
-constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL";
 
 std::string CookedAssetKey(std::string path)
 {
@@ -174,6 +173,7 @@ void EditorLayer::AppendAnimatorInspector(Engine& engine, EditorSession& session
     const AssetHandle<ModelAsset> renderedModel = selected.record.model ? selected.record.model->asset : AssetHandle<ModelAsset>{};
     const AssetHandle<ModelAsset> animationAsset = ResolvedAnimationAsset(selected);
     const unsigned clipCount = animationAsset ? static_cast<unsigned>(animationAsset->animations.size()) : 0u;
+    (void)clipCount;
 
     ImGui::TextDisabled("Animation Source / Skeleton");
     ImGui::BeginDisabled(readOnly);
@@ -214,15 +214,20 @@ void EditorLayer::AppendAnimatorInspector(Engine& engine, EditorSession& session
             LogAnimatorError(engine, error);
         }
     }
-    if (ImGui::BeginDragDropTarget())
+    ImGui::EndDisabled();
+
+    ImGui::BeginDisabled(readOnly);
+    ImGui::Button("Drop cooked animation ModelAsset here##AnimatorSourceDrop", ImVec2(-1.0f, 0.0f));
+    ImGui::EndDisabled();
+    const ImVec2 animationDropMin = ImGui::GetItemRectMin();
+    const ImVec2 animationDropMax = ImGui::GetItemRectMax();
+    if (!readOnly && ImGui::BeginDragDropTarget())
     {
-        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(CookedModelPayload))
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DragDrop::CookedModel))
         {
             try
             {
-                const char* data = static_cast<const char*>(payload->Data);
-                std::string path(data, data + payload->DataSize);
-                if (!path.empty() && path.back() == '\0') path.pop_back();
+                const std::string path = DragDrop::TextPayload(*payload);
                 if (!renderedModel) throw std::invalid_argument("Animator requires a rendered ModelAsset");
                 auto source = LoadAnimationModel(engine, path);
                 if (source->animations.empty()) throw std::invalid_argument("Animation source contains no clips");
@@ -252,8 +257,20 @@ void EditorLayer::AppendAnimatorInspector(Engine& engine, EditorSession& session
         }
         ImGui::EndDragDropTarget();
     }
+    if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
+    {
+        const bool accepted = !readOnly && renderedModel && payload->IsDataType(DragDrop::CookedModel);
+        const char* rejected = readOnly
+            ? "Animator source is read-only"
+            : !renderedModel
+                ? "Assign a rendered ModelAsset before an animation source"
+                : "Animator accepts cooked ModelAsset animation sources";
+        DragDrop::DrawRectFeedback(animationDropMin, animationDropMax, accepted,
+                                   "Assign compatible animation source", rejected);
+    }
+
     const bool canUseModelAnimations = renderedModel && !renderedModel->animations.empty();
-    ImGui::BeginDisabled(!canUseModelAnimations);
+    ImGui::BeginDisabled(readOnly || !canUseModelAnimations);
     if (ImGui::Button("Use Model Asset"))
     {
         auto value = currentRecord();
@@ -272,7 +289,6 @@ void EditorLayer::AppendAnimatorInspector(Engine& engine, EditorSession& session
         if (commit(value, "Using the rendered model's skeleton and clips."))
             animatorSourcePath_.fill('\0');
     }
-    ImGui::EndDisabled();
     ImGui::EndDisabled();
 
     const AssetHandle<ModelAsset> resolved = [&]() {

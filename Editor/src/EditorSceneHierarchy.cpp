@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include "EditorDragDrop.h"
 #include "EditorSceneHierarchy.h"
 #include <PlagC/Application.h>
 #include <imgui.h>
@@ -7,7 +8,6 @@
 #include <cctype>
 #include <cfloat>
 #include <cstdio>
-#include <cstring>
 #include <functional>
 #include <optional>
 #include <string>
@@ -19,8 +19,6 @@
 
 namespace PlagC::Editor {
 namespace {
-
-constexpr const char* EntityPayload = "PLAGC_EDITOR_ENTITY";
 
 enum class PendingKind {
     None,
@@ -127,6 +125,26 @@ void Tooltip(const char* text)
 {
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
         ImGui::SetTooltip("%s", text);
+}
+
+bool WouldCreateCycle(const std::unordered_map<std::uint64_t, const AuthoringEntity*>& byID,
+                      std::uint64_t dragged,
+                      std::uint64_t target)
+{
+    if (!dragged || !target)
+        return false;
+
+    std::uint64_t current = target;
+    for (std::size_t guard = 0; current && guard <= byID.size(); ++guard)
+    {
+        if (current == dragged)
+            return true;
+        const auto found = byID.find(current);
+        if (found == byID.end())
+            break;
+        current = found->second->parentPersistentID;
+    }
+    return false;
 }
 
 } // namespace
@@ -246,18 +264,38 @@ void EditorSceneHierarchy::Draw(Engine& engine, EditorSession& session, bool& op
         ImGui::Separator();
         ImGui::Selectable("Scene Root  (drop here)", false, ImGuiSelectableFlags_AllowDoubleClick,
                           ImVec2(0.0f, ImGui::GetFrameHeight()));
+        const ImVec2 rootDropMin = ImGui::GetItemRectMin();
+        const ImVec2 rootDropMax = ImGui::GetItemRectMax();
+        const bool rootDropHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
         Tooltip("Drop an entity here to remove its parent");
+        if (rootDropHovered && ImGui::GetDragDropPayload())
+        {
+            bool accepted = false;
+            const ImGuiPayload* active = ImGui::GetDragDropPayload();
+            if (active->IsDataType(DragDrop::Entity))
+            {
+                try
+                {
+                    const std::uint64_t dragged = DragDrop::EntityIDPayload(*active);
+                    accepted = !Locked(dragged) && byID.contains(dragged);
+                }
+                catch (...) {}
+            }
+            DragDrop::DrawRectFeedback(rootDropMin, rootDropMax, accepted,
+                                       "Move entity to Scene Root",
+                                       "Scene Root accepts an unlocked hierarchy entity");
+        }
         if (ImGui::BeginDragDropTarget())
         {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(EntityPayload))
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(DragDrop::Entity))
             {
-                if (payload->DataSize == sizeof(std::uint64_t))
+                try
                 {
-                    std::uint64_t dragged = 0;
-                    std::memcpy(&dragged, payload->Data, sizeof(dragged));
-                    if (!Locked(dragged))
+                    const std::uint64_t dragged = DragDrop::EntityIDPayload(*payload);
+                    if (!Locked(dragged) && byID.contains(dragged))
                         pending = {PendingKind::Reparent, dragged, 0, false};
                 }
+                catch (const std::exception& error) { LogEditorError(engine, error); }
             }
             ImGui::EndDragDropTarget();
         }
@@ -400,6 +438,10 @@ void EditorSceneHierarchy::Draw(Engine& engine, EditorSession& session, bool& op
                     const bool clicked = ImGui::Selectable(
                         item->record.name.c_str(), item->selected,
                         ImGuiSelectableFlags_AllowDoubleClick, ImVec2(0.0f, 0.0f));
+                    const ImVec2 rowDropMin = ImGui::GetItemRectMin();
+                    const ImVec2 rowDropMax = ImGui::GetItemRectMax();
+                    const bool rowDropHovered = ImGui::IsItemHovered(
+                        ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
                     nameItemDrawn = true;
                     if (locked)
                         ImGui::PopStyleColor();
@@ -413,23 +455,51 @@ void EditorSceneHierarchy::Draw(Engine& engine, EditorSession& session, bool& op
                     if (editing && !locked && ImGui::BeginDragDropSource())
                     {
                         const std::uint64_t id = item->persistentID;
-                        ImGui::SetDragDropPayload(EntityPayload, &id, sizeof(id));
+                        ImGui::SetDragDropPayload(DragDrop::Entity, &id, sizeof(id));
                         ImGui::Text("[%s] %s", TypeBadge(*item), item->record.name.c_str());
                         ImGui::EndDragDropSource();
                     }
+
+                    if (rowDropHovered && ImGui::GetDragDropPayload())
+                    {
+                        bool accepted = false;
+                        const ImGuiPayload* active = ImGui::GetDragDropPayload();
+                        if (editing && !locked && active->IsDataType(DragDrop::Entity))
+                        {
+                            try
+                            {
+                                const std::uint64_t dragged = DragDrop::EntityIDPayload(*active);
+                                accepted = byID.contains(dragged) && !Locked(dragged) &&
+                                           dragged != item->persistentID &&
+                                           !WouldCreateCycle(byID, dragged, item->persistentID);
+                            }
+                            catch (...) {}
+                        }
+                        DragDrop::DrawRectFeedback(
+                            rowDropMin, rowDropMax, accepted,
+                            "Reparent entity here",
+                            locked
+                                ? "Target entity is locked"
+                                : "Drop must be an unlocked entity and cannot create a hierarchy cycle");
+                    }
+
                     if (editing && !locked && ImGui::BeginDragDropTarget())
                     {
                         if (const ImGuiPayload* payload =
-                                ImGui::AcceptDragDropPayload(EntityPayload))
+                                ImGui::AcceptDragDropPayload(DragDrop::Entity))
                         {
-                            if (payload->DataSize == sizeof(std::uint64_t))
+                            try
                             {
-                                std::uint64_t dragged = 0;
-                                std::memcpy(&dragged, payload->Data, sizeof(dragged));
-                                if (dragged != item->persistentID && !Locked(dragged))
+                                const std::uint64_t dragged = DragDrop::EntityIDPayload(*payload);
+                                if (byID.contains(dragged) && !Locked(dragged) &&
+                                    dragged != item->persistentID &&
+                                    !WouldCreateCycle(byID, dragged, item->persistentID))
+                                {
                                     pending = {PendingKind::Reparent, dragged,
                                                item->persistentID, false};
+                                }
                             }
+                            catch (const std::exception& error) { LogEditorError(engine, error); }
                         }
                         ImGui::EndDragDropTarget();
                     }
