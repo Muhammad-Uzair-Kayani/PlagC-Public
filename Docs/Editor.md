@@ -23,7 +23,8 @@ A milestone is not complete because a backend API exists. It is complete when th
 8. Update this document in the same milestone commit with status, tests, files, and commit evidence.
 9. Stop after each milestone and wait for approval before starting the next one.
 
-Assigned milestone lane for this implementation stream: **1, 4, 7, 10, 13, 17**. Work must not leak into other milestones; each assigned milestone must be finished before moving to the next assigned milestone.
+Assigned milestone lane for the completed implementation stream: **1, 4, 7, 10, 13, 17**.
+Current requested execution lane: **19, 22, 25, 28**. Work remains milestone-scoped and each requested milestone is pushed before the next begins.
 
 ## Status legend
 
@@ -175,7 +176,7 @@ Professional Play/Pause/Step/Stop transport, clear runtime visual state, shortcu
 
 Define gameplay update/lifecycle hooks, editor-vs-game input routing, physics step callbacks, animation/audio ordering, trigger/collision routing and correct Pause/Step semantics.
 
-## 19. Console — `FOUNDATION`
+## 19. Console — `DONE`
 
 Severity styling/icons, compact entries, expandable details, category/search filtering, repeated-message collapsing, copy/context actions and separation of giant profiler dumps from normal logs.
 
@@ -420,7 +421,7 @@ Definition of done for the product milestone:
 - Delivered: hierarchical folders with Up and clickable breadcrumb navigation; grid/list asset-card views; subtree search; Source/Cooked/Project origin filtering; model/texture/audio/material/scene/controller/shader/cooked/other type filtering; name/type/size sorting; explicit internal-file visibility control with manifests, shaders, compositor/support/import-receipt files hidden by default; selected-asset details with runtime type/state/generation/errors; source↔cooked relationships from the existing import receipts; context actions for select/copy/reveal/reload/refresh; canonical filesystem/registry path deduplication; and preserved cooked-model double-click creation plus the existing Inspector/Viewport drag payload.
 - Architecture: the browser consumes the existing `AssetBrowserModel` snapshot, `AssetManager` registry and Milestone 15 import receipts instead of duplicating asset/import systems. Model Inspector reveal, Inspector assignment, viewport placement and Milestone 3 model creation continue through their existing editor/document contracts.
 - Scope boundary: asset cards remain textual placeholders; no thumbnail/preview cache or generation (14), no new import/reimport processing (15), no scene open/save workflow (16), and no Play Toolbar work (17) is included.
-- Regression: `Scripts/Tests/EditorMilestone13ContentBrowserTests.py` plus updated `EditorAssetInteractionTests.py` and Milestone 6 reveal coverage; `ValidateEditor.bat` and Windows Editor CI run the focused gate.
+- Regression: `Scripts/Tests/EditorMilestone13ContentBrowserTests.py` plus updated `EditorAssetInteractionTests.py` and Milestone 6 reveal coverage; `ValidateEditor.bat` and Windows CI run the focused gate.
 - Next step: stop here and wait for explicit approval before starting Milestone 17.
 
 ## 14. Thumbnail / Preview System — `DONE`
@@ -466,6 +467,15 @@ Definition of done for the product milestone:
 - Regression: `Scripts/Tests/EditorMilestone18Tests.py` covers lifecycle, editor-vs-game input isolation, fixed-step callback ordering, Pause/Step semantics, trigger/collision routing, animation/audio ordering, validation wiring and the Milestone 19 scope boundary. Existing `EditorPlayRuntimeTests.py` was updated for the fixed-step gameplay callback path. Both are wired into `ValidateEditor.bat` and Windows Editor CI.
 - Scope boundary: no Console (19), profiler UI (20), toolbar redesign (21), menu work (22), theme/icons, scripting language, audio authoring or later editor milestone work is included.
 - Next step: stop here and wait for explicit approval before starting any other milestone.
+
+## 19. Console — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 19 implementation commit on `prototype`.
+- Delivered: severity-specific compact badges and styling; compact single-line messages with click-to-expand full details; timestamp/category/thread/sequence diagnostics; dynamic category selection plus existing search/severity filtering; consecutive repeated-message collapsing with repeat counts and first/last timing; per-entry context actions for copying message/details/category; clear and auto-scroll controls; and a dedicated Profiler tab that keeps giant `PROFILER` reports out of the normal diagnostic stream.
+- Architecture: the Console continues to consume immutable `Log::Snapshot()` records and the existing backend `FilterLogRecords` contract. Milestone 19 adds presentation/grouping only; it does not mutate engine log records, introduce a second logger, or absorb Statistics/Profiler ownership from Milestone 20.
+- Scope boundary: no Statistics/Profiler graphs (20), Editor Toolbar redesign (21), Menu Bar expansion (22), theme/icon system (23/24), or notification/toast framework (39) is included.
+- Regression: `Scripts/Tests/EditorMilestone19ConsoleTests.py`; existing M17/M18 roadmap assertions were relaxed so completed downstream work no longer invalidates their historical scope tests. `ValidateEditor.bat` and Windows Editor CI run the focused M19 gate.
 
 ## Historical architecture note
 
