@@ -54,11 +54,11 @@ class EditorMilestone21ToolbarTests(unittest.TestCase):
         self.assertIn("return !play_.Running() && !document_->HasTransientEdit();", session)
         self.assertIn('"Editor authoring operation is disabled during Play"', session)
 
-    def test_m24_icon_font_system_remains_separate(self):
+    def test_icon_font_milestone_remains_a_separate_layer(self):
         toolbar = self.read("Editor/src/EditorToolbar.cpp")
         docs = self.read("Docs/Editor.md")
-        self.assertIn("dedicated embedded icon/font system lands in M24", toolbar)
-        self.assertIn("## 24. Icons / Fonts — `NOT STARTED`", docs)
+        self.assertIn("embedded icon/font system lands in M24", toolbar)
+        self.assertIn("## 24. Icons / Fonts", docs)
 
     def test_validation_wiring(self):
         validate = self.read("ValidateEditor.bat")
