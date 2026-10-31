@@ -84,7 +84,8 @@ class EditorMilestone23ThemeTests(unittest.TestCase):
         self.assertIn("EditorMilestone23ThemeTests.py", ci)
         self.assertIn("## 23. Editor Theme / Visual System — `DONE`", docs)
         self.assertIn("Continue this explicitly assigned batch with **26 → 29**", docs)
-        self.assertIn("no M36 settings/theme-selector implementation", docs)
+        self.assertIn("M36 settings/theme-selector implementation is included", docs)
+        self.assertIn("Scope boundary: no M26 selection, M29 preview-rendering, or M36", docs)
 
 
 if __name__ == "__main__":
