@@ -40,14 +40,20 @@ class EditorAssetInteractionTests(unittest.TestCase):
         self.assertIn("entity.model = ModelComponent{model, true, true}", source)
         self.assertIn("session.EditDocument().Create(std::move(entity))", source)
 
-    def test_inspector_model_drop_is_undoable_and_preserves_instance_flags(self):
+    def test_inspector_model_drop_is_undoable_preserves_flags_and_uses_shared_validation(self):
         source = self.read("Editor/src/EditorAssetInteractions.cpp")
         panels = self.read("Editor/src/EditorDataPanels.cpp")
         app = self.read("Editor/src/EditorApp.cpp")
         header = self.read("Editor/src/EditorLayer.h")
+        drag_drop = self.read("Editor/src/EditorDragDrop.h")
+        # Content Browser still emits the established wire-format string; the Inspector now
+        # consumes it through the canonical M28 shared payload/validation contract.
         self.assertIn('constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL"', panels)
         self.assertIn("ImGui::SetDragDropPayload(CookedModelPayload", panels)
-        self.assertIn("ImGui::AcceptDragDropPayload(CookedModelPayload)", source)
+        self.assertIn('CookedModel = "PLAGC_COOKED_MODEL"', drag_drop)
+        self.assertIn("ImGui::AcceptDragDropPayload(DragDrop::CookedModel)", source)
+        self.assertIn("DragDrop::TextPayload(*payload)", source)
+        self.assertIn("DragDrop::DrawRectFeedback", source)
         self.assertIn("session.EditDocument().SetModel(selected->entity", source)
         self.assertIn("ReplacementModel(*selected, std::move(model))", source)
         self.assertIn("result.visible = selected.record.model->visible", source)
