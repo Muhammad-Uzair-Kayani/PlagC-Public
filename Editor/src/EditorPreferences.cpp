@@ -2,6 +2,7 @@
 #include "EditorPreferences.h"
 #include "EditorProfilerPanel.h"
 #include "EditorRestart.h"
+#include "EditorTheme.h"
 #include <PlagC/Application.h>
 #include <PlagC/Editor/EditorSession.h>
 #include <PlagC/Renderer/BackendSelection.h>
@@ -14,6 +15,10 @@ EditorPreferences* EditorPreferences::active_ = nullptr;
 void EditorPreferences::Initialize(Engine& engine)
 {
     active_ = this;
+    // M23 applies one global presentation language after the ImGui context/font
+    // atlas exists and before the first editor frame is drawn.
+    EditorTheme::Apply();
+
     const auto active = engine.Graphics().Backend();
     preferred_ = LoadRendererPreference(DefaultRendererPreferencePath(), active);
     if (preferred_ != RendererBackend::OpenGL && preferred_ != RendererBackend::Vulkan)

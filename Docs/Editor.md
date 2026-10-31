@@ -192,7 +192,7 @@ Save/undo/redo, transform tools, local/world, pivot/center, snap, Play transport
 
 Complete File/Edit/Entity/Assets/View/Window/Debug/Help menus, shortcuts and context-sensitive enable/disable behavior.
 
-## 23. Editor Theme / Visual System — `NOT STARTED`
+## 23. Editor Theme / Visual System — `DONE`
 
 A deliberate PlagC visual language: typography, spacing, component cards, headers, selection/hover/disabled colors, padding, borders, toolbar/dock styling and strong contrast instead of raw ImGui defaults.
 
@@ -402,7 +402,7 @@ Definition of done for the product milestone:
 ## Milestone 16 — Scene File Workflow — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 16 completion commit on `prototype`.
+- Commit evidence: `43e5caa6d58005db25549baeaef8c8e893d60db5`.
 - Delivered: New/Open/Save/Save As/Open Recent; persistent recent-scene history; scene identity and dirty indicator; Save/Discard/Cancel handling for replacement/exit; untitled Save As during both normal save and window-close flow; actionable file errors; and transactional document replacement that leaves the current authoring scene intact when loading fails.
 - Persistence: scene format v4 keeps v1/v2/v3 readable and persists hierarchy, transforms, active camera, cameras, lights, model references, shadow/visibility state, material overrides, physics bodies/colliders including geometry-backed collider data, animator source/playback/controller parameters/state and upper-body state. Loaded persistent IDs advance the allocator before new authoring entities are created.
 - Safety: raw renderer `RenderableComponent` handles remain explicitly non-serializable rather than being silently discarded; scene saves retain atomic replacement semantics and only mark history saved after the replacement succeeds.
@@ -434,7 +434,7 @@ Definition of done for the product milestone:
 ## 20. Statistics / Profiler — `DONE`
 
 - Date: 2026-10-31
-- Commit evidence: this Milestone 20 completion commit on `prototype`.
+- Commit evidence: `46cf8a5f6f226d568ed23b2e74545323112cb3fd`.
 - Delivered: bounded 120-sample history with live Frame/FPS/application-CPU/GPU/UI-submit/job-utilization graphs; Freeze/Resume and Clear History controls; frame P95/P99/max and hitch counters; and a complete CPU timing breakdown for platform/events, asset pump, application, physics, animation, scene sync, audio, renderer submission/pacing and unaccounted time.
 - GPU/rendering: exposes active backend, asynchronous GPU timing state/total/P99/max/query latency/sample count, draw calls, triangles, instances, objects, meshes, materials, lights and textures using existing renderer-neutral `FrameProfile`/`RenderStats` data.
 - Jobs: `JobSystem` now maintains a lock-free cumulative worker busy-time counter; the Editor derives real interval utilization from busy-time deltas, elapsed wall time and worker count rather than guessing utilization from submitted/executed counts.
@@ -459,13 +459,25 @@ Definition of done for the product milestone:
 - Composition: existing controllers remain owners; `EditorMenuController` composes the menu surface without parallel mutation systems.
 - Regression: `Scripts/Tests/EditorMilestone22MenuBarTests.py`.
 
+## 23. Editor Theme / Visual System — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 23 completion commit on `prototype`.
+- Delivered: a deliberate PlagC dark visual language with high-contrast text, muted disabled text, blue interaction accent, elevated panel/control surfaces, explicit selection/hover/active states, consistent borders and modal dimming.
+- Layout rhythm: centralized window/frame/cell padding, item spacing, indentation, scrollbar/grab sizing, rounding and border dimensions replace raw Dear ImGui defaults across the editor.
+- Component/tooling integration: existing Inspector component cards inherit dedicated header/hover/active styling; the global toolbar inherits the themed child/button surfaces; tabs, tables, plots, drag/drop targets and docking previews share the same visual vocabulary without duplicating panel code.
+- Typography/icons: M23 uses M24's embedded `EditorVisualAssets::TextFont()` as the canonical text face and owns only scale/spacing/color hierarchy; it does not ship or load a second raw font.
+- Architecture: `EditorTheme` is frontend-only and renderer-neutral. It is applied once after ImGui/font initialization and before the first editor frame. No authoring/runtime state is touched.
+- Regression: `Scripts/Tests/EditorMilestone23ThemeTests.py`; local and Windows validation include the M23 gate.
+- Scope boundary: no M26 selection, M29 preview-rendering, or M36 settings/theme-selector implementation is included.
+
 ## 24. Icons / Fonts — `DONE`
 
 - Date: 2026-10-31
 - Delivered: a renderer-neutral `EditorVisualAssets` catalog covering entities, folders/assets, model/texture/material, camera/light/physics, Save/Undo/Redo, transform-space/pivot/snap, Play transport and settings; reusable vector-drawn `IconButton`/inline icon primitives; and accessible icon names for non-text surfaces.
 - Fonts: editor text uses Dear ImGui's built-in embedded default font through `ImGui::GetFont()`; PlagC ships no raw TTF/OTF source font as part of this milestone.
 - Rendering boundary: icons are ImGui draw-list primitives only; no Ogre/OpenGL/Vulkan resource is exposed to the icon system. The M21 toolbar uses this catalog for its authoring and transport presentation.
-- Scope boundary: no M23 theme/spacing/color-system redesign is included.
+- Scope boundary: M23 now owns the completed theme/spacing/color system; M24 remains icon/font-asset ownership only.
 - Regression: `Scripts/Tests/EditorMilestone24IconFontTests.py`; local and Windows validation run the focused gate.
 
 ## 25. Docking / Workspace — `DONE`
@@ -498,7 +510,7 @@ Definition of done for the product milestone:
 - HDR/environment validation: the Ogre path uses an RGBA16F scene target, bloom passes, tone mapping/exposure, shadow-node gating, skybox/environment handling and PBS reflection binding. The same renderer/editor quality contracts cover Ogre OpenGL and the pinned Vulkan build path.
 - Resize/UI validation: Editor viewport targets are sized in framebuffer pixels using `DisplayFramebufferScale`; ImGui submission also consumes framebuffer scaling and submits through the renderer-neutral UI path.
 - MSAA boundary: the current Editor target is deliberately reported as a validated **1× baseline**. The audit recognizes canonical 1/2/4/8 sample counts but does not claim unsupported multisampling; adding a selectable multisampled target remains a renderer capability expansion rather than a false M30 claim.
-- Scope boundary: no M29 editor-preview policy, M34 general debug visualization or M23 visual theme work is included.
+- Scope boundary: no M29 editor-preview policy or M34 general debug visualization is included; M23 now owns the completed visual theme.
 - Regression: `Scripts/Tests/EditorMilestone30RenderingQualityTests.py`; local and Windows validation run the focused gate.
 
 ## Historical architecture note
@@ -507,4 +519,4 @@ Earlier revisions contained longer backend handoff notes. Their binding contract
 
 ## Current execution stop
 
-Milestone **20** is complete in implementation scope. Continue this explicitly assigned batch with **23 → 26 → 29**, pushing each milestone independently after validation.
+Milestone **23** is complete in implementation scope. Continue this explicitly assigned batch with **26 → 29**, pushing each milestone independently after validation.

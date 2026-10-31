@@ -83,14 +83,14 @@ class EditorMilestone20StatisticsTests(unittest.TestCase):
         self.assertIn('ImGui::FindWindowByName("Statistics")', panel)
         self.assertIn("statistics->Active", panel)
 
-    def test_m20_is_wired_and_documented(self):
+    def test_m20_remains_wired_after_theme_completion(self):
         local = self.read("ValidateEditor.bat")
         ci = self.read(".github/workflows/editor-windows.yml")
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone20StatisticsTests.py", local)
         self.assertIn("EditorMilestone20StatisticsTests.py", ci)
         self.assertIn("## 20. Statistics / Profiler — `DONE`", docs)
-        self.assertIn("Continue this explicitly assigned batch with **23 → 26 → 29**", docs)
+        self.assertIn("## 23. Editor Theme / Visual System — `DONE`", docs)
 
 
 if __name__ == "__main__":
