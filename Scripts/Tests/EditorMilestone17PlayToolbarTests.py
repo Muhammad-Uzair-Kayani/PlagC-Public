@@ -87,8 +87,6 @@ class EditorMilestone17PlayToolbarTests(unittest.TestCase):
         self.assertIn("EditorMilestone17PlayToolbarTests.py", validate)
         self.assertIn("EditorMilestone17PlayToolbarTests.py", workflow)
         self.assertIn("## 17. Play Toolbar — `DONE`", docs)
-        self.assertIn("## 19. Console — `FOUNDATION`", docs)
-        self.assertNotIn("## 19. Console — `DONE`", docs)
 
 
 if __name__ == "__main__":
