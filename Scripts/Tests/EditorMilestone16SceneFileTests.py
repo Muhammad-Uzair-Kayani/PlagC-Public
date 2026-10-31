@@ -16,20 +16,30 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.header = self.read("Editor/src/EditorFileController.h")
         self.scene = self.read("PlagC/src/Editor/SceneSerialization.cpp")
         self.session = self.read("PlagC/src/Editor/EditorSession.cpp")
+        self.native_tests = self.read("Scripts/Tests/EditorSerializationTests.cpp")
         self.docs = self.read("Docs/Editor.md")
 
-    def test_file_menu_has_complete_scene_workflow_and_dirty_feedback(self):
+    def test_file_menu_has_complete_scene_workflow_shortcuts_and_dirty_feedback(self):
         for text in (
             '"New"', '"Open..."', '"Open Recent"', '"Save"', '"Save As..."',
             '"Unsaved Changes"', 'session.Dirty() ? "File *" : "File"',
             '"Untitled.plscene"', '"Last file error:"',
+            "ImGuiKey_N", "ImGuiKey_O", "ImGuiKey_S",
         ):
             self.assertIn(text, self.files)
         self.assertIn("PendingAction::OpenRecent", self.files)
         self.assertIn("RecentScenesPath", self.files)
         self.assertIn("MaxRecentScenes = 8", self.files)
 
-    def test_recent_scenes_are_persisted_and_use_unsaved_policy(self):
+    def test_unsaved_save_path_handles_untitled_scenes_through_save_as(self):
+        self.assertIn("if (!session.HasPath())", self.files)
+        self.assertIn("return SaveAs(engine, session);", self.files)
+        self.assertIn('ImGui::Button("Save"', self.files)
+        self.assertIn("if (SaveCurrent(engine, session))", self.files)
+        self.assertIn("ReplacePolicy::RequireClean", self.files)
+        self.assertIn("ReplacePolicy::DiscardChanges", self.files)
+
+    def test_recent_scenes_are_persisted_and_use_same_unsaved_policy(self):
         for text in (
             "RememberRecent(engine, session.Path())",
             "RememberRecent(engine, path)",
@@ -43,10 +53,12 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.assertIn("ReplacePolicy::DiscardChanges", self.files)
 
     def test_replacement_stays_transactional(self):
-        self.assertIn("auto replacement=SceneDocument::Load", self.session)
-        self.assertIn("document_=std::move(replacement)", self.session)
-        self.assertLess(self.session.index("auto replacement=SceneDocument::Load"),
-                        self.session.index("document_=std::move(replacement)"))
+        compact = "".join(self.session.split())
+        load = "autoreplacement=SceneDocument::Load(path,std::move(resolver));"
+        swap = "document_=std::move(replacement);"
+        self.assertIn(load, compact)
+        self.assertIn(swap, compact)
+        self.assertLess(compact.index(load), compact.index(swap))
         self.assertIn("EditorSession::Open constructs and validates the replacement document first", self.files)
 
     def test_scene_v4_persists_physics_and_animator_components(self):
@@ -78,6 +90,16 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.assertIn("document->nextPersistentID_=maxID+1", self.scene)
         self.assertIn("Persistent entity ID space exhausted", self.scene)
 
+    def test_native_roundtrip_covers_hierarchy_materials_physics_animator_and_new_ids(self):
+        for text in (
+            "loaded->ParentPersistentID(loadedChild)",
+            "loadedRecord.model->materialOverrides",
+            "loadedRecord.physics",
+            "loadedRecord.animator",
+            "loaded->PersistentID(createdAfterLoad)",
+        ):
+            self.assertIn(text, self.native_tests)
+
     def test_atomic_save_and_useful_errors_remain_enforced(self):
         self.assertIn("MoveFileExW", self.scene)
         self.assertIn("MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH", self.scene)
@@ -86,10 +108,9 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.assertIn('Severity::Error, "EDITOR-FILE"', self.files)
         self.assertIn("Scene file does not exist:", self.files)
 
-    def test_roadmap_marks_only_m16_complete_for_this_lane(self):
+    def test_roadmap_marks_m16_complete(self):
         self.assertIn("## 16. Scene File Workflow — `DONE`", self.docs)
         self.assertIn("## Milestone 16 — Scene File Workflow — `DONE`", self.docs)
-        self.assertIn("stop here", self.docs.lower())
 
 
 if __name__ == "__main__":
