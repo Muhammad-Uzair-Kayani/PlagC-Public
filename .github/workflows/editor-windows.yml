@@ -67,6 +67,7 @@ jobs:
             'EditorGizmoTests.py',
             'EditorUiTextureTests.py',
             'EditorViewportSceneViewTests.py',
+            'EditorCameraNavigationTests.py',
             'EditorSceneHierarchyMilestoneTests.py'
           )
           foreach ($test in $tests) {
