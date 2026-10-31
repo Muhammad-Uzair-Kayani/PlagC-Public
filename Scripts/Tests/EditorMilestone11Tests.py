@@ -6,6 +6,7 @@ def read(path):
     return (ROOT / path).read_text(encoding="utf-8")
 
 animator = read("Editor/src/EditorAnimatorInspector.cpp")
+drag_drop = read("Editor/src/EditorDragDrop.h")
 layer = read("Editor/src/EditorLayer.h")
 app = read("Editor/src/EditorApp.cpp")
 controller = read("PlagC/include/PlagC/Animation/AnimationController.h")
@@ -24,7 +25,9 @@ checks = {
     "animation source and skeleton assignment use cooked ModelAsset with compatibility validation":
         "Animation Source / Skeleton" in animator and
         "SkeletonCompatible" in animator and
-        "PLAGC_COOKED_MODEL" in animator and
+        'CookedModel = "PLAGC_COOKED_MODEL"' in drag_drop and
+        "ImGui::AcceptDragDropPayload(DragDrop::CookedModel)" in animator and
+        "DragDrop::TextPayload(*payload)" in animator and
         "Use Model Asset" in animator,
     "named clip authoring and playback controls are present":
         "ClipLabel" in animator and
