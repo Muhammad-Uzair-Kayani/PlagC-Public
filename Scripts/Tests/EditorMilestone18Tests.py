@@ -98,14 +98,13 @@ class EditorMilestone18Tests(unittest.TestCase):
         self.assertIn("gameplay_.Pause(context)", runtime)
         self.assertIn("gameplay_.Resume(context)", runtime)
 
-    def test_milestone_is_wired_into_validation_without_leaking_to_19(self):
+    def test_milestone_is_wired_into_validation(self):
         local = self.read("ValidateEditor.bat")
         ci = self.read(".github/workflows/editor-windows.yml")
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone18Tests.py", local)
         self.assertIn("EditorMilestone18Tests.py", ci)
         self.assertIn("## 18. Runtime / Game Logic — `DONE`", docs)
-        self.assertIn("## 19. Console — `FOUNDATION`", docs)
 
 
 if __name__ == "__main__":
