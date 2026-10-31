@@ -212,7 +212,7 @@ Hierarchy↔viewport synchronization, independent asset selection, Inspector tra
 
 Cover transform, rename, create/delete/duplicate, reparent, component add/remove/edit, model/material/light/camera/physics changes with correct command labels and transaction coalescing.
 
-## 28. Drag & Drop — `FOUNDATION`
+## 28. Drag & Drop — `DONE`
 
 Asset→viewport, asset→Inspector, hierarchy reparenting, material→slot, animation→animator, validation and visible drop feedback.
 
@@ -398,7 +398,7 @@ Definition of done for the product milestone:
 
 - Date: 2026-10-31
 - Commit evidence: this Milestone 11 implementation commit on `prototype`.
-- Delivered: cooked `ModelAsset` animation-source assignment by path or drag/drop with skeleton-layout compatibility checks; fallback to the rendered model's embedded skeleton/clips; named clip selection with duration; Play/Pause/Restart/Stop, loop, speed and time scrubbing; selected-entity-only edit-mode Scene View animation preview; existing `.pgcontroller` assignment/clear; controller state selection and typed Float/Bool/Trigger parameter editing; and clip, skeleton hierarchy and import-warning diagnostics.
+- Delivered: cooked `ModelAsset` animation-source assignment by path or drag/drop with skeleton-layout compatibility checks; fallback to the rendered model's embedded skeleton/clips; named clip selection with duration; Play/Pause/Restart/Stop, loop/speed, and time scrubbing; selected-entity-only edit-mode Scene View animation preview; existing `.pgcontroller` assignment/clear; controller state selection and typed Float/Bool/Trigger parameter editing; and clip, skeleton hierarchy and import-warning diagnostics.
 - Runtime integration: `Animator` now samples clips from an optional compatible animation-source asset while the rendered model continues to own the target skeleton, mesh geometry, inverse-bind data and skinning output. `AssetScene` rebuilds animated instances when that source changes and can advance only one selected authoring animator during editor preview; normal Play still advances the isolated runtime world as before.
 - Architecture: Animator authoring remains command-backed through `SceneDocument::SetAnimator`; M12 remains the owner of graph topology/state-machine asset authoring and M11 only assigns/operates those controller assets. No Ogre/Ozz implementation object is exposed through editor-facing contracts.
 - Persistence boundary: scene-format support for Animator components remains Milestone 16 work; M11 does not broaden scene serialization merely to claim persistence.
@@ -496,6 +496,17 @@ Definition of done for the product milestone:
 - Ownership: Dear ImGui remains the owner of window/docking serialization; `EditorWorkspace` owns lifecycle, local file paths, panel visibility and reset orchestration. Workspace state is presentation-only and never enters scene/runtime serialization.
 - Scope boundary: no selection changes (26), undo/redo expansion (27), drag/drop redesign (28), theme work (23) or icon/font work (24) is included.
 - Regression: `Scripts/Tests/EditorMilestone25WorkspaceTests.py`; historical M19/M22 downstream assertions were relaxed and the M25 gate preserves concurrently added M24/M27 regressions in local and Windows validation.
+
+## 28. Drag & Drop — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 28 implementation series on `prototype`.
+- Delivered: preserved cooked-model asset→Viewport placement and asset→Inspector model replacement; preserved persistent-ID hierarchy reparent/root-drop; added first-class `.pgmaterial` drag sources from Content Browser previews and command-backed material→selected-slot assignment; preserved cooked model/animation-source drag into Animator with clip, skeleton-layout and controller-graph validation; and added a shared frontend payload contract with defensive text decoding plus explicit green/red drop feedback for asset-facing targets.
+- Validation: viewport drops reject Play-mode authoring and malformed text payloads; model assignment continues to require cooked `ModelAsset` resources under `Assets://Cooked`; material slots validate `.pgmaterial` paths, load the material and validate referenced textures before `SceneDocument::SetModelMaterial`; Animator source drops require a rendered model, at least one clip, skeleton compatibility and a valid controller graph; hierarchy reparent payloads require the expected persistent-ID size and reject locked/self targets while `SceneDocument` remains the final cycle/parent authority.
+- Feedback: viewport targets receive a visible accept/reject border and message; material slots show explicit `[DROP]`/`[NO]` feedback including locked/Play read-only rejection; existing ImGui hierarchy/model/animator drop targets retain their native target highlighting while their validation messages flow through the existing editor log/status surfaces.
+- Architecture: drag/drop payloads remain frontend identifiers only. All resulting scene mutations continue through `SceneDocument`; asset resolution stays in `AssetManager`/material loaders; no Ogre/Jolt/EnTT implementation type crosses the drag/drop boundary.
+- Scope boundary: no Selection System multi-select work (26), general Editor Preview Rendering (29), notification/toast framework (39), or Asset Manager lifecycle redesign (31) is included.
+- Regression: `Scripts/Tests/EditorMilestone28DragDropTests.py` plus existing asset-interaction, hierarchy, material and Animator regressions; local and Windows editor validation both include the M28 gate while preserving concurrent M30 coverage.
 
 ## Historical architecture note
 
