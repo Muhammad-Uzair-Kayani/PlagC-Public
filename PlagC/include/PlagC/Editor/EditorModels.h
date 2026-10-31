@@ -104,6 +104,7 @@ EditorTelemetry MakeTelemetry(const FrameProfile&, const JobStats&, std::span<co
 
 enum class GizmoMode { Translate, Rotate, Scale };
 enum class TransformSpace { World, Local };
+enum class TransformPivot { Pivot, Center };
 
 struct InputCaptureState {
     bool uiBlocksMouse = false;
@@ -121,6 +122,7 @@ struct ViewportState {
     unsigned height = 1;
     GizmoMode gizmo = GizmoMode::Translate;
     TransformSpace transformSpace = TransformSpace::World;
+    TransformPivot pivot = TransformPivot::Pivot;
     bool gridVisible = true;
     bool gizmosVisible = true;
     bool previewLighting = true;
