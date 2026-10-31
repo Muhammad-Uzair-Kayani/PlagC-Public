@@ -17,7 +17,7 @@ class EditorSession;
 
 class EditorStatisticsPanel {
 public:
-    void Draw(Engine&, EditorSession&, bool* open = nullptr);
+    void Draw(Engine&, EditorSession&);
     void Reset() noexcept;
 
 private:
