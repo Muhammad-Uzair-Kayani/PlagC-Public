@@ -13,6 +13,7 @@ class EditorFileController {
 public:
     void DrawMenu(Engine&, EditorSession&);
     void DrawUnsavedModal(Engine&, EditorSession&);
+    bool Save(Engine&, EditorSession&);
     std::uint64_t DocumentGeneration() const noexcept { return documentGeneration_; }
 
 private:
