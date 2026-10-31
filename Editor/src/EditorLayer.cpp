@@ -175,9 +175,10 @@ void EditorLayer::DrawDockHost(Engine& engine, EditorSession& session)
             ImGui::MenuItem("Statistics", nullptr, &showStatistics_);
             ImGui::EndMenu();
         }
-        DrawTransport(engine, session);
         ImGui::EndMenuBar();
     }
+
+    DrawEditorToolbar(engine, session);
     ImGui::DockSpace(dockspaceID, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
     ImGui::End();
 }
