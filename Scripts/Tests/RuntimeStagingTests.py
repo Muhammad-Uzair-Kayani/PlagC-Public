@@ -13,6 +13,7 @@ from RuntimeAssetManifest import BASE, verify
 from StageRuntimeAssets import sync_tree
 
 SCRIPT = Path(__file__).resolve().parents[1] / "StageRuntimeAssets.py"
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class StagingTests(unittest.TestCase):
@@ -120,6 +121,14 @@ class StagingTests(unittest.TestCase):
 
             self.assertEqual((destination / "shader").read_bytes(), b"ok")
             self.assertFalse((destination / "stale").exists())
+
+    def test_dist_editor_surfaces_top_level_fatal_errors(self):
+        source = (ROOT / "Editor/src/DistFatalDiagnostics.cpp").read_text(encoding="utf-8")
+        self.assertIn("defined(_WIN32) && defined(PC_DIST)", source)
+        self.assertIn("PlagC fatal error:", source)
+        self.assertIn("Logs/PlagC-fatal.log", source)
+        self.assertIn("MessageBoxA", source)
+        self.assertIn("PlagC Editor - Fatal Error", source)
 
 
 if __name__ == "__main__":
