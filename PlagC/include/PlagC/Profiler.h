@@ -36,7 +36,7 @@ struct FrameProfile
 {
     double frameMs = 0.0, pollEventsMs = 0.0, assetPumpMs = 0.0, applicationUpdateMs = 0.0;
     double physicsMs = 0.0, animationMs = 0.0, sceneSyncMs = 0.0, audioMs = 0.0,
-           applicationOtherMs = 0.0;
+           uiMs = 0.0, applicationOtherMs = 0.0;
     double renderSubmitMs = 0.0, rendererCpuMs = 0.0, pacingMs = 0.0, unaccountedMs = 0.0,
            fps = 0.0;
 
@@ -72,6 +72,7 @@ class Profiler
         PC_ACCUM(animationMs);
         PC_ACCUM(sceneSyncMs);
         PC_ACCUM(audioMs);
+        PC_ACCUM(uiMs);
         PC_ACCUM(applicationOtherMs);
         PC_ACCUM(renderSubmitMs);
         PC_ACCUM(rendererCpuMs);
@@ -120,6 +121,7 @@ class Profiler
         PC_AVG(animationMs);
         PC_AVG(sceneSyncMs);
         PC_AVG(audioMs);
+        PC_AVG(uiMs);
         PC_AVG(applicationOtherMs);
         PC_AVG(renderSubmitMs);
         PC_AVG(rendererCpuMs);
