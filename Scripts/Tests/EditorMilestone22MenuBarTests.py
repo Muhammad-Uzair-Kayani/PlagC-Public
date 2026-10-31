@@ -16,7 +16,8 @@ class EditorMilestone22MenuBarTests(unittest.TestCase):
         layer = self.read("Editor/src/EditorLayer.cpp")
         files = self.read("Editor/src/EditorFileController.cpp")
         header = self.read("Editor/src/EditorLayer.h")
-        self.assertIn('BeginMenu("File")', files)
+        self.assertIn('const char* menuLabel = session.Dirty() ? "File *" : "File"', files)
+        self.assertIn("ImGui::BeginMenu(menuLabel)", files)
         self.assertIn('BeginMenu("Edit")', layer)
         self.assertIn('BeginMenu("View")', layer)
         for name in ("Entity", "Assets", "Window", "Debug", "Help"):

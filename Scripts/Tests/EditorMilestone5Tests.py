@@ -81,7 +81,7 @@ class EditorMilestone5Tests(unittest.TestCase):
         self.assertIn("EditorMilestone5Tests.py", local)
         self.assertIn("EditorMilestone5Tests.py", workflow)
         self.assertIn("## 5. Transform Inspector — `DONE`", docs)
-        self.assertIn("## Milestone 5 — Transform Inspector — `DONE`", docs)
+        self.assertIn("## 5. Transform Inspector — `DONE`", docs[docs.index("# Milestone Execution Log"):])
 
 
 if __name__ == "__main__":

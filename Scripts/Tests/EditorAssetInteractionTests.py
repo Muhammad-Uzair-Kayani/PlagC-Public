@@ -64,7 +64,7 @@ class EditorAssetInteractionTests(unittest.TestCase):
         self.assertIn("ImGui::GetCurrentWindow()", source)
         self.assertIn('window->GetID("ViewportSurface")', source)
         self.assertIn("ImGui::BeginDragDropTargetCustom(rect,surface)", source)
-        self.assertIn('ImGui::AcceptDragDropPayload(CookedModelPayload)', source)
+        self.assertIn("ImGui::AcceptDragDropPayload(DragDrop::CookedModel)", source)
         self.assertIn("DropPosition(editorCamera,viewport_,rect,ImGui::GetIO().MousePos)", source)
         self.assertIn("CreateCookedModelEntity(engine,session", source)
         self.assertIn("void AppendViewportAssetDrop(Engine&, EditorSession&, const CameraDesc& editorCamera);", header)

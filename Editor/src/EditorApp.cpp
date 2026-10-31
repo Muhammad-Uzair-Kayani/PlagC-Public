@@ -311,16 +311,15 @@ private:
         if (!ImGui::BeginPopupModal(popup, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
         ImGui::TextWrapped("The current scene has unsaved changes. Save before closing the Editor?");
         ImGui::Spacing();
-        const bool canSave = session_->HasPath() && session_->EditingEnabled();
+        const bool canSave = session_->EditingEnabled();
         ImGui::BeginDisabled(!canSave);
         if (ImGui::Button("Save & Exit"))
         {
-            try
+            if (layer_.SaveScene(engine, *session_))
             {
-                session_->Save(); closePrompt_=false; ImGui::CloseCurrentPopup();
+                closePrompt_=false; ImGui::CloseCurrentPopup();
                 if (auto* window=engine.MainWindow()) window->RequestClose();
             }
-            catch (const std::exception& error) { engine.Logger().Write(PlagC::Severity::Error,"EDITOR",error.what()); }
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
@@ -334,8 +333,7 @@ private:
         if (!canSave)
         {
             ImGui::Spacing();
-            if (!session_->HasPath()) ImGui::TextDisabled("Use File > Save As before closing if you want to keep this scene.");
-            else if (session_->Playing()) ImGui::TextDisabled("Stop Play mode before saving the scene.");
+            if (session_->Playing()) ImGui::TextDisabled("Stop Play mode before saving the scene.");
             else ImGui::TextDisabled("Finish the active editor gesture before saving the scene.");
         }
         ImGui::EndPopup();

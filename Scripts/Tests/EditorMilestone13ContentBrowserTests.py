@@ -52,11 +52,13 @@ class EditorMilestone13ContentBrowserTests(unittest.TestCase):
         panel = self.read("Editor/src/EditorDataPanels.cpp")
         interactions = self.read("Editor/src/EditorAssetInteractions.cpp")
         viewport_drop = self.read("Editor/src/EditorViewportAssetDrop.cpp")
+        dragdrop = self.read("Editor/src/EditorDragDrop.h")
         self.assertIn('constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL"', panel)
         self.assertIn('ImGui::SetDragDropPayload(CookedModelPayload', panel)
         self.assertIn("dataPanels_.ConsumeCookedModelActivation()", interactions)
         self.assertNotIn('SeparatorText("Cooked runtime assets")', interactions)
-        self.assertIn('"PLAGC_COOKED_MODEL"', viewport_drop)
+        self.assertIn("DragDrop::CookedModel", viewport_drop)
+        self.assertIn('CookedModel = "PLAGC_COOKED_MODEL"', dragdrop)
 
     def test_source_cooked_relationship_uses_existing_import_receipts(self):
         panel = self.read("Editor/src/EditorDataPanels.cpp")
@@ -75,7 +77,7 @@ class EditorMilestone13ContentBrowserTests(unittest.TestCase):
         self.assertIn("MergeBrowserEntries", panel)
         self.assertIn("std::unordered_map<std::string, std::size_t> byPath", panel)
 
-    def test_m13_remains_wired_after_later_preview_milestones(self):
+    def test_m13_remains_wired_after_later_editor_milestones(self):
         local = self.read("ValidateEditor.bat")
         ci = self.read(".github/workflows/editor-windows.yml")
         docs = self.read("Docs/Editor.md")
@@ -83,7 +85,7 @@ class EditorMilestone13ContentBrowserTests(unittest.TestCase):
         self.assertIn("EditorMilestone13ContentBrowserTests.py", local)
         self.assertIn("EditorMilestone13ContentBrowserTests.py", ci)
         self.assertIn("## 13. Content Browser — `DONE`", docs)
-        self.assertIn("## 17. Play Toolbar — `FOUNDATION`", docs)
+        self.assertIn("## 17. Play Toolbar — `DONE`", docs)
         self.assertNotIn("CookImportedAsset(", panel)
 
 

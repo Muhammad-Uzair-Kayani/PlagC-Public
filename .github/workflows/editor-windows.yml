@@ -31,40 +31,48 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Run editor source regressions
-        shell: cmd
+        shell: pwsh
         run: |
-          python Scripts\Tests\EngineBoundaryTests.py
-          python Scripts\Tests\RuntimeStagingTests.py
-          python Scripts\Tests\EditorArchitectureTests.py
-          python Scripts\Tests\EditorPlayRuntimeTests.py
-          python Scripts\Tests\EditorAssetInteractionTests.py
-          python Scripts\Tests\EditorMilestone3Tests.py
-          python Scripts\Tests\EditorMilestone4InspectorTests.py
-          python Scripts\Tests\EditorMilestone5Tests.py
-          python Scripts\Tests\EditorMilestone6Tests.py
-          python Scripts\Tests\EditorMilestone7MaterialTests.py
-          python Scripts\Tests\EditorMilestone8Tests.py
-          python Scripts\Tests\EditorMilestone9Tests.py
-          python Scripts\Tests\EditorMilestone10Tests.py
-          python Scripts\Tests\EditorMilestone11Tests.py
-          python Scripts\Tests\EditorMilestone12Tests.py
-          python Scripts\Tests\EditorMilestone13ContentBrowserTests.py
-          python Scripts\Tests\EditorMilestone14ThumbnailTests.py
-          python Scripts\Tests\EditorMilestone15Tests.py
-          python Scripts\Tests\EditorMilestone17PlayToolbarTests.py
-          python Scripts\Tests\EditorMilestone18Tests.py
-          python Scripts\Tests\EditorMilestone19ConsoleTests.py
-          python Scripts\Tests\EditorMilestone21ToolbarTests.py
-          python Scripts\Tests\EditorMilestone22MenuBarTests.py
-          python Scripts\Tests\EditorMilestone24IconFontTests.py
-          python Scripts\Tests\EditorMilestone25WorkspaceTests.py
-          python Scripts\Tests\EditorMilestone27UndoRedoTests.py
-          python Scripts\Tests\EditorMilestone28DragDropTests.py
-          python Scripts\Tests\EditorMilestone30RenderingQualityTests.py
-          python Scripts\Tests\EditorGizmoTests.py
-          python Scripts\Tests\EditorUiTextureTests.py
-          python Scripts\Tests\EditorViewportSceneViewTests.py
-          python Scripts\Tests\EditorSceneHierarchyMilestoneTests.py
+          $tests = @(
+            'EngineBoundaryTests.py',
+            'RuntimeStagingTests.py',
+            'EditorArchitectureTests.py',
+            'EditorPlayRuntimeTests.py',
+            'EditorAssetInteractionTests.py',
+            'EditorMilestone3Tests.py',
+            'EditorMilestone4InspectorTests.py',
+            'EditorMilestone5Tests.py',
+            'EditorMilestone6Tests.py',
+            'EditorMilestone7MaterialTests.py',
+            'EditorMilestone8Tests.py',
+            'EditorMilestone9Tests.py',
+            'EditorMilestone10Tests.py',
+            'EditorMilestone11Tests.py',
+            'EditorMilestone12Tests.py',
+            'EditorMilestone13ContentBrowserTests.py',
+            'EditorMilestone14ThumbnailTests.py',
+            'EditorMilestone15Tests.py',
+            'EditorMilestone16SceneFileTests.py',
+            'EditorMilestone17PlayToolbarTests.py',
+            'EditorMilestone18Tests.py',
+            'EditorMilestone19ConsoleTests.py',
+            'EditorMilestone21ToolbarTests.py',
+            'EditorMilestone22MenuBarTests.py',
+            'EditorMilestone24IconFontTests.py',
+            'EditorMilestone25WorkspaceTests.py',
+            'EditorMilestone27UndoRedoTests.py',
+            'EditorMilestone28DragDropTests.py',
+            'EditorMilestone30RenderingQualityTests.py',
+            'EditorGizmoTests.py',
+            'EditorUiTextureTests.py',
+            'EditorViewportSceneViewTests.py',
+            'EditorSceneHierarchyMilestoneTests.py'
+          )
+          foreach ($test in $tests) {
+            Write-Host "[Editor Source Regression] $test"
+            python (Join-Path 'Scripts\Tests' $test)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Generate OpenGL VS2022 solution
         shell: cmd

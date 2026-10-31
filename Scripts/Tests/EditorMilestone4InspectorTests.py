@@ -78,9 +78,9 @@ class EditorMilestone4InspectorTests(unittest.TestCase):
         self.assertIn("## 4. Inspector — `DONE`", doc)
         self.assertIn("## 4. Inspector — `DONE`", doc[doc.index("# Milestone Execution Log"):])
         self.assertIn("Scope boundary", doc)
-        self.assertIn("Milestone 5", doc)
-        self.assertIn("Milestone 7", doc)
-        self.assertIn("Milestone 10", doc)
+        self.assertIn("## 5. Transform Inspector — `DONE`", doc)
+        self.assertIn("## 7. Material System + Inspector — `DONE`", doc)
+        self.assertIn("## 10. Physics Inspector — `DONE`", doc)
 
     def test_validation_entrypoints_run_milestone4_gate(self):
         validate = self.read("ValidateEditor.bat")

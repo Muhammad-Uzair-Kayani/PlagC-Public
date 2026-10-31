@@ -29,6 +29,7 @@ public:
 
     const ViewportState& Viewport() const noexcept { return viewport_; }
     bool InspectorVisible() const noexcept { return showInspector_; }
+    bool SaveScene(Engine& engine, EditorSession& session) { return files_.Save(engine, session); }
     bool HierarchyEntityLocked(std::uint64_t persistentID) const noexcept {
         return hierarchy_.Locked(persistentID);
     }
