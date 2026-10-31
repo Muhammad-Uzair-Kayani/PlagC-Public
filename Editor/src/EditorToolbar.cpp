@@ -5,6 +5,7 @@
 #include <PlagC/Application.h>
 #include <imgui.h>
 #include <algorithm>
+#include <string>
 
 namespace PlagC::Editor {
 namespace {
@@ -36,16 +37,26 @@ void EditorLayer::DrawEditorToolbar(Engine& engine, EditorSession& session)
         ImGui::TextDisabled("*");
     }
 
+    std::string undoTooltip = "Undo (Ctrl+Z)";
+    std::string redoTooltip = "Redo (Ctrl+Y)";
+    if (authoring)
+    {
+        if (!session.Document().UndoLabel().empty())
+            undoTooltip = "Undo " + std::string(session.Document().UndoLabel()) + " (Ctrl+Z)";
+        if (!session.Document().RedoLabel().empty())
+            redoTooltip = "Redo " + std::string(session.Document().RedoLabel()) + " (Ctrl+Y)";
+    }
+
     ImGui::SameLine();
     if (EditorVisualAssets::IconButton(EditorIcon::Undo, "ToolbarUndo",
-                                       "Undo (Ctrl+Z)", session.CanUndo()))
+                                       undoTooltip, session.CanUndo()))
     {
         session.Undo();
         inspectorRevision_ = componentRevision_ = 0;
     }
     ImGui::SameLine();
     if (EditorVisualAssets::IconButton(EditorIcon::Redo, "ToolbarRedo",
-                                       "Redo (Ctrl+Y)", session.CanRedo()))
+                                       redoTooltip, session.CanRedo()))
     {
         session.Redo();
         inspectorRevision_ = componentRevision_ = 0;
