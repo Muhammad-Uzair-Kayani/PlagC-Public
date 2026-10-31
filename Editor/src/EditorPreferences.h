@@ -18,6 +18,7 @@ public:
 
     void Toggle() noexcept { open_ = !open_; }
     bool Open() const noexcept { return open_; }
+    static bool ToggleActive() noexcept;
     bool RestartRequired(RendererBackend active) const noexcept
     {
         return preferred_ != RendererBackend::Auto && preferred_ != active;
@@ -26,6 +27,7 @@ public:
 private:
     bool Restart(Engine&);
 
+    static EditorPreferences* active_;
     bool open_ = false;
     RendererBackend preferred_ = RendererBackend::Auto;
 };
