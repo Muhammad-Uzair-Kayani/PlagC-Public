@@ -59,7 +59,7 @@ class EditorMilestone12Tests(unittest.TestCase):
 
     def test_runtime_active_state_is_visualized_and_play_authoring_is_locked(self):
         self.assertIn("controller->Current().name.c_str()", self.editor)
-        self.assertIn('"Runtime state: %s"', self.editor)
+        self.assertIn('" | Runtime state: %s"', self.editor)
         self.assertIn("const bool editable = session.EditingEnabled()", self.editor)
         self.assertIn('"Play mode: graph authoring is locked; active runtime state remains visible."', self.editor)
 
