@@ -93,14 +93,14 @@ class EditorMilestone7MaterialTests(unittest.TestCase):
         self.assertIn("setAlphaTest", self.ogre)
         self.assertIn("setTwoSidedLighting", self.ogre)
 
-    def test_scene_v3_persists_material_assignments_and_keeps_old_versions_readable(self):
-        self.assertIn('w.Key("version"); w.Uint(3)', self.scene)
-        self.assertIn("version!=1 && version!=2 && version!=3", self.scene)
+    def test_material_assignments_remain_persistent_in_current_scene_format(self):
+        self.assertIn("CurrentSceneVersion = 4", self.scene)
+        self.assertIn("if(version<1 || version>CurrentSceneVersion)", self.scene)
+        self.assertIn("if(version<3)", self.scene)
         self.assertIn('w.Key("materials")', self.scene)
         self.assertIn("materialOverrides", self.scene)
         self.assertIn("LoadMaterialAsset", self.scene)
         self.assertIn("r.castShadows", self.scene)
-        self.assertIn("Scene v3 cannot save renderable, physics or animator", self.scene)
 
     def test_material_inspector_supports_slots_full_pbs_save_reload_clear_and_live_preview(self):
         for token in (
@@ -132,7 +132,7 @@ class EditorMilestone7MaterialTests(unittest.TestCase):
 
     def test_scope_boundary_and_validation_wiring(self):
         self.assertIn("## 7. Material System + Inspector — `DONE`", self.docs)
-        self.assertIn("## 10. Physics Inspector — `FOUNDATION`", self.docs)
+        self.assertIn("## 10. Physics Inspector — `DONE`", self.docs)
         self.assertIn("EditorMilestone7MaterialTests.py", self.validate)
         self.assertIn("EditorMilestone7MaterialTests.py", self.workflow)
         self.assertIn("EditorMilestone8Tests.py", self.validate)
