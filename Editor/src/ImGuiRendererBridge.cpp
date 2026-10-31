@@ -159,11 +159,10 @@ void ImGuiRendererBridge::Submit(Renderer& renderer, const ImDrawData* drawData)
             out.clipTop = std::clamp(top, 0.0f, frame.height);
             out.clipRight = std::clamp(right, 0.0f, frame.width);
             out.clipBottom = std::clamp(bottom, 0.0f, frame.height);
+            // Every engine-created UI TextureHandle is a valid ImGui texture ID.
+            // Renderer::SubmitUI performs the authoritative Ogre lookup/readiness
+            // validation for both normal UI textures and render targets.
             out.texture = DecodeTexture(command.GetTexID());
-            if (out.texture.kind == UiTextureKind::Texture &&
-                out.texture.value != fontTexture_.value)
-                throw std::runtime_error(
-                    "ImGui submitted an unknown editor UI texture handle");
 
             for (unsigned i = 0; i < command.ElemCount; ++i)
             {
