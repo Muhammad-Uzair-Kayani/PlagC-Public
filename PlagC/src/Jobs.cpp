@@ -1,6 +1,7 @@
 #include "pgcpch.h"
 #include <PlagC/Jobs.h>
 #include <PlagC/Thread.h>
+#include <chrono>
 
 namespace PlagC {
 static_assert(std::atomic<void*>::is_always_lock_free);
@@ -90,11 +91,16 @@ JobSystem::Job* JobSystem::Find(unsigned index) {
     return nullptr;
 }
 void JobSystem::Execute(Job* job) {
+    const auto busyStart = std::chrono::steady_clock::now();
     auto* group = job->group;
     auto* previous = executingGroup_; executingGroup_ = group;
     try { job->function(job->context); }
     catch (...) { group->failed.fetch_add(1); failed_.fetch_add(1); }
     executingGroup_ = previous;
+    const auto busyEnd = std::chrono::steady_clock::now();
+    const auto busy = std::chrono::duration_cast<std::chrono::nanoseconds>(busyEnd - busyStart).count();
+    if (busy > 0)
+        busyNanoseconds_.fetch_add(static_cast<std::uint64_t>(busy), std::memory_order_relaxed);
     executed_.fetch_add(1);
     job->used.store(false);
     group->pending.fetch_sub(1);
@@ -139,5 +145,8 @@ void JobSystem::Shutdown() {
     for (auto& w : workers_) if (w->thread.joinable()) w->thread.join();
     joined_ = true;
 }
-JobStats JobSystem::Stats() const { return {submitted_.load(), executed_.load(), stolen_.load(), failed_.load()}; }
+JobStats JobSystem::Stats() const {
+    return {submitted_.load(), executed_.load(), stolen_.load(), failed_.load(),
+            busyNanoseconds_.load(std::memory_order_relaxed)};
+}
 }
