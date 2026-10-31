@@ -4,6 +4,7 @@
 #include "EditorMenuController.h"
 #include "EditorSceneHierarchy.h"
 #include "EditorTransformInspector.h"
+#include "EditorWorkspace.h"
 #include <PlagC/Animation/AnimationControllerAsset.h>
 #include <PlagC/Assets/AssetImport.h>
 #include <PlagC/Editor/EditorModels.h>
@@ -51,6 +52,7 @@ public:
 
 private:
     friend class EditorMenuController;
+    friend class EditorWorkspace;
 
     enum class TransportAction {
         PlayStop,
@@ -76,6 +78,7 @@ private:
     void CreateCookedModelEntity(Engine&, EditorSession&, const char* assetPath, Vec3 position);
 
     EditorMenuController files_;
+    EditorWorkspace workspace_;
     EditorPreviewDataPanels dataPanels_;
     EditorSceneHierarchy hierarchy_;
     EditorTransformInspector transformInspector_;
