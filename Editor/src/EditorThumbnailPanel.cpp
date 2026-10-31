@@ -1,5 +1,6 @@
 #include "pgcpch.h"
 #include "EditorDataPanels.h"
+#include "EditorDragDrop.h"
 #include "ImGuiRendererBridge.h"
 #include <PlagC/Application.h>
 #include <PlagC/Assets/AssetImport.h>
@@ -158,6 +159,37 @@ ThumbnailView DrawPreviewImage(Engine& engine, EditorThumbnailCache& cache,
     return view;
 }
 
+void DrawPreviewDragSource(const PreviewRequest& request)
+{
+    const char* payloadType = nullptr;
+    const char* description = nullptr;
+    switch (request.kind)
+    {
+    case ThumbnailKind::Model:
+        payloadType = DragDrop::CookedModel;
+        description = "Model / animation source";
+        break;
+    case ThumbnailKind::Material:
+        payloadType = DragDrop::MaterialAsset;
+        description = "Material asset";
+        break;
+    case ThumbnailKind::Texture:
+        return;
+    }
+
+    if (!ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+        return;
+
+    ImGui::SetDragDropPayload(payloadType, request.key.c_str(), request.key.size() + 1u);
+    ImGui::Text("%s", description);
+    ImGui::TextDisabled("%s", request.key.c_str());
+    if (request.kind == ThumbnailKind::Model)
+        ImGui::TextDisabled("Drop into Viewport, Model field, or Animator source.");
+    else
+        ImGui::TextDisabled("Drop onto a Material slot in Inspector.");
+    ImGui::EndDragDropSource();
+}
+
 bool StripEligible(const AssetBrowserEntry& entry)
 {
     if (entry.runtimeType && (*entry.runtimeType==AssetType::Model ||
@@ -195,11 +227,12 @@ void EditorDataPanels::DrawAssetPreview(Engine& engine)
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             const ThumbnailView view=DrawPreviewImage(engine,thumbnails_,*request,{128,128},"SelectedAssetPreview");
+            DrawPreviewDragSource(*request);
             ImGui::TableSetColumnIndex(1);
             ImGui::TextWrapped("%s",request->key.c_str());
             ImGui::Text("Status: %s",PreviewStateLabel(view.state));
             ImGui::TextDisabled("128 x 128 studio preview");
-            ImGui::TextDisabled("Fixed camera + three-light renderer-neutral setup");
+            ImGui::TextDisabled("Drag visual assets from the preview into compatible editor targets.");
             if (view.state==ThumbnailState::Failed && !view.error.empty())
                 ImGui::TextWrapped("%.*s",static_cast<int>(view.error.size()),view.error.data());
             if (ImGui::Button("Regenerate Preview"))
@@ -232,6 +265,7 @@ void EditorDataPanels::DrawAssetPreview(Engine& engine)
             if (displayed) ImGui::SameLine();
             ImGui::BeginGroup();
             DrawPreviewImage(engine,thumbnails_,*request,{54,54},request->key.c_str());
+            DrawPreviewDragSource(*request);
             std::string leaf=std::filesystem::path(request->key).filename().string();
             if (leaf.size()>10) leaf=leaf.substr(0,9)+"...";
             ImGui::TextDisabled("%s",leaf.c_str());
