@@ -30,6 +30,18 @@ private:
     std::function<void()> revert_;
 };
 
+template <class Component>
+std::string ComponentLabel(std::string_view name,
+                           const std::optional<Component>& before,
+                           const std::optional<Component>& after)
+{
+    if (!before && after)
+        return "Add " + std::string(name);
+    if (before && !after)
+        return "Remove " + std::string(name);
+    return "Edit " + std::string(name);
+}
+
 template <class Component, class Setter, class Remover>
 std::unique_ptr<Command> MakeComponentCommand(
     SceneDocument* document, std::uint64_t persistentID, std::string label,
@@ -60,9 +72,9 @@ void SceneDocument::SetRenderable(Entity entity, const RenderableComponent& rend
     RequireStableEditState();
     const auto record = world_->Read(entity);
     const auto id = PersistentID(entity);
+    const std::optional<RenderableComponent> after(renderable);
     history_.Execute(MakeComponentCommand<RenderableComponent>(
-        this, id, "Edit renderable", record.renderable,
-        std::optional<RenderableComponent>(renderable),
+        this, id, ComponentLabel("renderable", record.renderable, after), record.renderable, after,
         [this](Entity target, const RenderableComponent& value) { world_->SetRenderable(target, value); },
         [this](Entity target) { world_->RemoveRenderable(target); }));
     BumpRevision();
@@ -89,9 +101,9 @@ void SceneDocument::SetPhysics(Entity entity, const PhysicsComponent& physics)
     RequireStableEditState();
     const auto record = world_->Read(entity);
     const auto id = PersistentID(entity);
+    const std::optional<PhysicsComponent> after(physics);
     history_.Execute(MakeComponentCommand<PhysicsComponent>(
-        this, id, "Edit physics", record.physics,
-        std::optional<PhysicsComponent>(physics),
+        this, id, ComponentLabel("physics", record.physics, after), record.physics, after,
         [this](Entity target, const PhysicsComponent& value) { world_->SetPhysics(target, value); },
         [this](Entity target) { world_->RemovePhysics(target); }));
     BumpRevision();
@@ -118,9 +130,9 @@ void SceneDocument::SetAnimator(Entity entity, const AnimatorComponent& animator
     RequireStableEditState();
     const auto record = world_->Read(entity);
     const auto id = PersistentID(entity);
+    const std::optional<AnimatorComponent> after(animator);
     history_.Execute(MakeComponentCommand<AnimatorComponent>(
-        this, id, "Edit animator", record.animator,
-        std::optional<AnimatorComponent>(animator),
+        this, id, ComponentLabel("animator", record.animator, after), record.animator, after,
         [this](Entity target, const AnimatorComponent& value) { world_->SetAnimator(target, value); },
         [this](Entity target) { world_->RemoveAnimator(target); }));
     BumpRevision();
