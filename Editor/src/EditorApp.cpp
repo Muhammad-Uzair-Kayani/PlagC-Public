@@ -372,12 +372,17 @@ private:
         const float focusDz=editorCamera_.target.z-editorCamera_.position.z;
         const float focusDistance=std::clamp(std::sqrt(focusDx*focusDx+focusDy*focusDy+focusDz*focusDz),0.1f,100000.0f);
         SyncCameraLookFromEditorCamera();
-        if (viewport.input.AcceptCameraMouse() && viewport.input.AcceptKeyboard() && !blocked && ImGui::IsMouseDown(ImGuiMouseButton_Right))
-        {
+
+        const bool cameraMouse=viewport.input.AcceptCameraMouse()&&!blocked;
+        const bool cameraKeyboard=viewport.input.AcceptKeyboard()&&!blocked&&!io.KeyCtrl&&!io.KeyAlt&&!io.KeySuper;
+        if(cameraMouse&&ImGui::IsMouseDown(ImGuiMouseButton_Right))
             cameraLook_.Rotate(io.MouseDelta.x, io.MouseDelta.y);
-            const auto forward = cameraLook_.Forward();
-            constexpr float radians = 3.14159265358979323846f / 180.0f;
-            const PlagC::Vec3 right{-std::sin(cameraLook_.yaw * radians),0,std::cos(cameraLook_.yaw * radians)};
+
+        const auto forward = cameraLook_.Forward();
+        constexpr float radians = 3.14159265358979323846f / 180.0f;
+        const PlagC::Vec3 right{-std::sin(cameraLook_.yaw * radians),0,std::cos(cameraLook_.yaw * radians)};
+        if(cameraKeyboard)
+        {
             float x=float(ImGui::IsKeyDown(ImGuiKey_D))-float(ImGui::IsKeyDown(ImGuiKey_A));
             float y=float(ImGui::IsKeyDown(ImGuiKey_E))-float(ImGui::IsKeyDown(ImGuiKey_Q));
             float z=float(ImGui::IsKeyDown(ImGuiKey_W))-float(ImGui::IsKeyDown(ImGuiKey_S));
@@ -388,7 +393,6 @@ private:
             editorCamera_.position.y+=(y+forward.y*z)*step;
             editorCamera_.position.z+=(right.z*x+forward.z*z)*step;
         }
-        const auto forward=cameraLook_.Forward();
         const auto p=editorCamera_.position;
         editorCamera_.target={p.x+forward.x*focusDistance,p.y+forward.y*focusDistance,p.z+forward.z*focusDistance};
         engine.Graphics().SetCamera(editorCamera_);
