@@ -38,10 +38,22 @@ void EditorWorkspace::Initialize(EditorLayer& owner)
 
     // PlagC owns when workspace settings are written so layout and panel visibility
     // are committed together. Dear ImGui still owns the docking/window serialization.
+    // This initialization happens during the first menu pass, after ImGui::NewFrame may
+    // already have consumed a legacy root imgui.ini. Disable future automatic I/O and
+    // deterministically replace any first-frame legacy state before the DockSpace is drawn.
+    const bool hasSavedWorkspace = HasSavedWorkspace();
     ImGui::GetIO().IniFilename = nullptr;
-    startupRestore_ = HasSavedWorkspace();
-    if (std::filesystem::is_regular_file(statePath_))
-        LoadPanelState(owner);
+    if (hasSavedWorkspace)
+    {
+        startupRestore_ = true;
+        if (std::filesystem::is_regular_file(statePath_))
+            LoadPanelState(owner);
+    }
+    else
+    {
+        ImGui::ClearIniSettings();
+        pending_ = Pending::Reset;
+    }
     initialized_ = true;
 }
 

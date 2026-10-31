@@ -53,7 +53,21 @@ class EditorMilestone25WorkspaceTests(unittest.TestCase):
         self.assertIn("owner.BuildDefaultLayout(", workspace)
         self.assertIn("SetDefaultPanels(owner)", workspace)
         self.assertIn("LoadPanelState(owner)", workspace)
-        self.assertIn("startupRestore_ = HasSavedWorkspace()", workspace)
+        self.assertIn("startupRestore_ = true", workspace)
+
+    def test_first_frame_legacy_imgui_ini_cannot_override_plagc_workspace(self):
+        workspace = self.read("Editor/src/EditorWorkspace.cpp")
+        self.assertIn("const bool hasSavedWorkspace = HasSavedWorkspace()", workspace)
+        self.assertIn("ImGui::GetIO().IniFilename = nullptr", workspace)
+        self.assertIn("if (hasSavedWorkspace)", workspace)
+        self.assertIn("ImGui::ClearIniSettings()", workspace)
+        self.assertIn("pending_ = Pending::Reset", workspace)
+        self.assertIn("ApplyPending(owner)", workspace)
+        # A stale panel-state sidecar must not be loaded unless its matching layout exists.
+        saved_branch = workspace.index("if (hasSavedWorkspace)")
+        load_panel = workspace.index("LoadPanelState(owner)", saved_branch)
+        reset_branch = workspace.index("pending_ = Pending::Reset", saved_branch)
+        self.assertLess(load_panel, reset_branch)
 
     def test_detached_windows_remain_supported_and_local_state_is_not_tracked(self):
         layer = self.read("Editor/src/EditorLayer.cpp")
