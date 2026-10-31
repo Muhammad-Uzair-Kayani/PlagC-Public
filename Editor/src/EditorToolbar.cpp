@@ -3,8 +3,10 @@
 #include "EditorPreferences.h"
 #include "EditorVisualAssets.h"
 #include <PlagC/Application.h>
+#include <PlagC/Renderer/RenderQuality.h>
 #include <imgui.h>
 #include <algorithm>
+#include <cmath>
 #include <string>
 
 namespace PlagC::Editor {
@@ -15,6 +17,80 @@ void ToolbarSeparator()
     ImGui::SameLine();
     ImGui::TextDisabled("|");
     ImGui::SameLine();
+}
+
+void DrawRenderingQualityPopup(Engine& engine, const ViewportState& viewport)
+{
+    if (!ImGui::BeginPopup("Rendering Quality##EditorToolbar"))
+        return;
+
+    auto settings = engine.Graphics().Settings();
+    bool changed = false;
+    changed |= ImGui::Checkbox("HDR + Tone Mapping", &settings.hdr);
+    changed |= ImGui::Checkbox("Bloom", &settings.bloom);
+    changed |= ImGui::Checkbox("Scene Shadows", &settings.shadows);
+    ImGui::SetNextItemWidth(180.0f);
+    changed |= ImGui::DragFloat("Exposure", &settings.exposure, 0.02f, 0.1f, 8.0f, "%.2f");
+    ImGui::SetNextItemWidth(180.0f);
+    changed |= ImGui::DragFloat("Bloom Strength", &settings.bloomStrength, 0.01f, 0.0f, 4.0f, "%.2f");
+    ImGui::SetNextItemWidth(180.0f);
+    changed |= ImGui::DragFloat("Bloom Threshold", &settings.bloomThreshold, 0.02f, 0.01f, 16.0f, "%.2f");
+    if (changed)
+    {
+        settings.exposure = std::clamp(settings.exposure, 0.1f, 8.0f);
+        settings.bloomStrength = std::clamp(settings.bloomStrength, 0.0f, 4.0f);
+        settings.bloomThreshold = std::clamp(settings.bloomThreshold, 0.01f, 16.0f);
+        engine.Graphics().SetSettings(settings);
+    }
+
+    ImGui::Separator();
+    const auto environment = engine.Graphics().Environment();
+    ImGui::Text("Backend: %s", BackendName(engine.Graphics().Backend()));
+    ImGui::Text("Environment: %s", environment.cubemap.empty() ? "none" : environment.cubemap.c_str());
+    ImGui::Text("Skybox: %s   IBL reflections: %s",
+                environment.skybox ? "on" : "off",
+                environment.reflections ? "on" : "off");
+
+    const ImGuiIO& io = ImGui::GetIO();
+    const unsigned logicalWidth = std::max(1u, viewport.width);
+    const unsigned logicalHeight = std::max(1u, viewport.height);
+    const unsigned framebufferWidth = std::max(
+        1u, static_cast<unsigned>(std::lround(logicalWidth * io.DisplayFramebufferScale.x)));
+    const unsigned framebufferHeight = std::max(
+        1u, static_cast<unsigned>(std::lround(logicalHeight * io.DisplayFramebufferScale.y)));
+
+    RenderQualityAuditInput input;
+    input.settings = settings;
+    input.environment = environment;
+    input.backend = engine.Graphics().Backend();
+    input.logicalWidth = logicalWidth;
+    input.logicalHeight = logicalHeight;
+    input.framebufferWidth = framebufferWidth;
+    input.framebufferHeight = framebufferHeight;
+    input.msaaSamples = 1u; // Current renderer-neutral Editor target baseline.
+    input.uiCompositing = true;
+    const RenderQualityAudit audit = AuditRenderQuality(input);
+
+    ImGui::Text("Viewport: %ux%u -> %ux%u framebuffer", logicalWidth, logicalHeight,
+                framebufferWidth, framebufferHeight);
+    ImGui::Text("DPI scale: %.2f x %.2f", audit.dpiScaleX, audit.dpiScaleY);
+    ImGui::Text("MSAA: 1x validated baseline");
+    ImGui::TextDisabled("Base colour/emissive = sRGB; normal/metal/roughness/AO = linear.");
+
+    if (!audit.errors.empty())
+    {
+        ImGui::SeparatorText("Quality Errors");
+        for (const auto& error : audit.errors)
+            ImGui::BulletText("%s", error.c_str());
+    }
+    if (!audit.notices.empty())
+    {
+        ImGui::SeparatorText("Validation Notes");
+        for (const auto& notice : audit.notices)
+            ImGui::BulletText("%s", notice.c_str());
+    }
+
+    ImGui::EndPopup();
 }
 
 } // namespace
@@ -134,10 +210,18 @@ void EditorLayer::DrawEditorToolbar(Engine& engine, EditorSession& session)
                                        "Stop Play mode (F5)", running))
         ExecuteTransport(engine, session, TransportAction::PlayStop);
 
-    const float settingsX = ImGui::GetWindowWidth() - 40.0f;
+    const float rightControlsWidth = 76.0f;
+    const float rightX = ImGui::GetWindowWidth() - rightControlsWidth;
     ImGui::SameLine();
-    if (ImGui::GetCursorPosX() < settingsX)
-        ImGui::SetCursorPosX(settingsX);
+    if (ImGui::GetCursorPosX() < rightX)
+        ImGui::SetCursorPosX(rightX);
+    if (ImGui::Button("Q##RenderingQuality", ImVec2(30.0f, 26.0f)))
+        ImGui::OpenPopup("Rendering Quality##EditorToolbar");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("Rendering quality validation and live HDR/shadow controls");
+    DrawRenderingQualityPopup(engine, viewport_);
+
+    ImGui::SameLine();
     if (EditorVisualAssets::IconButton(EditorIcon::Settings, "ToolbarSettings",
                                        "Editor settings (Ctrl+,)"))
         EditorPreferences::ToggleActive();
