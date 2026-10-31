@@ -34,6 +34,21 @@ void EditorMenuController::DrawMenu(Engine& engine, EditorSession& session)
         selectedLocked = selected && owner_.hierarchy_.Locked(document.PersistentID(selected));
     }
 
+    // M22 owns the shortcut it advertises in the Entity menu. Keep Escape context-safe so
+    // text editing, active widgets, popups/modals and modified key chords retain ownership.
+    const auto& io = ImGui::GetIO();
+    const bool clearSelectionBlocked =
+        io.WantTextInput || ImGui::IsAnyItemActive() || io.KeyCtrl || io.KeyAlt || io.KeySuper ||
+        ImGui::IsPopupOpen(nullptr,
+            ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+    if (authoring && selected && !transient && !clearSelectionBlocked &&
+        ImGui::IsKeyPressed(ImGuiKey_Escape, false))
+    {
+        session.EditDocument().Select({});
+        selected = {};
+        selectedLocked = false;
+    }
+
     if (ImGui::BeginMenu("Entity"))
     {
         if (ImGui::MenuItem("Create Empty", nullptr, false, authoring && !transient))
@@ -162,7 +177,7 @@ void EditorMenuController::DrawMenu(Engine& engine, EditorSession& session)
         ImGui::TextDisabled("Prototype authoring workspace");
         ImGui::Separator();
         ImGui::TextDisabled("File: Ctrl+N / Ctrl+O / Ctrl+S");
-        ImGui::TextDisabled("Edit: Ctrl+Z / Ctrl+Y / Ctrl+D / Delete");
+        ImGui::TextDisabled("Edit: Ctrl+Z / Ctrl+Y / Ctrl+D / Delete / Esc");
         ImGui::TextDisabled("Play: F5 / F6 / F7");
         ImGui::Separator();
         if (ImGui::MenuItem("Copy Editor Documentation Path"))

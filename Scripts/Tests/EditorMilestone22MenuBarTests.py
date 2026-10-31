@@ -55,9 +55,10 @@ class EditorMilestone22MenuBarTests(unittest.TestCase):
         self.assertIn("owner_.physicsDebugVisible_", menu)
         self.assertIn("owner_.physicsDebugAll_", menu)
 
-    def test_shortcuts_are_existing_context_safe_routes_not_duplicate_systems(self):
+    def test_shortcuts_are_context_safe_and_match_advertised_menu_labels(self):
         files = self.read("Editor/src/EditorFileController.cpp")
         layer = self.read("Editor/src/EditorLayer.cpp")
+        menu = self.read("Editor/src/EditorMenuController.cpp")
         self.assertIn("ImGuiKey_N", files)
         self.assertIn("ImGuiKey_O", files)
         self.assertIn("ImGuiKey_S", files)
@@ -68,12 +69,19 @@ class EditorMilestone22MenuBarTests(unittest.TestCase):
         self.assertIn("ImGuiKey_Delete", layer)
         self.assertIn("session.CanUndo()", layer)
         self.assertIn("session.CanRedo()", layer)
+        self.assertIn("ImGuiKey_Escape", menu)
+        self.assertIn("clearSelectionBlocked", menu)
+        self.assertIn("io.WantTextInput", menu)
+        self.assertIn("ImGui::IsAnyItemActive()", menu)
+        self.assertIn("ImGui::IsPopupOpen(nullptr", menu)
+        self.assertIn("session.EditDocument().Select({})", menu)
 
     def test_help_menu_has_editor_specific_discovery_without_external_dependency(self):
         menu = self.read("Editor/src/EditorMenuController.cpp")
         self.assertIn('"PlagC Editor"', menu)
         self.assertIn('"Copy Editor Documentation Path"', menu)
         self.assertIn('ImGui::SetClipboardText("Docs/Editor.md")', menu)
+        self.assertIn('"Edit: Ctrl+Z / Ctrl+Y / Ctrl+D / Delete / Esc"', menu)
         self.assertIn('"Play: F5 / F6 / F7"', menu)
 
     def test_m22_is_wired(self):
