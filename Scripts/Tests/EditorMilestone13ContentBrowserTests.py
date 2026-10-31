@@ -52,11 +52,13 @@ class EditorMilestone13ContentBrowserTests(unittest.TestCase):
         panel = self.read("Editor/src/EditorDataPanels.cpp")
         interactions = self.read("Editor/src/EditorAssetInteractions.cpp")
         viewport_drop = self.read("Editor/src/EditorViewportAssetDrop.cpp")
+        dragdrop = self.read("Editor/src/EditorDragDrop.h")
         self.assertIn('constexpr const char* CookedModelPayload = "PLAGC_COOKED_MODEL"', panel)
         self.assertIn('ImGui::SetDragDropPayload(CookedModelPayload', panel)
         self.assertIn("dataPanels_.ConsumeCookedModelActivation()", interactions)
         self.assertNotIn('SeparatorText("Cooked runtime assets")', interactions)
-        self.assertIn('"PLAGC_COOKED_MODEL"', viewport_drop)
+        self.assertIn("DragDrop::CookedModel", viewport_drop)
+        self.assertIn('CookedModel = "PLAGC_COOKED_MODEL"', dragdrop)
 
     def test_source_cooked_relationship_uses_existing_import_receipts(self):
         panel = self.read("Editor/src/EditorDataPanels.cpp")
