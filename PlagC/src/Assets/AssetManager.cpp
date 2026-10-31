@@ -1,11 +1,103 @@
 #include "pgcpch.h"
 #include <PlagC/Assets/AssetManager.h>
 #include <PlagC/Thread.h>
+#include <array>
+#include <optional>
+#include <string_view>
 namespace PlagC
 {
 namespace
 {
 std::atomic<std::uint64_t> nextGeneration{1};
+
+std::uint64_t AssetPathID(std::string_view key)
+{
+    std::uint64_t id = 14695981039346656037ull;
+    for (unsigned char c : key)
+    {
+        id ^= c;
+        id *= 1099511628211ull;
+    }
+    return id ? id : 1;
+}
+
+std::optional<Primitive> BuiltinPrimitiveKind(std::string_view path)
+{
+    if (path == "Engine://Primitives/Cube.plasset") return Primitive::Cube;
+    if (path == "Engine://Primitives/Plane.plasset") return Primitive::Plane;
+    if (path == "Engine://Primitives/Sphere.plasset") return Primitive::Sphere;
+    if (path == "Engine://Primitives/Cylinder.plasset") return Primitive::Cylinder;
+    return std::nullopt;
+}
+
+std::size_t PrimitiveIndex(Primitive primitive)
+{
+    switch (primitive)
+    {
+    case Primitive::Cube: return 0;
+    case Primitive::Plane: return 1;
+    case Primitive::Sphere: return 2;
+    case Primitive::Cylinder: return 3;
+    }
+    throw std::invalid_argument("unknown built-in primitive");
+}
+
+const char *PrimitiveName(Primitive primitive)
+{
+    switch (primitive)
+    {
+    case Primitive::Cube: return "Cube";
+    case Primitive::Plane: return "Plane";
+    case Primitive::Sphere: return "Sphere";
+    case Primitive::Cylinder: return "Cylinder";
+    }
+    throw std::invalid_argument("unknown built-in primitive");
+}
+
+std::shared_ptr<const Asset> BuiltinPrimitiveAsset(const std::string &path, AssetType type)
+{
+    const auto primitive = BuiltinPrimitiveKind(path);
+    if (!primitive)
+        return {};
+    if (type != AssetType::Model)
+        throw std::invalid_argument("built-in primitive asset type mismatch");
+
+    static std::array<std::shared_ptr<const ModelAsset>, 4> cache;
+    auto &cached = cache[PrimitiveIndex(*primitive)];
+    if (!cached)
+    {
+        auto asset = std::make_shared<ModelAsset>();
+        asset->metadata.id = {AssetPathID(path)};
+        asset->metadata.type = AssetType::Model;
+        asset->metadata.path = path;
+        asset->metadata.generation = 1;
+
+        MeshAsset mesh;
+        mesh.name = PrimitiveName(*primitive);
+        mesh.geometry = MakePrimitive(*primitive);
+        mesh.node = 0;
+        mesh.material = 0;
+        asset->meshes.push_back(std::move(mesh));
+
+        MaterialAsset material;
+        material.name = "Default";
+        material.colour = {0.72f, 0.74f, 0.78f};
+        material.roughness = 0.55f;
+        asset->materials.push_back(std::move(material));
+
+        AssetNode root;
+        root.name = "Root";
+        root.parent = -1;
+        asset->skeleton.joints.push_back(std::move(root));
+
+        const auto &geometry = asset->meshes.front().geometry;
+        asset->metadata.bytes = geometry.vertices.size() * sizeof(Vertex) +
+                                geometry.indices.size() * sizeof(std::uint32_t);
+        Validate(*asset);
+        cached = std::move(asset);
+    }
+    return cached;
+}
 }
 struct AssetManager::Impl
 {
@@ -144,6 +236,9 @@ std::filesystem::path AssetManager::MountedRoot(const std::string &name) const
 void AssetManager::Request(const std::string &path, AssetType type)
 {
     Thread::RequireMain();
+    if (BuiltinPrimitiveAsset(path, type))
+        return;
+
     auto &p = *impl_;
     auto [key, full] = p.Resolve(path);
     auto found = p.entries.find(key);
@@ -155,14 +250,7 @@ void AssetManager::Request(const std::string &path, AssetType type)
     }
     if (p.entries.size() >= 4096)
         throw std::runtime_error("asset registry capacity reached");
-    std::uint64_t id = 14695981039346656037ull;
-    for (unsigned char c : key)
-    {
-        id ^= c;
-        id *= 1099511628211ull;
-    }
-    if (!id)
-        id = 1;
+    const std::uint64_t id = AssetPathID(key);
     for (const auto &[name, e] : p.entries)
         if (e->info.metadata.id.value == id)
             throw std::runtime_error("asset ID hash collision");
@@ -227,6 +315,9 @@ void AssetManager::Wait()
 std::shared_ptr<const Asset> AssetManager::GetBase(const std::string &path, AssetType type) const
 {
     Thread::RequireMain();
+    if (auto builtin = BuiltinPrimitiveAsset(path, type))
+        return builtin;
+
     auto key = impl_->Resolve(path).first;
     auto it = impl_->entries.find(key);
     if (it == impl_->entries.end())
@@ -238,6 +329,9 @@ std::shared_ptr<const Asset> AssetManager::GetBase(const std::string &path, Asse
 }
 std::shared_ptr<const Asset> AssetManager::LoadBase(const std::string &path, AssetType type)
 {
+    if (auto builtin = BuiltinPrimitiveAsset(path, type))
+        return builtin;
+
     Request(path, type);
     Wait();
     auto value = GetBase(path, type);
@@ -251,6 +345,9 @@ std::shared_ptr<const Asset> AssetManager::LoadBase(const std::string &path, Ass
 void AssetManager::Reload(const std::string &path)
 {
     Thread::RequireMain();
+    if (BuiltinPrimitiveKind(path))
+        return;
+
     Wait();
     auto &e = *impl_->entries.at(impl_->Resolve(path).first);
     e.done = false;
@@ -263,6 +360,9 @@ void AssetManager::Reload(const std::string &path)
 void AssetManager::Unload(const std::string &path)
 {
     Thread::RequireMain();
+    if (BuiltinPrimitiveKind(path))
+        return;
+
     Wait();
     impl_->entries.erase(impl_->Resolve(path).first);
 }

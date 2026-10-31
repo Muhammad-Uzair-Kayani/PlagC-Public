@@ -5,7 +5,6 @@
 #include <PlagC/Assets/AssetManager.h>
 #include <imgui.h>
 #include <algorithm>
-#include <array>
 #include <filesystem>
 #include <limits>
 #include <stdexcept>
@@ -59,55 +58,24 @@ const AuthoringEntity* SelectedEntity(const std::vector<AuthoringEntity>& entiti
     return it == entities.end() ? nullptr : &*it;
 }
 
-struct PrimitiveResources
-{
-    Renderer* owner = nullptr;
-    MaterialHandle material{};
-    std::array<MeshHandle, 4> meshes{};
-};
-
-PrimitiveResources& EditorPrimitives()
-{
-    // These resources intentionally live for the renderer lifetime. The editor process owns a
-    // single Renderer, which releases all remaining resource handles during renderer shutdown.
-    static PrimitiveResources resources;
-    return resources;
-}
-
-std::size_t PrimitiveIndex(Primitive primitive)
+const char* PrimitiveAssetPath(Primitive primitive)
 {
     switch (primitive)
     {
-    case Primitive::Cube: return 0;
-    case Primitive::Plane: return 1;
-    case Primitive::Sphere: return 2;
-    case Primitive::Cylinder: return 3;
+    case Primitive::Cube: return "Engine://Primitives/Cube.plasset";
+    case Primitive::Plane: return "Engine://Primitives/Plane.plasset";
+    case Primitive::Sphere: return "Engine://Primitives/Sphere.plasset";
+    case Primitive::Cylinder: return "Engine://Primitives/Cylinder.plasset";
     }
     throw std::invalid_argument("Unknown editor primitive");
 }
 
-RenderableComponent PrimitiveRenderable(Engine& engine, Primitive primitive)
+ModelComponent PrimitiveModel(Engine& engine, Primitive primitive)
 {
-    auto& renderer = engine.Graphics();
-    auto& resources = EditorPrimitives();
-    if (!resources.owner)
-        resources.owner = &renderer;
-    if (resources.owner != &renderer)
-        throw std::logic_error("Editor primitive cache belongs to a different renderer");
-
-    if (!resources.material)
-    {
-        MaterialDesc material;
-        material.colour = {0.72f, 0.74f, 0.78f};
-        material.roughness = 0.55f;
-        resources.material = renderer.CreateMaterial(material);
-    }
-
-    auto& mesh = resources.meshes[PrimitiveIndex(primitive)];
-    if (!mesh)
-        mesh = renderer.CreateMesh(MakePrimitive(primitive));
-
-    return RenderableComponent{mesh, resources.material, true, true, 10};
+    auto model = engine.Assets().Load<ModelAsset>(PrimitiveAssetPath(primitive));
+    if (!model)
+        throw std::runtime_error("Built-in primitive ModelAsset could not be resolved");
+    return ModelComponent{std::move(model), true, true};
 }
 
 Vec3 CreationAnchor(EditorSession& session)
@@ -180,7 +148,7 @@ void CreatePrimitiveEntity(Engine& engine, EditorSession& session,
     entity.transform.position = CreationAnchor(session);
     if (primitive != Primitive::Plane)
         entity.transform.position.y += 0.5f;
-    entity.renderable = PrimitiveRenderable(engine, primitive);
+    entity.model = PrimitiveModel(engine, primitive);
     session.EditDocument().Create(std::move(entity));
 }
 
@@ -203,7 +171,7 @@ void CreatePhysicsEntity(Engine& engine, EditorSession& session, MotionType moti
     entity.name = name;
     entity.transform.position = CreationAnchor(session);
     entity.transform.position.y += motion == MotionType::Static ? 0.5f : 1.5f;
-    entity.renderable = PrimitiveRenderable(engine, primitive);
+    entity.model = PrimitiveModel(engine, primitive);
     entity.physics = PhysicsBody(motion, collider);
     session.EditDocument().Create(std::move(entity));
 }

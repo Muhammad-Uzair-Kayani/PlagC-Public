@@ -13,6 +13,7 @@ class EditorMilestone3Tests(unittest.TestCase):
 
     def setUp(self):
         self.source = self.read("Editor/src/EditorAssetInteractions.cpp")
+        self.assets = self.read("PlagC/src/Assets/AssetManager.cpp")
 
     def test_hierarchy_exposes_real_create_workflow(self):
         self.assertIn('ImGui::Button("+ Create..."', self.source)
@@ -45,14 +46,20 @@ class EditorMilestone3Tests(unittest.TestCase):
         self.assertIn("light.outerAngle = 40.0f;", self.source)
         self.assertIn("entity.light = LightComponent{light};", self.source)
 
-    def test_primitives_create_real_renderer_resources(self):
-        self.assertIn("renderer.CreateMaterial(material)", self.source)
-        self.assertIn("renderer.CreateMesh(MakePrimitive(primitive))", self.source)
-        self.assertIn("Primitive::Cube", self.source)
-        self.assertIn("Primitive::Plane", self.source)
-        self.assertIn("Primitive::Sphere", self.source)
-        self.assertIn("Primitive::Cylinder", self.source)
-        self.assertIn("entity.renderable = PrimitiveRenderable(engine, primitive);", self.source)
+    def test_primitives_use_persistent_builtin_model_assets(self):
+        for path in (
+            "Engine://Primitives/Cube.plasset",
+            "Engine://Primitives/Plane.plasset",
+            "Engine://Primitives/Sphere.plasset",
+            "Engine://Primitives/Cylinder.plasset",
+        ):
+            self.assertIn(path, self.source)
+            self.assertIn(path, self.assets)
+        self.assertIn("engine.Assets().Load<ModelAsset>(PrimitiveAssetPath(primitive))", self.source)
+        self.assertIn("entity.model = PrimitiveModel(engine, primitive);", self.source)
+        self.assertNotIn("entity.renderable = PrimitiveRenderable", self.source)
+        self.assertIn("mesh.geometry = MakePrimitive(*primitive);", self.assets)
+        self.assertIn("Validate(*asset);", self.assets)
 
     def test_physics_presets_are_rendered_and_simulation_ready(self):
         for label in (
@@ -71,6 +78,7 @@ class EditorMilestone3Tests(unittest.TestCase):
         self.assertIn("ColliderType::Cylinder", self.source)
         self.assertIn("CollisionLayer::StaticWorld", self.source)
         self.assertIn("CollisionLayer::Dynamic", self.source)
+        self.assertIn("entity.model = PrimitiveModel(engine, primitive);", self.source)
         self.assertIn("entity.physics = PhysicsBody(motion, collider);", self.source)
 
     def test_creation_uses_authoring_context_instead_of_stacking_everything_at_origin(self):

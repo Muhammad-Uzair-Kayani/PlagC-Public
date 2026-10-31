@@ -19,6 +19,8 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.scene = self.read("PlagC/src/Editor/SceneSerialization.cpp")
         self.session = self.read("PlagC/src/Editor/EditorSession.cpp")
         self.native_tests = self.read("Scripts/Tests/EditorSerializationTests.cpp")
+        self.asset_interactions = self.read("Editor/src/EditorAssetInteractions.cpp")
+        self.asset_manager = self.read("PlagC/src/Assets/AssetManager.cpp")
         self.docs = self.read("Docs/Editor.md")
 
     def test_file_menu_has_complete_scene_workflow_shortcuts_and_dirty_feedback(self):
@@ -89,6 +91,23 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.assertIn("materialOverrides", self.scene)
         self.assertIn("animationSource", self.scene)
         self.assertIn("Model resolver required to load animator source", self.scene)
+
+    def test_editor_primitives_and_physics_presets_use_persistent_model_assets(self):
+        for path in (
+            "Engine://Primitives/Cube.plasset",
+            "Engine://Primitives/Plane.plasset",
+            "Engine://Primitives/Sphere.plasset",
+            "Engine://Primitives/Cylinder.plasset",
+        ):
+            self.assertIn(path, self.asset_interactions)
+            self.assertIn(path, self.asset_manager)
+        self.assertIn("entity.model = PrimitiveModel(engine, primitive);", self.asset_interactions)
+        self.assertNotIn("entity.renderable = PrimitiveRenderable", self.asset_interactions)
+        self.assertIn("BuiltinPrimitiveAsset", self.asset_manager)
+        self.assertIn("mesh.geometry = MakePrimitive(*primitive);", self.asset_manager)
+        self.assertIn("AssetType::Model", self.asset_manager)
+        self.assertIn("Validate(*asset);", self.asset_manager)
+        self.assertIn("engine.Assets().Load<ModelAsset>(path)", self.files)
 
     def test_raw_renderer_handles_remain_explicitly_nonserializable(self):
         self.assertIn("if(r.renderable)", self.scene)
