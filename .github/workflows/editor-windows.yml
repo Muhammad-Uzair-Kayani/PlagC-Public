@@ -55,6 +55,7 @@ jobs:
           python Scripts\Tests\EditorMilestone18Tests.py
           python Scripts\Tests\EditorMilestone19ConsoleTests.py
           python Scripts\Tests\EditorMilestone21ToolbarTests.py
+          python Scripts\Tests\EditorMilestone22MenuBarTests.py
           python Scripts\Tests\EditorGizmoTests.py
           python Scripts\Tests\EditorUiTextureTests.py
           python Scripts\Tests\EditorViewportSceneViewTests.py
