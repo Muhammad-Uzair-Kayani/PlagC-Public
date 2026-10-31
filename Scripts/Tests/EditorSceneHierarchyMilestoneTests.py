@@ -13,15 +13,18 @@ class EditorSceneHierarchyMilestoneTests(unittest.TestCase):
 
     def test_hierarchy_is_real_editor_pass_over_scene_document(self):
         source = self.read("Editor/src/EditorSceneHierarchy.cpp")
+        drag_drop = self.read("Editor/src/EditorDragDrop.h")
         for required in (
             "session.ViewDocument().Snapshot()",
             "SelectPersistent",
             "FindByPersistentID",
             "SetParent",
             "ClearParent",
-            "PLAGC_EDITOR_ENTITY",
+            "DragDrop::Entity",
+            "DragDrop::EntityIDPayload",
         ):
             self.assertIn(required, source)
+        self.assertIn('Entity = "PLAGC_EDITOR_ENTITY"', drag_drop)
 
     def test_search_types_expansion_rename_and_context_workflow_exist(self):
         source = self.read("Editor/src/EditorSceneHierarchy.cpp")
