@@ -58,11 +58,15 @@ class EditorUiTextureTests(unittest.TestCase):
         self.assertIn("std::uint64_t{1} << 63", bridge)
         self.assertIn("PlagC/AssetTexture", source)
 
-    def test_bridge_rejects_unknown_low_bit_texture_handles(self):
+    def test_bridge_forwards_all_engine_ui_texture_handles_to_renderer_validation(self):
         bridge = self.read("Editor/src/ImGuiRendererBridge.cpp")
-        self.assertIn("out.texture.kind == UiTextureKind::Texture", bridge)
-        self.assertIn("out.texture.value != fontTexture_.value", bridge)
-        self.assertIn("ImGui submitted an unknown editor UI texture handle", bridge)
+        thumbnail = self.read("Editor/src/EditorThumbnailPanel.cpp")
+        submission = self.read("PlagC/src/Renderer/UiSubmission.cpp")
+        self.assertIn("out.texture = DecodeTexture(command.GetTexID());", bridge)
+        self.assertNotIn("out.texture.value != fontTexture_.value", bridge)
+        self.assertNotIn("ImGui submitted an unknown editor UI texture handle", bridge)
+        self.assertIn("ImGuiRendererBridge::TextureID(view.texture)", thumbnail)
+        self.assertIn("Detail::ValidateOgreUITextures(data)", submission)
 
     def test_submission_resolves_and_validates_ogre_textures(self):
         submission = self.read("PlagC/src/Renderer/UiSubmission.cpp")
