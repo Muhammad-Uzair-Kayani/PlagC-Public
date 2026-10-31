@@ -1,14 +1,12 @@
 #include "pgcpch.h"
 #include "EditorVisualAssets.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <string>
 
 namespace PlagC::Editor {
 namespace {
-
-ImVec2 Add(ImVec2 a, ImVec2 b) { return {a.x + b.x, a.y + b.y}; }
-ImVec2 Mul(ImVec2 a, float s) { return {a.x * s, a.y * s}; }
 
 void Line(ImDrawList* draw, ImVec2 a, ImVec2 b, ImU32 colour, float width = 1.8f)
 {
@@ -74,7 +72,6 @@ void EditorVisualAssets::DrawIcon(ImDrawList* draw,
         return;
 
     const float r = size * 0.5f;
-    const float q = size * 0.24f;
     const float w = std::max(1.2f, size * 0.10f);
 
     switch (icon)
@@ -141,9 +138,15 @@ void EditorVisualAssets::DrawIcon(ImDrawList* draw,
         }
         break;
     case EditorIcon::Folder:
+    {
         draw->AddRect({c.x-r*.72f,c.y-r*.25f},{c.x+r*.72f,c.y+r*.58f},colour,2.0f,0,w);
-        draw->AddPolyline((ImVec2[3]){{c.x-r*.68f,c.y-r*.25f},{c.x-r*.38f,c.y-r*.58f},{c.x+r*.10f,c.y-r*.58f}},3,colour,0,w);
+        const std::array<ImVec2,3> tab{{
+            {c.x-r*.68f,c.y-r*.25f},
+            {c.x-r*.38f,c.y-r*.58f},
+            {c.x+r*.10f,c.y-r*.58f}}};
+        draw->AddPolyline(tab.data(),static_cast<int>(tab.size()),colour,0,w);
         break;
+    }
     case EditorIcon::Camera:
         draw->AddRect({c.x-r*.70f,c.y-r*.42f},{c.x+r*.38f,c.y+r*.42f},colour,2.0f,0,w);
         draw->AddTriangleFilled({c.x+r*.38f,c.y-r*.28f},{c.x+r*.76f,c.y-r*.50f},{c.x+r*.76f,c.y+r*.50f},colour);
@@ -167,10 +170,17 @@ void EditorVisualAssets::DrawIcon(ImDrawList* draw,
         draw->AddCircle(c,r*.16f,colour,12,w);
         break;
     case EditorIcon::Texture:
+    {
         Box(draw,c,r*.68f,colour);
         draw->AddCircle({c.x-r*.28f,c.y-r*.25f},r*.12f,colour,10,w);
-        draw->AddPolyline((ImVec2[4]){{c.x-r*.55f,c.y+r*.42f},{c.x-r*.12f,c.y},{c.x+r*.12f,c.y+r*.22f},{c.x+r*.55f,c.y-r*.12f}},4,colour,0,w);
+        const std::array<ImVec2,4> mountains{{
+            {c.x-r*.55f,c.y+r*.42f},
+            {c.x-r*.12f,c.y},
+            {c.x+r*.12f,c.y+r*.22f},
+            {c.x+r*.55f,c.y-r*.12f}}};
+        draw->AddPolyline(mountains.data(),static_cast<int>(mountains.size()),colour,0,w);
         break;
+    }
     case EditorIcon::Material:
         draw->AddCircle(c,r*.63f,colour,18,w);
         draw->AddCircle({c.x-r*.20f,c.y-r*.14f},r*.11f,colour,10,w);
