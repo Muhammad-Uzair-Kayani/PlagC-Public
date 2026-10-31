@@ -3,6 +3,7 @@
 #include "EditorPreferences.h"
 #include <PlagC/Application.h>
 #include <imgui.h>
+#include <algorithm>
 
 namespace PlagC::Editor {
 namespace {
