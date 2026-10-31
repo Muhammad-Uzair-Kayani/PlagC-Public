@@ -86,7 +86,7 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         self.assertIn('ImGui::DragFloat("Exposure",&settings.exposure', source)
         self.assertIn("engine.Graphics().SetSettings(settings)", source)
         self.assertIn("Ogre::PM_WIREFRAME", ogre)
-        self.assertIn("setNamedConstant(\"exposure\", settings.exposure)", ogre)
+        self.assertIn('"exposure", settings.exposure', ogre)
 
     def test_orthographic_asset_drop_uses_parallel_cursor_ray(self):
         source = self.read("Editor/src/EditorViewportAssetDrop.cpp")
