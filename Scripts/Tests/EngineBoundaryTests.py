@@ -94,6 +94,7 @@ class EngineBoundaryTests(unittest.TestCase):
         window_h = self.read("PlagC/include/PlagC/Window.h")
         window_cpp = self.read("PlagC/src/Window.cpp")
         editor = self.read("Editor/src/EditorApp.cpp")
+        layer = self.read("Editor/src/EditorLayer.h")
         self.assertIn("void CancelClose();", window_h)
         self.assertIn("glfwSetWindowShouldClose(impl_->handle, GLFW_FALSE)", window_cpp)
         self.assertIn("EventType::Close", editor)
@@ -103,7 +104,10 @@ class EngineBoundaryTests(unittest.TestCase):
         self.assertIn('ImGui::Button("Save & Exit")', editor)
         self.assertIn('ImGui::Button("Discard & Exit")', editor)
         self.assertIn('ImGui::Button("Cancel")', editor)
-        self.assertIn("session_->Save()", editor)
+        self.assertIn("const bool canSave = session_->EditingEnabled();", editor)
+        self.assertIn("layer_.SaveScene(engine, *session_)", editor)
+        self.assertIn("bool SaveScene(Engine& engine, EditorSession& session)", layer)
+        self.assertIn("return files_.Save(engine, session);", layer)
         self.assertIn("window->RequestClose()", editor)
 
     def test_runtime_staging_is_engine_only(self):
