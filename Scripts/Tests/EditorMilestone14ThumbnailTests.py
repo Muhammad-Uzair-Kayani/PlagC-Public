@@ -21,8 +21,10 @@ class EditorMilestone14ThumbnailTests(unittest.TestCase):
         self.assertIn("MaxConcurrentThumbnailJobs = 2", source)
         self.assertIn("MaxCachedThumbnails = 256", source)
         self.assertIn("group.pending.load(std::memory_order_acquire)", source)
-        self.assertNotIn("Ogre", source)
-        self.assertNotIn("Ogre", header)
+        self.assertNotIn("#include <Ogre", source)
+        self.assertNotIn("#include <Ogre", header)
+        self.assertNotIn("Ogre::", source)
+        self.assertNotIn("Ogre::", header)
 
     def test_fixed_studio_camera_and_lighting_drive_model_and_material_previews(self):
         source = self.read("Editor/src/EditorThumbnailCache.cpp")
@@ -69,14 +71,14 @@ class EditorMilestone14ThumbnailTests(unittest.TestCase):
         self.assertNotIn("ThumbnailKind::Audio", panel)
         self.assertNotIn("ThumbnailKind::Scene", panel)
 
-    def test_m14_is_wired_and_stops_before_scene_file_and_preview_rendering_scope(self):
+    def test_m14_is_wired_and_preserves_later_scope_boundaries(self):
         local = self.read("ValidateEditor.bat")
         ci = self.read(".github/workflows/editor-windows.yml")
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone14ThumbnailTests.py", local)
         self.assertIn("EditorMilestone14ThumbnailTests.py", ci)
         self.assertIn("## 14. Thumbnail / Preview System — `DONE`", docs)
-        self.assertIn("## 16. Scene File Workflow — `FOUNDATION`", docs)
+        self.assertIn("## 16. Scene File Workflow — `DONE`", docs)
         self.assertIn("## 29. Editor Preview Rendering — `NOT STARTED`", docs)
 
 

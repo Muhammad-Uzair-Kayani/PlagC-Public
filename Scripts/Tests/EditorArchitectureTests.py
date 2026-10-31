@@ -57,11 +57,11 @@ class EditorArchitectureTests(unittest.TestCase):
         self.assertIn("InspectorVisible() const noexcept", header)
         self.assertIn('ImGui::Begin("Inspector")', source)
         for required in (
-            "document.SetCamera", "document.RemoveCamera",
-            "document.SetLight", "document.RemoveLight",
-            "document.SetModelVisible", "document.RemoveModel",
-            "document.SetPhysics", "document.RemovePhysics",
-            "document.SetAnimator", "document.RemoveAnimator",
+            "session.EditDocument().SetCamera", "session.EditDocument().RemoveCamera",
+            "session.EditDocument().SetLight", "session.EditDocument().RemoveLight",
+            "session.EditDocument().SetModelVisible", "session.EditDocument().RemoveModel",
+            "session.EditDocument().SetPhysics", "session.EditDocument().RemovePhysics",
+            "session.EditDocument().SetAnimator", "session.EditDocument().RemoveAnimator",
         ):
             self.assertIn(required, source)
         for forbidden in (
@@ -85,10 +85,12 @@ class EditorArchitectureTests(unittest.TestCase):
         self.assertIn('"world hierarchy cycle"', source)
         self.assertIn("parentByChild", source)
 
-    def test_scene_v2_persists_hierarchy_and_loads_v1(self):
+    def test_scene_v4_persists_hierarchy_and_keeps_v1_v3_readable(self):
         source = self.read("PlagC/src/Editor/SceneSerialization.cpp")
-        self.assertIn('w.Key("version"); w.Uint(2)', source)
-        self.assertIn('version!=1 && version!=2', source)
+        self.assertIn("CurrentSceneVersion = 4", source)
+        self.assertIn("if(version<1 || version>CurrentSceneVersion)", source)
+        self.assertIn("if(version==1)", source)
+        self.assertIn("else if(version<4)", source)
         self.assertIn('w.Key("parent")', source)
         self.assertIn("ValidateHierarchy(records,ids)", source)
 

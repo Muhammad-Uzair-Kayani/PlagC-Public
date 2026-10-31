@@ -24,7 +24,7 @@ A milestone is not complete because a backend API exists. It is complete when th
 9. Stop after the explicitly assigned milestone or batch and wait for approval before starting unrelated work.
 
 Assigned milestone lane for the completed implementation stream: **1, 4, 7, 10, 13, 17**.
-Current requested execution lane: **21, 24, 27, 30**. Concurrent completed work on **19, 22, 25, 28** is preserved in the same `prototype` history.
+Current requested execution lane: **16, 20, 23, 26, 29**. Each milestone is completed and pushed independently before the next begins; concurrent completed work on other milestones is preserved.
 
 ## Status legend
 
@@ -164,7 +164,7 @@ Preview scene/camera/lighting, model/material/texture thumbnails, cache and inva
 
 Import/reimport UI for supported model/texture formats, source-to-cooked relationship, scale/coordinate/normal/tangent/material/animation options and surfaced import errors.
 
-## 16. Scene File Workflow — `FOUNDATION`
+## 16. Scene File Workflow — `DONE`
 
 New/Open/Save/Save As/Recent scenes, dirty indicator, transactional replacement, unsaved prompts, scene-version validation, persistent hierarchy/components/material assignments and useful load/save errors.
 
@@ -399,6 +399,17 @@ Definition of done for the product milestone:
 - Delivered: model/texture import/reimport, receipts, scale/coordinate/normal/tangent/material/animation/UV settings, texture import and surfaced errors.
 - Regression: `Scripts/Tests/EditorMilestone15Tests.py`.
 
+## Milestone 16 — Scene File Workflow — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 16 completion commit on `prototype`.
+- Delivered: New/Open/Save/Save As/Open Recent; persistent recent-scene history; scene identity and dirty indicator; Save/Discard/Cancel handling for replacement/exit; untitled Save As during both normal save and window-close flow; actionable file errors; and transactional document replacement that leaves the current authoring scene intact when loading fails.
+- Persistence: scene format v4 keeps v1/v2/v3 readable and persists hierarchy, transforms, active camera, cameras, lights, model references, shadow/visibility state, material overrides, physics bodies/colliders including geometry-backed collider data, animator source/playback/controller parameters/state and upper-body state. Loaded persistent IDs advance the allocator before new authoring entities are created.
+- Safety: raw renderer `RenderableComponent` handles remain explicitly non-serializable rather than being silently discarded; scene saves retain atomic replacement semantics and only mark history saved after the replacement succeeds.
+- Architecture: the M22 menu and M21 toolbar continue to reuse `EditorFileController`; no parallel save/open subsystem was introduced. Scene persistence remains renderer/Jolt neutral at the editor contract boundary.
+- Regression: `Scripts/Tests/EditorMilestone16SceneFileTests.py`, expanded `EditorSerializationTests.cpp`, and compatibility updates for prior scene-version assertions; local and Windows validation include the M16 gate.
+- Scope boundary: no M20 profiler, M23 theme, M26 selection or M29 preview-rendering implementation is included.
+
 ## 17. Play Toolbar — `DONE`
 
 - Date: 2026-10-31
@@ -484,4 +495,4 @@ Earlier revisions contained longer backend handoff notes. Their binding contract
 
 ## Current execution stop
 
-The explicitly requested batch **21, 24, 27, 30** is complete in implementation scope. Stop here after exact branch validation and wait for explicit approval before starting another milestone.
+Milestone **16** is complete in implementation scope. Continue this explicitly assigned batch with **20 → 23 → 26 → 29**, pushing each milestone independently after validation.
