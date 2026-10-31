@@ -78,6 +78,19 @@ void EditorFileController::DrawMenu(Engine& engine, EditorSession& session)
     ImGui::EndMenu();
 }
 
+bool EditorFileController::Save(Engine& engine, EditorSession& session)
+{
+    try
+    {
+        return SaveCurrent(engine, session);
+    }
+    catch (const std::exception& error)
+    {
+        LogFileError(engine, error);
+        return false;
+    }
+}
+
 void EditorFileController::DrawUnsavedModal(Engine& engine, EditorSession& session)
 {
     if (openUnsavedPopup_)
