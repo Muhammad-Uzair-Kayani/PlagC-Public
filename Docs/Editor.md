@@ -200,7 +200,7 @@ A deliberate PlagC visual language: typography, spacing, component cards, header
 
 Consistent embedded icon/font assets for entities, folders, assets, cameras, lights, physics, transport and transform tools without shipping raw font source files.
 
-## 25. Docking / Workspace — `FOUNDATION`
+## 25. Docking / Workspace — `DONE`
 
 Strong default layout, save/restore/reset workspace, sane panel locations and support for useful detached/docked workflows.
 
@@ -486,6 +486,16 @@ Definition of done for the product milestone:
 - Context policy: destructive authoring commands are disabled during Play, during transient document edits, with no selection, or when the hierarchy entity is locked as applicable. Import authoring is Play-gated while pure presentation/window/debug actions remain available.
 - Scope boundary: no workspace persistence/reset behavior (25), new icon/font system (24), broad shortcut redesign (35), or drag/drop redesign (28) is included.
 - Regression: `Scripts/Tests/EditorMilestone22MenuBarTests.py`; M19's historical downstream-status assertion was relaxed, and both local and Windows validation gates include M22.
+
+## 25. Docking / Workspace — `DONE`
+
+- Date: 2026-10-31
+- Commit evidence: this Milestone 25 implementation series on `prototype`.
+- Delivered: retained strong default workspace with hierarchy-left, inspector/statistics-right, content/console-bottom and viewport-center; explicit Save Workspace, Restore Saved Workspace and Reset to Default Layout actions under Window → Workspace; automatic startup restore when a saved layout exists; ImGui docking/window geometry persistence plus PlagC panel-visibility persistence; automatic save when ImGui marks workspace settings dirty; and local-only workspace storage under `User/Editor/`.
+- Detached/docked policy: only the full-screen DockHost is `NoDocking`; editor tool windows remain ordinary dockable windows, so detached positions and docking relationships are serialized by Dear ImGui and restored with the workspace.
+- Ownership: Dear ImGui remains the owner of window/docking serialization; `EditorWorkspace` owns lifecycle, local file paths, panel visibility and reset orchestration. Workspace state is presentation-only and never enters scene/runtime serialization.
+- Scope boundary: no selection changes (26), undo/redo expansion (27), drag/drop redesign (28), theme work (23) or icon/font work (24) is included.
+- Regression: `Scripts/Tests/EditorMilestone25WorkspaceTests.py`; historical M19/M22 downstream assertions were relaxed and the M25 gate preserves concurrently added M24/M27 regressions in local and Windows validation.
 
 ## Historical architecture note
 
