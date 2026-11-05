@@ -29,7 +29,7 @@ constexpr std::size_t MaxBytes = 64 * 1024 * 1024;
 constexpr std::size_t MaxEntities = 100000;
 constexpr std::size_t MaxGeometryElements = 1000000;
 constexpr std::size_t MaxAnimationItems = 4096;
-constexpr unsigned CurrentSceneVersion = 5;
+constexpr unsigned CurrentSceneVersion = 6;
 constexpr unsigned SceneParseFlags =
     static_cast<unsigned>(rapidjson::kParseValidateEncodingFlag) |
     static_cast<unsigned>(rapidjson::kParseIterativeFlag);
@@ -440,8 +440,7 @@ std::string SceneDocument::Serialize() const {
         }
         if(r.light) {
             const auto &l=r.light->light; w.Key("light"); w.StartObject();
-            w.Key("type"); w.Int(static_cast<int>(l.type)); VectorField(w,"position",l.position);
-            VectorField(w,"direction",l.direction); VectorField(w,"colour",l.colour);
+            w.Key("type"); w.Int(static_cast<int>(l.type)); VectorField(w,"colour",l.colour);
             Scalar(w,"power",l.power); Scalar(w,"radius",l.radius); Scalar(w,"inner",l.innerAngle); Scalar(w,"outer",l.outerAngle); w.EndObject();
         }
         if(r.model) {
@@ -502,10 +501,25 @@ std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text,
             }
         }
         if(v.HasMember("light")) {
-            auto &l=v["light"]; Fields(l,{"type","position","direction","colour","power","radius","inner","outer"});
+            auto &l=v["light"];
+            if(version<6) Fields(l,{"type","position","direction","colour","power","radius","inner","outer"});
+            else Fields(l,{"type","colour","power","radius","inner","outer"});
             auto &type=Get(l,"type"); if(!type.IsInt() || type.GetInt()<0 || type.GetInt()>2) Fail("Invalid light type");
-            LightDesc d; d.type=static_cast<LightType>(type.GetInt()); d.position=Vector(Get(l,"position"));
-            d.direction=Vector(Get(l,"direction")); d.colour=Vector(Get(l,"colour"));
+            LightDesc d; d.type=static_cast<LightType>(type.GetInt());
+            if(version<6) {
+                (void)Vector(Get(l,"position")); // Historical descriptor position was already ignored.
+                const auto direction=Vector(Get(l,"direction"));
+                if(d.type!=LightType::Point) {
+                    const auto rotation=DirectionRotation(direction);
+                    if(r.camera) {
+                        const auto cameraForward=RotateDirection(r.transform.rotationDegrees,{0,0,-1});
+                        const auto lightForward=RotateDirection(rotation,{0,0,-1});
+                        const auto dot=cameraForward.x*lightForward.x+cameraForward.y*lightForward.y+cameraForward.z*lightForward.z;
+                        if(dot<0.9999f) Fail("Legacy entity has conflicting camera/light orientations; split it before migration");
+                    } else r.transform.rotationDegrees=rotation;
+                }
+            }
+            d.colour=Vector(Get(l,"colour"));
             d.power=Number(Get(l,"power")); d.radius=Number(Get(l,"radius")); d.innerAngle=Number(Get(l,"inner")); d.outerAngle=Number(Get(l,"outer")); r.light=LightComponent{d};
         }
         if(v.HasMember("model")) {

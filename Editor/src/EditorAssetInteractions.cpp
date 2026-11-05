@@ -122,7 +122,7 @@ void CreateLight(EditorSession& session, LightType type, const char* name)
 
     LightDesc light;
     light.type = type;
-    light.direction = {-0.6f, -1.0f, -0.4f};
+    entity.transform.rotationDegrees = DirectionRotation({-0.6f,-1.0f,-0.4f});
     if (type == LightType::Directional)
         light.power = 3.141593f;
     else if (type == LightType::Point)

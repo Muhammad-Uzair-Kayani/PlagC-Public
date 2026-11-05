@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include <PlagC/World/LightSystem.h>
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
 #include <imgui.h>
@@ -160,7 +161,7 @@ void DrawLightVisualizations(ImDrawList* draw,const ImRect& rect,const CameraDes
     for(const auto& entity:entities)
     {
         if(!entity.record.light) continue;
-        const auto& light=entity.record.light->light;
+        const auto light=ExtractLight(*entity.record.light,entity.record.transform);
         const V3 origin=V(entity.record.transform.position);
         const auto projected=Project(origin,camera,state,rect);
         if(!projected.valid) continue;

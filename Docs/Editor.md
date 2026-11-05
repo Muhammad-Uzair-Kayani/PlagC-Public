@@ -210,15 +210,21 @@ and standalone Windows packaging remain pending.
 
 ## P0 — Directional/Spot Light Transform rotation does not define light direction
 
-**Status: `BROKEN`**
+**Status: `IMPLEMENTED` — native lighting acceptance pending**
 
-Light position is synchronized from Transform position, but light direction is stored independently in `LightComponent.light.direction`.
+Directional and spot lights now derive direction from resolved Transform rotation
+(local forward -Z), using the same extraction function in SceneRenderer and viewport
+guides. The Inspector no longer exposes an independent direction control. Light
+creation writes the intended orientation into Transform. LightDesc remains a renderer
+contract; its position/direction fields are ignored when wrapped by LightComponent.
 
-This makes normal Rotate gizmo behavior inconsistent for directional and spot lights.
+Scene v6 stores photometric properties and Transform, and migrates v1–v5 light
+directions before restoring hierarchy. A legacy entity with conflicting camera and
+light directions is rejected with an explicit split-entity instruction rather than
+silently changing one of its views. Point lights require no orientation migration.
 
-### Required correction
-
-Directional and spot light direction should be derived from entity Transform rotation, or the Editor must use one clearly defined equivalent orientation representation. Generic transform rotation and light direction must not diverge.
+Executable regressions cover rotation, parenting, undo/redo, migration and reload.
+Native OpenGL/Vulkan lighting and gizmo acceptance remain pending.
 
 ---
 
@@ -297,10 +303,10 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 2 | Scene Hierarchy | `IMPLEMENTED` | Main edit hierarchy works; runtime selection is wired; native interaction acceptance remains pending. |
 | 3 | Entity Creation | `IMPLEMENTED` | Empty/model/camera/light/primitives/physics creation paths exist. |
 | 4 | Inspector | `PARTIAL` | Edit inspection is substantial; runtime read-only selection is wired; native interaction acceptance remains pending. |
-| 5 | Transform Inspector | `PARTIAL` | Generic transforms work, but light rotation semantics remain inconsistent; camera rotation is canonical. |
+| 5 | Transform Inspector | `PARTIAL` | Generic transforms work, but camera and light rotation now share Transform semantics; native acceptance pending. |
 | 6 | Model / Mesh Inspector | `IMPLEMENTED` | Main model editing exists; broader asset integration still limits robustness. |
 | 7 | Material System + Inspector | `IMPLEMENTED` | Real PBS/material authoring exists; full asset/project acceptance remains pending. |
-| 8 | Lighting Inspector | `PARTIAL` | Light properties work, but transform-direction semantics remain inconsistent; global shadow control is now correctly scoped. |
+| 8 | Lighting Inspector | `PARTIAL` | Light properties work, but Transform direction and global shadow ownership are corrected; native acceptance pending. |
 | 9 | Camera Inspector | `PARTIAL` | Projection/active-camera tools exist; Transform orientation and Play camera ownership are implemented; native acceptance pending. |
 | 10 | Physics Inspector | `IMPLEMENTED` | Main body/collider authoring exists; full debug/acceptance workflow remains pending. |
 | 11 | Animator Inspector | `IMPLEMENTED` | Substantial animation authoring exists; real-asset workflow acceptance still required. |
@@ -308,7 +314,7 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 13 | Content Browser | `IMPLEMENTED` | Main browser UI exists; asset-manager integration remains incomplete. |
 | 14 | Thumbnail / Preview | `PARTIAL` | Real async preview path exists; recent UI-texture crash showed integration was not yet robust. |
 | 15 | Asset Import | `IMPLEMENTED` | Import/reimport infrastructure exists; end-to-end project asset lifecycle still needs acceptance. |
-| 16 | Scene File Workflow | `IMPLEMENTED` | v4 persistence is substantial and primitive persistence was repaired; full project-scene acceptance still pending. |
+| 16 | Scene File Workflow | `IMPLEMENTED` | v6 persistence migrates camera/light poses and preserves primitive assets; full project-scene acceptance still pending. |
 | 17 | Play Toolbar | `PARTIAL` | Transport, Game isolation and runtime selection are implemented; native acceptance remains pending. |
 | 18 | Runtime / Game Logic | `FOUNDATION` | Runtime lifecycle, physics and gameplay hooks exist; Editor integration is not product-complete. |
 | 19 | Console | `IMPLEMENTED` | Real console/log presentation exists. |

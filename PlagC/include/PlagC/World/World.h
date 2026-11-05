@@ -35,7 +35,8 @@ struct RenderableComponent
 };
 struct LightComponent
 {
-    // World-space direction. Position is supplied by the entity's resolved Transform.
+    // Photometric properties. Descriptor position/direction are ignored by ECS rendering;
+    // the resolved Transform supplies position and orientation (local forward -Z).
     LightDesc light;
 };
 struct CameraComponent

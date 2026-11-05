@@ -2,6 +2,7 @@
 #include <PlagC/Thread.h>
 #include <cassert>
 #include <PlagC/Camera/CameraSystem.h>
+#include <PlagC/World/LightSystem.h>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -55,9 +56,52 @@ void TestCameraPose() {
     assert(near(forward(system.Extract(migratedAgain->Scene())),{1,0,0}));
 }
 
+void TestLightPose() {
+    auto world=std::make_unique<World>();
+    const auto parent=world->Create("Parent");
+    const auto light=world->Create("Spot");
+    Transform pose; pose.position={1,0,0};
+    world->SetTransform(light,pose);
+    LightComponent component; component.light.type=LightType::Spot;
+    world->SetLight(light,component); world->SetParent(light,parent);
+    SceneDocument document(std::move(world));
+    auto near=[](Vec3 a,Vec3 b) {return std::abs(a.x-b.x)<0.001f && std::abs(a.y-b.y)<0.001f && std::abs(a.z-b.z)<0.001f;};
+    auto extracted=[&] {const auto r=document.Scene().Read(light); return ExtractLight(*r.light,r.transform);};
+    assert(near(extracted().direction,{0,0,-1}));
+    Transform parentPose; parentPose.rotationDegrees.y=90;
+    document.SetTransform(parent,parentPose);
+    assert(near(extracted().direction,{-1,0,0}));
+    assert(near(extracted().position,{0,0,-1}));
+    assert(document.Undo()); assert(near(extracted().direction,{0,0,-1}));
+    assert(document.Redo());
+    auto loaded=SceneDocument::Deserialize(document.Serialize());
+    const auto record=loaded->Scene().Read(loaded->FindByPersistentID(document.PersistentID(light)));
+    assert(near(ExtractLight(*record.light,record.transform).direction,{-1,0,0}));
+
+    const auto legacy=R"({"format":"PlagC.Scene","version":5,"activeCamera":null,"entities":[
+      {"id":"1","parent":null,"name":"Directional","transform":{"position":[2,3,4],"rotation":[0,0,0],"scale":[1,1,1]},"light":{"type":0,"position":[0,0,0],"direction":[1,-1,0],"colour":[1,1,1],"power":1,"radius":10,"inner":20,"outer":30}}
+    ]})";
+    auto migrated=SceneDocument::Deserialize(legacy);
+    const auto migratedRecord=migrated->Scene().Read(migrated->FindByPersistentID(1));
+    const auto desc=ExtractLight(*migratedRecord.light,migratedRecord.transform);
+    assert(near(desc.position,{2,3,4}));
+    assert(near(desc.direction,{0.7071068f,-0.7071068f,0}));
+    auto reloaded=SceneDocument::Deserialize(migrated->Serialize());
+    const auto r=reloaded->Scene().Read(reloaded->FindByPersistentID(1));
+    assert(near(ExtractLight(*r.light,r.transform).direction,desc.direction));
+    std::string conflicting=legacy;
+    const auto marker=conflicting.find("\"light\":");
+    conflicting.insert(marker,"\"camera\":{\"fov\":60,\"near\":0.1,\"far\":1000,\"aspect\":0},");
+    bool rejected=false;
+    try { (void)SceneDocument::Deserialize(conflicting); }
+    catch(const std::exception& e) { rejected=std::string(e.what()).find("conflicting camera/light")!=std::string::npos; }
+    assert(rejected);
+}
+
 int main() {
     Thread::InitializeMain();
     TestCameraPose();
+    TestLightPose();
 
     auto world = std::make_unique<World>();
     auto entity = world->Create("Authoring");

@@ -41,6 +41,7 @@ link_sources = [
     'PlagC/src/Editor/EditorSession.cpp',
 ]
 compile_only = [
+    'PlagC/src/World/SceneRenderer.cpp',
     'PlagC/src/Editor/ViewportTarget.cpp',
     'PlagC/src/Editor/ScenePicking.cpp',
     'PlagC/src/Editor/PhysicsPicking.cpp',

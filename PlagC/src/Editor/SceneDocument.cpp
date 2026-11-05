@@ -28,8 +28,7 @@ bool Equal(const CameraComponent& a, const CameraComponent& b) {
 }
 
 bool Equal(const LightDesc& a, const LightDesc& b) {
-    return a.type == b.type && Equal(a.position, b.position) &&
-           Equal(a.direction, b.direction) && Equal(a.colour, b.colour) &&
+    return a.type == b.type && Equal(a.colour, b.colour) &&
            a.power == b.power && a.radius == b.radius &&
            a.innerAngle == b.innerAngle && a.outerAngle == b.outerAngle;
 }

@@ -400,14 +400,7 @@ void EditorLayer::AppendComponentInspector(Engine& engine, EditorSession& sessio
                     ImGui::EndCombo();
                 }
 
-                if (componentLight_->light.type != LightType::Point)
-                {
-                    Property("Direction", "World-space direction used by Directional and Spot lights.");
-                    if (ImGui::DragFloat3("##Direction", &componentLight_->light.direction.x,
-                                          0.01f, -1.0f, 1.0f, "%.3f"))
-                        commitLight();
-                }
-
+                // Directional and spot orientation is edited through Transform/gizmos.
                 Property("Colour", "Linear light colour sent to the renderer.");
                 if (ImGui::ColorEdit3("##Colour", &componentLight_->light.colour.x))
                     commitLight();

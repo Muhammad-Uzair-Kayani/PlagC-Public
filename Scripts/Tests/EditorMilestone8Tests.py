@@ -42,7 +42,7 @@ class EditorMilestone8Tests(unittest.TestCase):
 
     def test_type_specific_controls_and_spot_cones_are_validated(self):
         source = self.read("Editor/src/EditorComponentInspector.cpp")
-        self.assertIn("componentLight_->light.type != LightType::Point", source)
+        self.assertNotIn('Property("Direction"', source)
         self.assertIn("componentLight_->light.type != LightType::Directional", source)
         self.assertIn("componentLight_->light.type == LightType::Spot", source)
         self.assertIn("outerAngle - 0.1f", source)

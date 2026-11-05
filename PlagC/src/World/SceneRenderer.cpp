@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include <PlagC/World/LightSystem.h>
 #include <PlagC/Camera/CameraSystem.h>
 #include <PlagC/World/SceneRenderer.h>
 #include "WorldInternal.h"
@@ -289,8 +290,8 @@ void SceneRenderer::Sync(const World &world, std::span<const TransformUpdate> pr
             const auto &changes = registry.get<WorldChanges>(l->raw);
             if (l->transform == changes.transform && l->property == changes.light)
                 continue;
-            auto desc = registry.get<LightComponent>(l->raw).light;
-            desc.position = registry.get<Transform>(l->raw).position;
+            const auto desc = ExtractLight(registry.get<LightComponent>(l->raw),
+                                           registry.get<Transform>(l->raw));
             if (!l->handle)
             {
                 l->handle = p.renderer.CreateLight(desc);
