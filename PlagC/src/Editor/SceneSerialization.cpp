@@ -543,7 +543,7 @@ std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text,
         auto asset=resolve(r.model); if(!asset) Fail("Scene model could not be resolved");
         if(asset->metadata.path!=r.model) Fail("Resolved model path does not match scene reference");
         if(r.materialOverrides.size()>asset->materials.size()) Fail("Scene material override count exceeds model material slots");
-        ModelComponent model{asset,r.visible,r.castShadows};
+        ModelComponent model{asset,r.visible,r.castShadows,{}};
         model.materialOverrides.resize(r.materialOverrides.size());
         for(std::size_t i=0;i<r.materialOverrides.size();++i) {
             if(r.materialOverrides[i].empty()) continue;

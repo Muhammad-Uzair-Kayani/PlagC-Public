@@ -6,6 +6,9 @@
 
 namespace PlagC::Editor {
 
+// Play and Pause present Game output; authoring visualization belongs to Scene only.
+enum class EditorViewMode { Scene, Game };
+
 enum class ReplacePolicy {
     RequireClean,
     DiscardChanges
@@ -55,6 +58,7 @@ public:
     PlaySession::State PlayState() const;
     bool Playing() const;
     bool Paused() const;
+    EditorViewMode ViewMode() const { return Playing() ? EditorViewMode::Game : EditorViewMode::Scene; }
     std::uint64_t PlayGeneration() const;
 
     // World the viewport should display. Runtime systems mutate RuntimeWorld()

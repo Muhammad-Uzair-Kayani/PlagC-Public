@@ -151,7 +151,7 @@ void EditorLayer::AppendCameraInspector(Engine& engine,EditorSession& session,Ca
     }
 
     if(ImGuiWindow* viewportWindow=ImGui::FindWindowByName("Viewport");
-       selected&&viewportWindow&&viewportWindow->WasActive&&!viewportWindow->Collapsed&&!cameraPreview_)
+       !session.Playing()&&selected&&viewportWindow&&viewportWindow->WasActive&&!viewportWindow->Collapsed&&!cameraPreview_)
     {
         const ImRect rect=viewportWindow->WorkRect;
         if(rect.GetWidth()>40.0f&&rect.GetHeight()>40.0f)

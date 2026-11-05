@@ -296,6 +296,9 @@ void EditorLayer::AppendViewportExperience(Engine& engine,EditorSession& session
     AppendPhysicsInspector(engine,session,editorCamera);
     AppendCameraInspector(engine,session,editorCamera);
 
+    // Inspector panels remain available, but Game output has no authoring overlays or toolbar.
+    if (session.ViewMode() == EditorViewMode::Game) return;
+
     ImGuiWindow* viewportWindow=ImGui::FindWindowByName("Viewport");
     if(!viewportWindow||!viewportWindow->WasActive||viewportWindow->Collapsed) return;
     const ImRect rect=viewportWindow->WorkRect;

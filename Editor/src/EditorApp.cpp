@@ -145,6 +145,7 @@ public:
             viewportTarget_->Resize(
                 static_cast<unsigned>(std::clamp(std::lround(viewport.width * io.DisplayFramebufferScale.x), 1L, 8192L)),
                 static_cast<unsigned>(std::clamp(std::lround(viewport.height * io.DisplayFramebufferScale.y), 1L, 8192L)));
+        ApplyViewPolicy(engine);
         UpdateEditorCamera(engine, dt);
         viewportPresenter_.Draw(viewportTarget_->Handle());
         layer_.AppendViewportExperience(engine, *session_, editorCamera_);
@@ -351,6 +352,24 @@ private:
         cameraLook_.yaw=std::atan2(dz,dx)*degrees;
     }
 
+    void ApplyViewPolicy(PlagC::Engine& engine)
+    {
+        const bool game = session_->ViewMode() == PlagC::Editor::EditorViewMode::Game;
+        auto settings = engine.Graphics().Settings();
+        if (game && !sceneWireframe_)
+        {
+            sceneWireframe_ = settings.wireframe;
+            settings.wireframe = false;
+            engine.Graphics().SetSettings(settings);
+        }
+        else if (!game && sceneWireframe_)
+        {
+            settings.wireframe = *sceneWireframe_;
+            engine.Graphics().SetSettings(settings);
+            sceneWireframe_.reset();
+        }
+    }
+
     void UpdateEditorCamera(PlagC::Engine& engine, double dt)
     {
         const auto& viewport = layer_.Viewport();
@@ -361,7 +380,11 @@ private:
         if (session_->Playing())
         {
             engine.Graphics().SetCameraProjection(PlagC::CameraProjection::Perspective);
-            if (!runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics())) engine.Graphics().SetCamera(editorCamera_);
+            // A missing runtime camera must not borrow the editor's current pose.
+            gameCamera_ = session_->ViewWorld().ActiveCamera()
+                ? runtimeCamera_.Extract(session_->ViewWorld()) : PlagC::CameraDesc{};
+            gameCamera_.aspect = viewport.Aspect();
+            engine.Graphics().SetCamera(gameCamera_);
             return;
         }
 
@@ -398,6 +421,8 @@ private:
         engine.Graphics().SetCamera(editorCamera_);
     }
 
+    std::optional<bool> sceneWireframe_;
+    PlagC::CameraDesc gameCamera_{};
     PlagC::CameraDesc editorCamera_{};
     PlagC::CameraLook cameraLook_{-128.6598f,-25.1041f,.12f};
     PlagC::CameraSystem runtimeCamera_{};

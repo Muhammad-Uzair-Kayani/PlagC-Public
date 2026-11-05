@@ -14,8 +14,10 @@ int main() {
     auto light=world->Create("Light"); world->SetLight(light,{});
     auto plain=world->Create(std::string("Name\0with \"quotes\"",18));
     auto asset=std::make_shared<ModelAsset>(); asset->metadata.path="Game://props/crate.plasset";
+    asset->skeleton.joints.emplace_back();
+    asset->skeleton.joints.back().name="Spine";
     asset->animations.push_back({"Idle",1.0f,{}});
-    auto model=world->Create("Crate"); world->SetModel(model,{AssetHandle<ModelAsset>(asset),false});
+    auto model=world->Create("Crate"); world->SetModel(model,{AssetHandle<ModelAsset>(asset),false,true,{}});
     world->SetParent(model,plain);
 
     PhysicsComponent physics;

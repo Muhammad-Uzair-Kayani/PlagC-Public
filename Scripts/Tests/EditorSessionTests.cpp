@@ -17,6 +17,7 @@ int main() {
     EditorSession session(std::move(document));
 
     assert(!session.HasPath() && session.EditingEnabled());
+    assert(session.ViewMode() == EditorViewMode::Scene);
     session.EditDocument().Rename(entity, "Dirty");
     assert(session.Dirty());
 
@@ -54,11 +55,15 @@ int main() {
     assert(session.Document().Scene().Read(session.Document().FindByPersistentID(id)).name == "PlaySource");
     assert(session.RuntimeWorld().Read(runtimeEntity).name == "RuntimeOnly");
 
+    assert(session.ViewMode() == EditorViewMode::Game);
     session.PausePlay();
+    assert(session.ViewMode() == EditorViewMode::Game);
     session.RequestStep();
     assert(session.ConsumeStep());
+    assert(session.ViewMode() == EditorViewMode::Game);
     session.StopPlay();
     assert(!session.Playing() && session.EditingEnabled());
+    assert(session.ViewMode() == EditorViewMode::Scene);
 
     session.Save();
     assert(!session.Dirty());

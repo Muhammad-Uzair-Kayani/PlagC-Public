@@ -149,28 +149,23 @@ These are substantial foundations, but many are still `IMPLEMENTED` or `PARTIAL`
 
 These are known product-level defects discovered by running and auditing the current Editor. They take priority over new feature work.
 
-## P0 — Scene View and Game View are not correctly separated
+## P0 — Scene View and Game View separation
 
-**Status: `BROKEN`**
+**Status: `IMPLEMENTED` — native visual acceptance pending**
 
-When Play starts, the renderer switches to the runtime world's active camera. However, editor viewport overlays are still drawn using the editor camera.
+The session now defines Scene (stopped) and Game (Playing/Paused/Step) modes.
+Game output suppresses grid, light/frustum/selection/orientation helpers and the
+floating authoring viewport toolbar. Existing preview lights/environment remain
+disabled in Play; authoring wireframe is suspended and restored on Stop. A missing
+active runtime camera uses a fixed fallback rather than the editor camera pose.
 
-Current consequence:
-
-- 3D geometry may be rendered through the game/runtime camera;
-- grid, selection feedback and orientation UI may still be calculated from the editor camera;
-- editor visualization can therefore be spatially inconsistent with the actual Play view;
-- there is no clean Scene/Game visualization boundary yet.
-
-Milestone 29 exists specifically to solve this and has not been completed.
-
-### Required correction
-
-Introduce an explicit visualization policy:
-
-- **Edit / Scene View:** editor camera, grid, selection, gizmos, preview lights, collider/frustum/light helpers as requested.
-- **Play / Game View:** runtime active camera and game rendering only by default.
-- Optional runtime debug overlays must be separately enabled and use the runtime camera.
+Validation: executable EditorSession regression covers Scene -> Play -> Pause ->
+Step -> Stop mode transitions. All 11 backend executables pass, including scene
+round-trip and hierarchy tests. The runner now links current component/model/material
+implementations, and stale fixtures use the v4 schema and a valid animation skeleton.
+Frontend translation units are syntax checked.
+This is not native OpenGL/Vulkan visual acceptance. Runtime debug-overlay opt-in
+and a simultaneous Scene/Game split are not implemented; Game defaults to no helpers.
 
 ---
 
@@ -348,7 +343,7 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 26 | Selection System | `BROKEN` | Edit selection exists, but runtime selection/inspection contract is incomplete and contradictory. |
 | 27 | Undo / Redo | `IMPLEMENTED` | Command history is substantial; needs workflow-level coverage across all mutable components. |
 | 28 | Drag & Drop | `IMPLEMENTED` | Multiple DnD paths exist; depends on incomplete asset integration for full robustness. |
-| 29 | Editor Preview Rendering | `BROKEN` | Required Scene/Game isolation is not implemented; editor overlays can leak/mis-project in Play. |
+| 29 | Editor Preview Rendering | `IMPLEMENTED` | Scene/Game visualization guards and camera ownership implemented; native visual acceptance pending. |
 | 30 | Rendering Quality | `PARTIAL` | HDR/bloom/environment/shadows exist; real MSAA and stronger backend acceptance remain. |
 | 31 | Asset Manager Integration | `FOUNDATION` | Loading/reload foundations exist; missing/moved/dependency/background-state UX is incomplete. |
 | 32 | Prefab-like Reusable Objects | `NOT STARTED` | No complete prefab workflow. |
