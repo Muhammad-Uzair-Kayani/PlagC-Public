@@ -36,6 +36,7 @@ jobs:
           $tests = @(
             'EngineBoundaryTests.py',
             'RuntimeStagingTests.py',
+            'RuntimePackageTests.py',
             'EditorArchitectureTests.py',
             'EditorPlayRuntimeTests.py',
             'EditorAssetInteractionTests.py',

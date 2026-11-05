@@ -4,6 +4,7 @@
 #include <PlagC/LatencyProfiler.h>
 #include <PlagC/PerformanceCapture.h>
 #include <PlagC/Thread.h>
+#include <PlagC/RuntimePaths.h>
 #include <iomanip>
 
 namespace
@@ -48,7 +49,7 @@ int main(int argc, char **argv)
         {
             const std::string argument = argv[i];
             if (argument == "--performance-csv")
-                config.performanceCSV = ParseString(argument, i, argc, argv);
+                config.performanceCSV = std::filesystem::absolute(ParseString(argument, i, argc, argv)).string();
             else if (argument == "--performance-warmup")
                 config.performanceWarmup = ParseUnsigned(argument, i, argc, argv);
             else if (argument == "--performance-seconds")
@@ -140,6 +141,9 @@ int main(int argc, char **argv)
                                  ? std::min(32u, std::max(1u, hardware - 1))
                                  : 1u;
 
+        // Resolve explicit output paths above before anchoring packaged resources.
+        if (!config.headless && !config.nullPlatform && !config.offscreen)
+            PlagC::EnterRuntimePackage();
         const auto bootStart = Clock::now();
         PlagC::Engine engine(config);
         auto application = PlagC::CreateApplication(config);

@@ -11,6 +11,7 @@ if /I not "%CONFIG%"=="Debug" if /I not "%CONFIG%"=="Release" if /I not "%CONFIG
 )
 
 for %%T in (
+    RuntimePackageTests.py
     EngineBoundaryTests.py
     EditorArchitectureTests.py
     EditorPlayRuntimeTests.py

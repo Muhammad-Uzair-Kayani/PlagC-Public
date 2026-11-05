@@ -281,15 +281,21 @@ Critical workflows need executable/integration coverage, especially:
 
 ## P1 — Dist/package runtime still relies on relative working-directory data paths
 
-**Status: `PARTIAL`**
+**Status: `IMPLEMENTED` — native standalone package acceptance pending**
 
-Dist is now a windowed application and packaging preserves required runtime assets, but renderer/media paths are still relative to the process working directory.
+Graphical executables resolve their own directory through the OS and verify staged
+Assets and Ogre media before Engine construction. Startup anchors the existing
+relative renderer, shader, material and editor paths to that package directory,
+before any workers or logger are created. Explicit performance CSV paths are resolved
+against the caller's original directory before this change. Headless/null/offscreen
+harnesses retain their caller-controlled working directory.
 
-Launching `Editor.exe` independently can fail if the working directory is not the package root.
-
-### Required correction
-
-Resolve runtime resource roots relative to the executable/package location rather than assuming the caller's current working directory.
+This is a deliberate executable bootstrap policy, not a process-directory change
+inside the renderer or AssetManager. Library clients retain control of their roots.
+Executable regressions launch a probe from an unrelated directory and a path with
+spaces, and verify missing-package errors preserve the original working directory.
+These marker-based tests do not prove decoding/rendering of the complete package;
+Release/Dist OpenGL/Vulkan launches on Windows remain required for acceptance.
 
 ---
 
