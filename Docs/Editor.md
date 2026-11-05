@@ -227,23 +227,13 @@ Directional and spot light direction should be derived from entity Transform rot
 
 ## P1 — Light “Shadows” control is renderer-global, not per-light
 
-**Status: `PARTIAL`**
+**Status: `IMPLEMENTED` — native UI acceptance pending**
 
-The Light Inspector exposes a Shadows control, but it currently changes the renderer-wide shadow setting rather than a property of the selected light.
-
-The current UI therefore implies a per-light capability that does not exist.
-
-### Required correction
-
-Either:
-
-- implement real per-light `castShadows` support through scene data, renderer-neutral contracts, Ogre backend and serialization;
-
-or:
-
-- move the existing setting out of the Light Inspector and clearly label it as Scene/Renderer Shadows.
-
-No fake per-light UI.
+Removed the renderer-global shadow checkbox from the selected Light Inspector.
+The existing **Scene Shadows** control in the rendering toolbar owns this setting.
+Per-model Cast Shadows remains a separate, real instance property. No per-light
+shadow capability is implied. The ownership check is a source regression; native
+rendering acceptance remains pending.
 
 ---
 
@@ -313,7 +303,7 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 5 | Transform Inspector | `PARTIAL` | Generic transforms work, but camera/light rotation semantics are inconsistent. |
 | 6 | Model / Mesh Inspector | `IMPLEMENTED` | Main model editing exists; broader asset integration still limits robustness. |
 | 7 | Material System + Inspector | `IMPLEMENTED` | Real PBS/material authoring exists; full asset/project acceptance remains pending. |
-| 8 | Lighting Inspector | `PARTIAL` | Light properties work, but transform-direction semantics and shadow ownership are wrong/incomplete. |
+| 8 | Lighting Inspector | `PARTIAL` | Light properties work, but transform-direction semantics remain inconsistent; global shadow control is now correctly scoped. |
 | 9 | Camera Inspector | `PARTIAL` | Projection/active-camera tools exist; camera orientation semantics and Play/Game integration are incomplete. |
 | 10 | Physics Inspector | `IMPLEMENTED` | Main body/collider authoring exists; full debug/acceptance workflow remains pending. |
 | 11 | Animator Inspector | `IMPLEMENTED` | Substantial animation authoring exists; real-asset workflow acceptance still required. |

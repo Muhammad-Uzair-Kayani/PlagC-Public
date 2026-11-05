@@ -456,15 +456,6 @@ void EditorLayer::AppendComponentInspector(Engine& engine, EditorSession& sessio
                     }
                 }
 
-                Property("Shadows", "PlagC currently owns shadow-map execution as a renderer-wide pass.");
-                auto renderSettings = engine.Graphics().Settings();
-                bool sceneShadows = renderSettings.shadows;
-                if (ImGui::Checkbox("##SceneShadows", &sceneShadows))
-                {
-                    renderSettings.shadows = sceneShadows;
-                    engine.Graphics().SetSettings(renderSettings);
-                }
-
                 ImGui::EndTable();
             }
             ImGui::EndDisabled();

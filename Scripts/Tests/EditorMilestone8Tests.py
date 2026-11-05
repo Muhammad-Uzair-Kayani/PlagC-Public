@@ -51,11 +51,10 @@ class EditorMilestone8Tests(unittest.TestCase):
 
     def test_existing_renderer_shadow_pass_is_exposed_without_fake_per_light_contract(self):
         source = self.read("Editor/src/EditorComponentInspector.cpp")
-        self.assertIn('Property("Shadows"', source)
-        self.assertIn('ImGui::Checkbox("##SceneShadows"', source)
-        self.assertIn("engine.Graphics().Settings()", source)
-        self.assertIn("renderSettings.shadows = sceneShadows", source)
-        self.assertIn("engine.Graphics().SetSettings(renderSettings)", source)
+        self.assertNotIn('Property("Shadows"', source)
+        self.assertNotIn('ImGui::Checkbox("##SceneShadows"', source)
+        toolbar = self.read("Editor/src/EditorToolbar.cpp")
+        self.assertIn('ImGui::Checkbox("Scene Shadows", &settings.shadows)', toolbar)
 
     def test_milestone4_read_only_policy_is_preserved_for_lighting(self):
         source = self.read("Editor/src/EditorComponentInspector.cpp")
@@ -103,8 +102,9 @@ class EditorMilestone8Tests(unittest.TestCase):
         self.assertIn("EditorMilestone4InspectorTests.py", workflow)
         self.assertIn("EditorMilestone8Tests.py", local)
         self.assertIn("EditorMilestone8Tests.py", workflow)
-        self.assertIn("## 8. Lighting Inspector — `DONE`", docs)
-        self.assertIn("## 8. Lighting Inspector — `DONE`", docs[docs.index("# Milestone Execution Log"):])
+        self.assertIn("| 8 | Lighting Inspector |", docs)
+        self.assertIn("The existing **Scene Shadows** control", docs)
+
 
 
 if __name__ == "__main__":
