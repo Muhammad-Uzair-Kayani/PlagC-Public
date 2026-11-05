@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include <PlagC/World/TransformGraph.h>
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
 #include <imgui.h>
@@ -28,7 +29,7 @@ Basis CameraBasis(const CameraDesc& camera)
 {
     V3 forward=Normalize(Sub(V(camera.target),V(camera.position)));
     if(Length(forward)<1e-5f) forward={0,0,-1};
-    V3 reference={0,1,0};
+    V3 reference=V(camera.up);
     if(std::fabs(Dot(forward,reference))>0.999f) reference={0,0,1};
     V3 right=Normalize(Cross(forward,reference));
     V3 up=Normalize(Cross(right,forward));
@@ -74,7 +75,9 @@ CameraDesc AuthoredCamera(const AuthoringEntity& entity)
     const auto& component=*entity.record.camera;
     CameraDesc camera;
     camera.position=entity.record.transform.position;
-    camera.target=component.target;
+    const auto f=RotateDirection(entity.record.transform.rotationDegrees,{0,0,-1});
+    camera.target={camera.position.x+f.x,camera.position.y+f.y,camera.position.z+f.z};
+    camera.up=RotateDirection(entity.record.transform.rotationDegrees,{0,1,0});
     camera.fov=component.fov;
     camera.nearClip=component.nearClip;
     camera.farClip=component.farClip;
@@ -205,7 +208,8 @@ void EditorLayer::AppendCameraInspector(Engine& engine,EditorSession& session,Ca
             Transform transform=selected->record.transform;
             transform.position=editorCamera.position;
             CameraComponent aligned=camera;
-            aligned.target=editorCamera.target;
+            transform.rotationDegrees=DirectionRotation({editorCamera.target.x-editorCamera.position.x,
+                editorCamera.target.y-editorCamera.position.y,editorCamera.target.z-editorCamera.position.z},editorCamera.up);
             aligned.fov=editorCamera.fov;
             aligned.nearClip=editorCamera.nearClip;
             aligned.farClip=editorCamera.farClip;

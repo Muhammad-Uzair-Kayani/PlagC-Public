@@ -28,7 +28,7 @@ Basis CameraBasis(const CameraDesc& camera)
 {
     V3 forward=Normalize(Sub(V(camera.target),V(camera.position)));
     if(Length(forward)<1e-5f) forward={0,0,-1};
-    V3 reference={0,1,0};
+    V3 reference=V(camera.up);
     if(std::fabs(Dot(forward,reference))>.999f) reference={0,0,1};
     V3 right=Normalize(Cross(forward,reference));
     return {forward,right,Normalize(Cross(right,forward))};

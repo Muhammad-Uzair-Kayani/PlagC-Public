@@ -96,7 +96,7 @@ int main() {
     assert(runtime->ParentPersistentID(runtimeGrand) == childID);
 
     const std::string serialized = document.Serialize();
-    assert(serialized.find("\"version\":4") != std::string::npos);
+    assert(serialized.find("\"version\":5") != std::string::npos);
     auto loaded = Editor::SceneDocument::Deserialize(serialized);
     assert(ParentID(*loaded, childID) == rootID);
     assert(ParentID(*loaded, grandID) == childID);

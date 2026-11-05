@@ -996,12 +996,13 @@ void Renderer::SetCamera(const CameraDesc &d)
 {
     Thread::RequireMain();
     Require(std::isfinite(d.aspect) && d.aspect >= 0 && Finite(d.position) && Finite(d.target) &&
+                Finite(d.up) && V(d.up).squaredLength() > 0 &&
                 (V(d.position) - V(d.target)).squaredLength() > 0 && d.fov > 1 && d.fov < 179 &&
                 d.nearClip > 0 && d.farClip > d.nearClip,
             "invalid camera");
     auto &p = *impl_;
     p.cameraNode->setPosition(V(d.position));
-    p.cameraNode->setFixedYawAxis(true, Ogre::Vector3::UNIT_Y);
+    p.cameraNode->setFixedYawAxis(true, V(d.up));
     p.cameraNode->lookAt(V(d.target), Ogre::Node::TS_PARENT);
     p.camera->setFOVy(Ogre::Degree(d.fov));
     p.camera->setNearClipDistance(d.nearClip);

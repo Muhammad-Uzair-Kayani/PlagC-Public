@@ -51,7 +51,7 @@ Simulation::Simulation(const Settings &settings, const PhysicsConfig &config)
     physicsStep_ = 1 / config.fixedHz;
     metrics.target = std::clamp(settings.entities, 1000u, 10000u);
     camera = world.Create("FPS camera");
-    world.SetCamera(camera, {{0, 1, 0}, 70, .07f, 500});
+    world.SetCamera(camera, {70, .07f, 500});
     world.SetActiveCamera(camera);
     BuildFacility();
     ResetPlayer();

@@ -1,14 +1,63 @@
 #include <PlagC/Editor/EditorSession.h>
 #include <PlagC/Thread.h>
 #include <cassert>
+#include <PlagC/Camera/CameraSystem.h>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 using namespace PlagC;
 using namespace PlagC::Editor;
 
+void TestCameraPose() {
+    auto world = std::make_unique<World>();
+    const auto parent = world->Create("Parent");
+    const auto camera = world->Create("Camera");
+    Transform pose; pose.position={2,3,4};
+    world->SetTransform(camera,pose);
+    world->SetCamera(camera,{});
+    world->SetParent(camera,parent);
+    world->SetActiveCamera(camera);
+    SceneDocument document(std::move(world));
+    CameraSystem system; system.SetViewport(1600,900);
+    auto near=[](Vec3 a,Vec3 b) {
+        return std::abs(a.x-b.x)<0.001f && std::abs(a.y-b.y)<0.001f && std::abs(a.z-b.z)<0.001f;
+    };
+    auto forward=[](CameraDesc c) {return Vec3{c.target.x-c.position.x,c.target.y-c.position.y,c.target.z-c.position.z};};
+    assert(near(forward(system.Extract(document.Scene())),{0,0,-1}));
+    pose.rotationDegrees={0,90,90};
+    document.SetTransform(camera,pose);
+    auto extracted=system.Extract(document.Scene());
+    assert(near(forward(extracted),{-1,0,0}));
+    assert(near(extracted.up,{0,0,1}));
+    assert(near(RotateDirection(DirectionRotation(forward(extracted),extracted.up),{0,1,0}),extracted.up));
+    assert(document.Undo());
+    assert(near(forward(system.Extract(document.Scene())),{0,0,-1}));
+    assert(document.Redo());
+    const auto saved=document.Serialize();
+    auto loaded=SceneDocument::Deserialize(saved);
+    assert(near(forward(system.Extract(loaded->Scene())),forward(extracted)));
+    assert(near(system.Extract(loaded->Scene()).up,extracted.up));
+    EditorSession session(std::move(loaded));
+    session.StartPlay();
+    assert(near(forward(system.Extract(session.ViewWorld())),forward(extracted)));
+    session.PausePlay(); session.RequestStep(); assert(session.ConsumeStep()); session.StopPlay();
+    assert(session.Document().Serialize()==saved);
+
+    const auto legacy=R"({"format":"PlagC.Scene","version":4,"activeCamera":"2","entities":[
+      {"id":"1","parent":null,"name":"Parent","transform":{"position":[0,0,0],"rotation":[0,35,0],"scale":[1,1,1]}},
+      {"id":"2","parent":"1","name":"Camera","transform":{"position":[2,3,4],"rotation":[0,0,0],"scale":[1,1,1]},"camera":{"target":[3,3,4],"fov":60,"near":0.1,"far":1000,"aspect":0}}
+    ]})";
+    auto migrated=SceneDocument::Deserialize(legacy);
+    const auto oldView=system.Extract(migrated->Scene());
+    assert(near(oldView.position,{2,3,4}));
+    assert(near(forward(oldView),{1,0,0}));
+    auto migratedAgain=SceneDocument::Deserialize(migrated->Serialize());
+    assert(near(forward(system.Extract(migratedAgain->Scene())),{1,0,0}));
+}
+
 int main() {
     Thread::InitializeMain();
+    TestCameraPose();
 
     auto world = std::make_unique<World>();
     auto entity = world->Create("Authoring");

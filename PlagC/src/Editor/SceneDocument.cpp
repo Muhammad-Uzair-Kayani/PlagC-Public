@@ -22,7 +22,7 @@ bool Equal(const Transform& a, const Transform& b) {
 }
 
 bool Equal(const CameraComponent& a, const CameraComponent& b) {
-    return Equal(a.target, b.target) && a.fov == b.fov &&
+    return a.fov == b.fov &&
            a.nearClip == b.nearClip && a.farClip == b.farClip &&
            a.aspect == b.aspect;
 }

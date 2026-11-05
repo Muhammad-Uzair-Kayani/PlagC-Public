@@ -1,5 +1,6 @@
 #pragma once
 #include <PlagC/World/World.h>
+#include <PlagC/World/TransformGraph.h>
 #include <cmath>
 #include <algorithm>
 namespace PlagC
@@ -48,7 +49,10 @@ class CameraSystem
             throw std::logic_error("no active camera");
         auto record = world.Read(e);
         const auto &c = *record.camera;
-        CameraDesc d{record.transform.position, c.target, c.fov, c.nearClip, c.farClip};
+        const auto forward = RotateDirection(record.transform.rotationDegrees, {0,0,-1});
+        const auto p = record.transform.position;
+        CameraDesc d{p, {p.x+forward.x,p.y+forward.y,p.z+forward.z}, c.fov, c.nearClip, c.farClip};
+        d.up = RotateDirection(record.transform.rotationDegrees, {0,1,0});
         d.aspect = c.aspect > 0 ? c.aspect : (height_ ? float(width_) / height_ : 0.f);
         return d;
     }
@@ -70,19 +74,10 @@ class FPSCameraController
         if (!c)
             throw std::invalid_argument("FPS controller requires camera");
         auto f = look.Forward();
-        c->target = {eye.x + f.x, eye.y + f.y, eye.z + f.z};
-        // SetCamera and SetTransform each validate the look-at pair. Use a target
-        // away from both positions before moving, then set the final target.
-        auto old = world.ReadTransform(camera);
-        auto safe = *c;
-        safe.target = {eye.x + f.x * 2, eye.y + f.y * 2, eye.z + f.z * 2};
-        if (safe.target.x == old.position.x && safe.target.y == old.position.y &&
-            safe.target.z == old.position.z)
-            safe.target.y += 1;
-        world.SetCamera(camera, safe);
-        old.position = eye;
-        world.SetTransform(camera, old);
-        world.SetCamera(camera, *c);
+        auto pose = world.ReadTransform(camera);
+        pose.position = eye;
+        pose.rotationDegrees = DirectionRotation(f);
+        world.SetTransform(camera, pose);
     }
 };
 class FreeCameraController : public FPSCameraController

@@ -90,7 +90,7 @@ void TestWorld(Renderer &renderer, JobSystem &jobs)
     auto badCamera = CameraComponent{}; badCamera.farClip = .01f;
     Check(Rejected([&] { world.SetCamera(e, badCamera); }), "world rejects invalid camera lens");
     auto coincident = t; coincident.position = {};
-    Check(Rejected([&] { world.SetTransform(e, coincident); }), "camera position cannot equal target");
+    world.SetTransform(e, coincident); // A camera at the origin is valid; rotation owns direction.
     world.RemoveCamera(e);
     Check(!world.ActiveCamera() && !world.Read(e).camera, "removing active camera clears selection");
     world.SetLight(e, {});

@@ -286,7 +286,6 @@ int main()
               "crossfade reaches destination joint pose");
         auto camera = world.Create();
         CameraComponent initialCamera;
-        initialCamera.target = {0, 0, -1};
         world.SetCamera(camera, initialCamera);
         CameraSystem cameras;
         cameras.Activate(world, camera);

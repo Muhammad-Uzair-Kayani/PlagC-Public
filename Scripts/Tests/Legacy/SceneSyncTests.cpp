@@ -28,7 +28,7 @@ void TestSceneSynchronization(Renderer& r) {
         w.SetRenderable(e,{mesh,material});scene.Sync(w);
         w.RemoveRenderable(e);w.SetRenderable(e,{mesh,material,false,false,20});scene.Sync(w);
         Check(scene.Objects()==1&&scene.Statistics().propertyCalls==3,"remove/readd before sync refreshes all changed flags");
-        w.SetLight(e,{});w.SetCamera(e,{{0,0,0}});w.SetActiveCamera(e);scene.Sync(w);scene.Sync(w);
+        w.SetLight(e,{});w.SetCamera(e,{});w.SetActiveCamera(e);scene.Sync(w);scene.Sync(w);
         Check(!scene.Statistics().lightCalls&&!scene.Statistics().cameraCalls,"unchanged lights and camera skip renderer calls");
         t.position.x=4;w.SetTransform(e,t);scene.Sync(w);
         Check(scene.Statistics().transforms==1&&scene.Statistics().lightCalls==1&&scene.Statistics().cameraCalls==1,"one transform updates object light and active camera");

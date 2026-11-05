@@ -40,7 +40,7 @@ PickRay BuildPickRay(const PickRequest& request) {
         throw std::invalid_argument("pick coordinates are outside the viewport");
 
     const CameraDesc& camera = request.camera;
-    if (!Finite(camera.position) || !Finite(camera.target) ||
+    if (!Finite(camera.position) || !Finite(camera.target) || !Finite(camera.up) ||
         !std::isfinite(camera.fov) || camera.fov <= 1.0f || camera.fov >= 179.0f ||
         !std::isfinite(camera.nearClip) || !std::isfinite(camera.farClip) ||
         camera.nearClip <= 0.0f || camera.farClip <= camera.nearClip ||
@@ -49,7 +49,7 @@ PickRay BuildPickRay(const PickRequest& request) {
         throw std::invalid_argument("invalid camera for picking");
 
     const Vec3 forward = Normalize(Sub(camera.target, camera.position));
-    Vec3 referenceUp{0.0f, 1.0f, 0.0f};
+    Vec3 referenceUp = Normalize(camera.up);
     if (std::fabs(Dot(forward, referenceUp)) > 0.999f)
         referenceUp = {0.0f, 0.0f, 1.0f};
     const Vec3 right = Normalize(Cross(forward, referenceUp));

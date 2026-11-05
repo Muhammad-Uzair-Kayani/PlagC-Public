@@ -298,10 +298,6 @@ void EditorLayer::AppendComponentInspector(Engine& engine, EditorSession& sessio
             bool commitRequested = false;
             if (BeginProperties("CameraProperties"))
             {
-                Property("Target", "World-space point the camera looks at.");
-                ImGui::DragFloat3("##Target", &componentCamera_->target.x, 0.05f);
-                commitRequested |= ImGui::IsItemDeactivatedAfterEdit();
-
                 Property("FOV", "Vertical field of view in degrees.");
                 ImGui::DragFloat("##FOV", &componentCamera_->fov, 0.25f, 1.0f, 179.0f, "%.1f deg");
                 commitRequested |= ImGui::IsItemDeactivatedAfterEdit();

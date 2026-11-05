@@ -125,6 +125,7 @@ struct CameraDesc
     Vec3 position{8, 6, 10}, target{0, 0, 0};
     float fov = 60, nearClip = .1f, farClip = 1000;
     float aspect = 0;
+    Vec3 up{0, 1, 0};
 };
 enum class CameraProjection
 {

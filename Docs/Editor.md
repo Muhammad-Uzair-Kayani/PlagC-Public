@@ -187,27 +187,24 @@ actual mouse selection and read-only inspection still require native UI acceptan
 
 ## P0 — Camera Transform rotation does not define camera orientation
 
-**Status: `BROKEN`**
+**Status: `IMPLEMENTED` — native camera/rendering acceptance pending**
 
-The runtime camera currently uses:
+CameraComponent now holds projection settings only. Resolved Transform position and
+Y * X * Z rotation define the camera pose (local forward -Z, up +Y). CameraSystem,
+FPS/free controllers, preview/frustum helpers and viewport picking use this pose.
+CameraDesc carries an up vector to preserve roll through the Ogre adapter. Game
+rendering respects an authored aspect override. Align Camera to View writes rotation
+rather than a competing target field.
 
-- `Transform.position` for camera position;
-- `CameraComponent.target` for look direction.
+Scene format v5 migrates v1–v4 world-space camera targets into Transform rotation
+before restoring hierarchy, preserving the legacy view and world-space placement.
+New saves store projection settings and the canonical Transform. C++ callers must
+replace CameraComponent.target assignments with a Transform rotation; use
+DirectionRotation(target - position) for a look-at operation.
 
-`Transform.rotationDegrees` is not used to construct the runtime camera orientation.
-
-This means rotating a Camera entity with the normal Rotate gizmo can change its Transform rotation without changing the actual game-camera direction.
-
-### Required correction
-
-Use one coherent camera pose model:
-
-- Transform position + rotation define camera pose;
-- Camera component stores projection settings such as FOV, near/far and aspect policy;
-- editor alignment tools update Transform consistently;
-- serialization preserves the same semantics.
-
-A target/look-at helper may exist as an editor operation, but it must not compete with Transform rotation as a second independent orientation source.
+Executable coverage checks camera rotation/roll, undo/redo, parented legacy migration,
+save/reload, Play isolation and rolled picking. Native OpenGL/Vulkan visual acceptance
+and standalone Windows packaging remain pending.
 
 ---
 
@@ -300,11 +297,11 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 2 | Scene Hierarchy | `IMPLEMENTED` | Main edit hierarchy works; runtime selection is wired; native interaction acceptance remains pending. |
 | 3 | Entity Creation | `IMPLEMENTED` | Empty/model/camera/light/primitives/physics creation paths exist. |
 | 4 | Inspector | `PARTIAL` | Edit inspection is substantial; runtime read-only selection is wired; native interaction acceptance remains pending. |
-| 5 | Transform Inspector | `PARTIAL` | Generic transforms work, but camera/light rotation semantics are inconsistent. |
+| 5 | Transform Inspector | `PARTIAL` | Generic transforms work, but light rotation semantics remain inconsistent; camera rotation is canonical. |
 | 6 | Model / Mesh Inspector | `IMPLEMENTED` | Main model editing exists; broader asset integration still limits robustness. |
 | 7 | Material System + Inspector | `IMPLEMENTED` | Real PBS/material authoring exists; full asset/project acceptance remains pending. |
 | 8 | Lighting Inspector | `PARTIAL` | Light properties work, but transform-direction semantics remain inconsistent; global shadow control is now correctly scoped. |
-| 9 | Camera Inspector | `PARTIAL` | Projection/active-camera tools exist; camera orientation semantics and Play/Game integration are incomplete. |
+| 9 | Camera Inspector | `PARTIAL` | Projection/active-camera tools exist; Transform orientation and Play camera ownership are implemented; native acceptance pending. |
 | 10 | Physics Inspector | `IMPLEMENTED` | Main body/collider authoring exists; full debug/acceptance workflow remains pending. |
 | 11 | Animator Inspector | `IMPLEMENTED` | Substantial animation authoring exists; real-asset workflow acceptance still required. |
 | 12 | Animation State Machine | `IMPLEMENTED` | Real controller/state infrastructure exists; full production workflow acceptance still required. |

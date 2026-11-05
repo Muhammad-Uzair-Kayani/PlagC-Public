@@ -57,7 +57,7 @@ class EditorMilestone9Tests(unittest.TestCase):
     def test_bidirectional_alignment_is_exposed(self):
         self.assertIn('"Align Camera to View"', self.camera)
         self.assertIn("transform.position=editorCamera.position", self.camera)
-        self.assertIn("aligned.target=editorCamera.target", self.camera)
+        self.assertIn("transform.rotationDegrees=DirectionRotation", self.camera)
         self.assertIn("document.SetTransform(selected->entity,transform)", self.camera)
         self.assertIn("document.SetCamera(selected->entity,aligned)", self.camera)
         self.assertIn('"Align View to Camera"', self.camera)

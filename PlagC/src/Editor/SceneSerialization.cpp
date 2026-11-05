@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include <PlagC/World/TransformGraph.h>
 #include <PlagC/Editor/SceneDocument.h>
 #include <PlagC/Thread.h>
 
@@ -28,7 +29,7 @@ constexpr std::size_t MaxBytes = 64 * 1024 * 1024;
 constexpr std::size_t MaxEntities = 100000;
 constexpr std::size_t MaxGeometryElements = 1000000;
 constexpr std::size_t MaxAnimationItems = 4096;
-constexpr unsigned CurrentSceneVersion = 4;
+constexpr unsigned CurrentSceneVersion = 5;
 constexpr unsigned SceneParseFlags =
     static_cast<unsigned>(rapidjson::kParseValidateEncodingFlag) |
     static_cast<unsigned>(rapidjson::kParseIterativeFlag);
@@ -434,7 +435,7 @@ std::string SceneDocument::Serialize() const {
         if(auto parent=world_->Parent(r.entity)) WriteString(w,std::to_string(PersistentID(parent))); else w.Null();
         w.Key("name"); WriteString(w,r.name); w.Key("transform"); WriteTransform(w,r.transform);
         if(r.camera) {
-            const auto &c=*r.camera; w.Key("camera"); w.StartObject(); VectorField(w,"target",c.target);
+            const auto &c=*r.camera; w.Key("camera"); w.StartObject();
             Scalar(w,"fov",c.fov); Scalar(w,"near",c.nearClip); Scalar(w,"far",c.farClip); Scalar(w,"aspect",c.aspect); w.EndObject();
         }
         if(r.light) {
@@ -490,8 +491,15 @@ std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text,
         if(version>=2) { const auto& parent=Get(v,"parent"); r.parent=parent.IsNull()?0:ID(parent); }
         r.name=String(Get(v,"name")); r.transform=TransformValue(Get(v,"transform"));
         if(v.HasMember("camera")) {
-            auto &c=v["camera"]; Fields(c,{"target","fov","near","far","aspect"});
-            r.camera=CameraComponent{Vector(Get(c,"target")),Number(Get(c,"fov")),Number(Get(c,"near")),Number(Get(c,"far")),Number(Get(c,"aspect"))};
+            auto &c=v["camera"];
+            if(version<5) Fields(c,{"target","fov","near","far","aspect"});
+            else Fields(c,{"fov","near","far","aspect"});
+            r.camera=CameraComponent{Number(Get(c,"fov")),Number(Get(c,"near")),Number(Get(c,"far")),Number(Get(c,"aspect"))};
+            if(version<5) {
+                const auto target=Vector(Get(c,"target"));
+                const auto p=r.transform.position;
+                r.transform.rotationDegrees=DirectionRotation({target.x-p.x,target.y-p.y,target.z-p.z});
+            }
         }
         if(v.HasMember("light")) {
             auto &l=v["light"]; Fields(l,{"type","position","direction","colour","power","radius","inner","outer"});

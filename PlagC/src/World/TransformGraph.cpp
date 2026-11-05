@@ -147,4 +147,30 @@ Transform RelativeTransform(const Transform& parentWorld, const Transform& world
     return result;
 }
 
+Vec3 RotateDirection(Vec3 rotationDegrees, Vec3 direction) {
+    if (!Finite(rotationDegrees) || !Finite(direction))
+        throw std::invalid_argument("invalid direction rotation");
+    return Rotate(Rotation(rotationDegrees), direction);
+}
+
+Vec3 DirectionRotation(Vec3 direction) {
+    const float length = std::sqrt(direction.x*direction.x + direction.y*direction.y + direction.z*direction.z);
+    if (!Finite(direction) || !std::isfinite(length) || length <= Epsilon)
+        throw std::invalid_argument("look direction must be finite and nonzero");
+    return {std::asin(std::clamp(direction.y/length, -1.0f, 1.0f))*Degrees,
+            std::atan2(-direction.x, -direction.z)*Degrees, 0.0f};
+}
+
+Vec3 DirectionRotation(Vec3 direction, Vec3 up) {
+    auto angles = DirectionRotation(direction);
+    if (!Finite(up)) throw std::invalid_argument("invalid camera up");
+    const auto right = RotateDirection(angles, {1,0,0});
+    const auto baseUp = RotateDirection(angles, {0,1,0});
+    const float x = up.x*right.x + up.y*right.y + up.z*right.z;
+    const float y = up.x*baseUp.x + up.y*baseUp.y + up.z*baseUp.z;
+    if (x*x+y*y <= Epsilon) throw std::invalid_argument("camera up is parallel to forward");
+    angles.z = std::atan2(-x,y)*Degrees;
+    return angles;
+}
+
 } // namespace PlagC

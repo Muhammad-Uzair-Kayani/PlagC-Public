@@ -45,7 +45,6 @@ int main() {
     cameraTemplate.name = "Camera";
     cameraTemplate.transform.position = {0, 1, 5};
     CameraComponent camera;
-    camera.target = {0, 1, 0};
     cameraTemplate.camera = camera;
 
     auto cameraEntity = document.Create(cameraTemplate);

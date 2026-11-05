@@ -1,4 +1,5 @@
 #include "pgcpch.h"
+#include <PlagC/World/TransformGraph.h>
 #include "EditorDragDrop.h"
 #include "EditorLayer.h"
 #include <PlagC/Application.h>
@@ -105,7 +106,7 @@ void CreateCamera(EditorSession& session)
     entity.name = "Camera";
     entity.transform.position = {anchor.x, anchor.y + 2.0f, anchor.z + 5.0f};
     CameraComponent camera;
-    camera.target = {anchor.x, anchor.y + 1.0f, anchor.z};
+    entity.transform.rotationDegrees = DirectionRotation({0,-1,-5});
     entity.camera = camera;
     session.EditDocument().Create(std::move(entity));
 }

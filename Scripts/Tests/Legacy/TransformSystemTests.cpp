@@ -25,11 +25,11 @@ void TestTransformSystem() {
     system.Prepare();world.Destroy(b);world.Create();
     Check(!system.IsBindingValid()&&Rejects([&]{system.Commit();})&&Rejects([&]{system.Prepare();}),"entity destruction/reuse invalidates cached bindings before dereference");
     const std::array one{a};system.Bind(world,one);
-    world.SetCamera(a,{{0,0,0}});
+    world.SetCamera(a,{});
     Check(!system.IsBindingValid(),"camera component insertion invalidates cached component pointers");
     system.Bind(world,one);values=system.Prepare();values[0].position={0,0,0};
-    Check(Rejects([&]{system.Commit();}),"system preserves camera position/target constraints");
-    system.Prepare();world.SetCamera(a,{{1,0,0}});
+    system.Commit(); Check(world.ReadTransform(a).position.x==0,"camera translation is independent of orientation");
+    system.Prepare();world.SetCamera(a,{65});
     Check(Rejects([&]{system.Commit();}),"system rejects intervening camera changes");
     world.RemoveCamera(a);Check(!system.IsBindingValid(),"camera removal invalidates system binding");
     system.Bind(world,one);system.Prepare();world.Clear();

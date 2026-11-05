@@ -39,7 +39,7 @@ ProjectedPoint Project(V3 world,const CameraDesc& camera,const ViewportState& vi
     const V3 eye=ToV3(camera.position);
     V3 forward=Normalize(Sub(ToV3(camera.target),eye));
     if(Length(forward)<1e-5f) forward={0,0,-1};
-    V3 reference={0,1,0};
+    V3 reference=ToV3(camera.up);
     if(std::fabs(Dot(forward,reference))>0.999f) reference={0,0,1};
     V3 right=Normalize(Cross(forward,reference));
     const V3 up=Normalize(Cross(right,forward));

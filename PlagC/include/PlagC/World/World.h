@@ -40,8 +40,7 @@ struct LightComponent
 };
 struct CameraComponent
 {
-    // Look-at target remains world-space; position comes from the resolved Transform.
-    Vec3 target{0, 0, 0};
+    // Resolved Transform owns position and orientation; local forward is -Z.
     float fov = 60, nearClip = .1f, farClip = 1000;
     float aspect = 0; // Zero follows the render viewport; positive values override it.
 };

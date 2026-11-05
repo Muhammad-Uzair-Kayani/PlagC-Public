@@ -1,5 +1,6 @@
 // Frozen baseline from 152b668 for the CPU plumbing benchmark only.
 #include "pgcpch.h"
+#include <PlagC/World/TransformGraph.h>
 #include "LegacySceneRenderer.h"
 #include <PlagC/Thread.h>
 #include <unordered_set>
@@ -76,7 +77,11 @@ void LegacySceneRenderer::Sync(const World &world)
         if (e.camera && e.entity == world.ActiveCamera())
         {
             const auto &c = *e.camera;
-            p.renderer.SetCamera({e.transform.position, c.target, c.fov, c.nearClip, c.farClip});
+            const auto f=RotateDirection(e.transform.rotationDegrees,{0,0,-1});
+            const auto pos=e.transform.position;
+            CameraDesc camera{pos,{pos.x+f.x,pos.y+f.y,pos.z+f.z},c.fov,c.nearClip,c.farClip};
+            camera.up=RotateDirection(e.transform.rotationDegrees,{0,1,0});
+            p.renderer.SetCamera(camera);
         }
     }
     for (auto it = p.objects.begin(); it != p.objects.end();)

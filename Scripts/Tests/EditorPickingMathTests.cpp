@@ -27,6 +27,12 @@ int main() {
     center.camera.farClip = 11.0f;
     center.camera.aspect = 0.0f;
 
+    auto rolled=center;
+    rolled.y=0;
+    rolled.camera.up={-1,0,0};
+    const auto rolledRay=BuildPickRay(rolled);
+    assert(rolledRay.displacement.x < 0 && Near(rolledRay.displacement.y,0));
+
     const PickRay centerRay = BuildPickRay(center);
     assert(Near(centerRay.origin.x, 0.0f));
     assert(Near(centerRay.origin.y, 0.0f));

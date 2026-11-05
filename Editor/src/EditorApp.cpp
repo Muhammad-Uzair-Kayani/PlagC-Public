@@ -382,7 +382,7 @@ private:
             // A missing runtime camera must not borrow the editor's current pose.
             gameCamera_ = session_->ViewWorld().ActiveCamera()
                 ? runtimeCamera_.Extract(session_->ViewWorld()) : PlagC::CameraDesc{};
-            gameCamera_.aspect = viewport.Aspect();
+            if (!session_->ViewWorld().ActiveCamera()) gameCamera_.aspect = viewport.Aspect();
             engine.Graphics().SetCamera(gameCamera_);
             return;
         }

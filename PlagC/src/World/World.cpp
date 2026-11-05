@@ -79,11 +79,10 @@ void ValidateWorldTransform(const Transform &t)
 }
 void ValidateWorldCamera(const CameraComponent &c, const Transform &t)
 {
-    const auto p = t.position;
-    Require(std::isfinite(c.aspect) && c.aspect >= 0 && Finite(c.target) && std::isfinite(c.fov) &&
+    ValidateWorldTransform(t);
+    Require(std::isfinite(c.aspect) && c.aspect >= 0 && std::isfinite(c.fov) &&
                 c.fov > 1 && c.fov < 179 && std::isfinite(c.nearClip) && std::isfinite(c.farClip) &&
-                c.nearClip > 0 && c.farClip > c.nearClip &&
-                (c.target.x != p.x || c.target.y != p.y || c.target.z != p.z),
+                c.nearClip > 0 && c.farClip > c.nearClip,
             "invalid world camera");
 }
 World::World() : impl_(std::make_unique<Impl>(nextWorld.fetch_add(1)))
