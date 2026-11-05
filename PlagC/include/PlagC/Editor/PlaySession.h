@@ -37,6 +37,7 @@ public:
     World& RuntimeWorld();
     const World& RuntimeWorld() const;
     const SceneDocument& RuntimeDocument() const;
+    void SelectPersistent(std::uint64_t persistentID);
 
 private:
     std::unique_ptr<SceneDocument> runtime_;

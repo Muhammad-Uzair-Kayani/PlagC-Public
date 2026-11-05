@@ -171,26 +171,17 @@ and a simultaneous Scene/Game split are not implemented; Game defaults to no hel
 
 ## P0 — Runtime selection/inspection is internally contradictory
 
-**Status: `BROKEN`**
+**Status: `IMPLEMENTED` — native interaction acceptance pending**
 
-The runtime clone starts with no selection.
+Hierarchy clicks and viewport picks now select the displayed document, including
+Playing and Paused runtime clones. Runtime picking uses the Game camera. Runtime
+selection does not expose mutable authoring access; the existing Inspector remains
+read-only in Play. Stop discards runtime selection and preserves authoring selection,
+scene contents, revision and history. Starting Play again begins without a selection.
 
-During Play:
-
-- hierarchy selection is disabled because authoring is disabled;
-- viewport picking exits because authoring is disabled;
-- the Inspector still tells the user to select a runtime entity.
-
-Therefore the UI asks for an action that currently has no valid interaction path.
-
-### Required correction
-
-Create explicit runtime selection state that:
-
-- can be changed from hierarchy and Game/Scene viewport while Play is running;
-- never mutates authoring selection/history;
-- allows read-only runtime inspection;
-- is discarded on Stop.
+Executable session tests cover selection, clearing, invalid IDs, Pause selection and
+Stop/restart isolation. Frontend compile checks cover the hierarchy/picking wiring;
+actual mouse selection and read-only inspection still require native UI acceptance.
 
 ---
 
@@ -316,9 +307,9 @@ The original 43 milestone numbers are retained so existing history and discussio
 | # | Area | Real status | Current interpretation |
 |---:|---|---|---|
 | 1 | Viewport / Scene View | `IMPLEMENTED` | Strong authoring viewport exists; Game/Scene separation still affects integration acceptance. |
-| 2 | Scene Hierarchy | `IMPLEMENTED` | Main edit hierarchy works; runtime-selection behavior is unresolved. |
+| 2 | Scene Hierarchy | `IMPLEMENTED` | Main edit hierarchy works; runtime selection is wired; native interaction acceptance remains pending. |
 | 3 | Entity Creation | `IMPLEMENTED` | Empty/model/camera/light/primitives/physics creation paths exist. |
-| 4 | Inspector | `PARTIAL` | Edit inspection is substantial; runtime inspection path is currently impossible despite UI messaging. |
+| 4 | Inspector | `PARTIAL` | Edit inspection is substantial; runtime read-only selection is wired; native interaction acceptance remains pending. |
 | 5 | Transform Inspector | `PARTIAL` | Generic transforms work, but camera/light rotation semantics are inconsistent. |
 | 6 | Model / Mesh Inspector | `IMPLEMENTED` | Main model editing exists; broader asset integration still limits robustness. |
 | 7 | Material System + Inspector | `IMPLEMENTED` | Real PBS/material authoring exists; full asset/project acceptance remains pending. |
@@ -331,7 +322,7 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 14 | Thumbnail / Preview | `PARTIAL` | Real async preview path exists; recent UI-texture crash showed integration was not yet robust. |
 | 15 | Asset Import | `IMPLEMENTED` | Import/reimport infrastructure exists; end-to-end project asset lifecycle still needs acceptance. |
 | 16 | Scene File Workflow | `IMPLEMENTED` | v4 persistence is substantial and primitive persistence was repaired; full project-scene acceptance still pending. |
-| 17 | Play Toolbar | `PARTIAL` | Transport/runtime clone works, but Game View isolation and runtime inspection are broken. |
+| 17 | Play Toolbar | `PARTIAL` | Transport, Game isolation and runtime selection are implemented; native acceptance remains pending. |
 | 18 | Runtime / Game Logic | `FOUNDATION` | Runtime lifecycle, physics and gameplay hooks exist; Editor integration is not product-complete. |
 | 19 | Console | `IMPLEMENTED` | Real console/log presentation exists. |
 | 20 | Statistics / Profiler | `IMPLEMENTED` | Real live telemetry exists; acceptance/performance baselines should still be formalized. |
@@ -340,7 +331,7 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 23 | Editor Theme / Visual System | `NOT STARTED` | Current appearance is primarily functional ImGui styling, not a finished PlagC visual system. |
 | 24 | Icons / Fonts | `IMPLEMENTED` | Embedded editor icons/font path exists. |
 | 25 | Docking / Workspace | `IMPLEMENTED` | Docking/default layout exists; broader UX acceptance still pending. |
-| 26 | Selection System | `BROKEN` | Edit selection exists, but runtime selection/inspection contract is incomplete and contradictory. |
+| 26 | Selection System | `IMPLEMENTED` | Runtime hierarchy/picking selection is isolated from authoring; native UI acceptance pending. |
 | 27 | Undo / Redo | `IMPLEMENTED` | Command history is substantial; needs workflow-level coverage across all mutable components. |
 | 28 | Drag & Drop | `IMPLEMENTED` | Multiple DnD paths exist; depends on incomplete asset integration for full robustness. |
 | 29 | Editor Preview Rendering | `IMPLEMENTED` | Scene/Game visualization guards and camera ownership implemented; native visual acceptance pending. |

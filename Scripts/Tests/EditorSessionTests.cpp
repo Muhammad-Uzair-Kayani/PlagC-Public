@@ -40,7 +40,25 @@ int main() {
 
     session.EditDocument().Rename(session.Document().FindByPersistentID(id), "PlaySource");
     assert(session.Dirty());
+    session.SelectViewPersistent(id);
+    const auto authoringBeforePlay = session.Document().Serialize();
+    const auto authoringRevision = session.Document().Revision();
+    const bool authoringUndo = session.Document().CanUndo();
     session.StartPlay();
+    assert(!session.ViewDocument().Selection());
+    const bool runtimeDirty = session.RuntimeDocument().Dirty();
+    const bool runtimeUndo = session.RuntimeDocument().CanUndo();
+    session.SelectViewPersistent(id);
+    assert(session.ViewDocument().Selection() == session.RuntimeDocument().FindByPersistentID(id));
+    assert(session.ViewDocument().Snapshot().front().selected);
+    bool selectionRejected = false;
+    try { session.SelectViewPersistent(id + 1000); }
+    catch (const std::invalid_argument&) { selectionRejected = true; }
+    assert(selectionRejected && session.ViewDocument().Selection());
+    assert(session.RuntimeDocument().Dirty() == runtimeDirty);
+    assert(session.RuntimeDocument().CanUndo() == runtimeUndo);
+    assert(session.Document().Revision() == authoringRevision);
+    assert(session.Document().Selection() == entity);
     assert(session.Playing() && &session.ViewWorld() == &session.RuntimeWorld());
     assert(session.ViewDocument().FindByPersistentID(id));
 
@@ -57,6 +75,10 @@ int main() {
 
     assert(session.ViewMode() == EditorViewMode::Game);
     session.PausePlay();
+    session.SelectViewPersistent(0);
+    assert(!session.ViewDocument().Selection());
+    session.SelectViewPersistent(id);
+    assert(session.ViewDocument().Selection() == runtimeEntity);
     assert(session.ViewMode() == EditorViewMode::Game);
     session.RequestStep();
     assert(session.ConsumeStep());
@@ -64,6 +86,14 @@ int main() {
     session.StopPlay();
     assert(!session.Playing() && session.EditingEnabled());
     assert(session.ViewMode() == EditorViewMode::Scene);
+
+    assert(session.Document().Serialize() == authoringBeforePlay);
+    assert(session.Document().Revision() == authoringRevision);
+    assert(session.Document().Selection() == entity);
+    assert(session.Document().CanUndo() == authoringUndo);
+    session.StartPlay();
+    assert(!session.ViewDocument().Selection());
+    session.StopPlay();
 
     session.Save();
     assert(!session.Dirty());

@@ -101,6 +101,13 @@ const World& PlaySession::RuntimeWorld() const {
     return *runtime_->world_;
 }
 
+void PlaySession::SelectPersistent(std::uint64_t persistentID) {
+    Thread::RequireMain();
+    if (!runtime_)
+        throw std::logic_error("Editor play session has no runtime document");
+    runtime_->SelectPersistent(persistentID);
+}
+
 const SceneDocument& PlaySession::RuntimeDocument() const {
     Thread::RequireMain();
     if (!runtime_)

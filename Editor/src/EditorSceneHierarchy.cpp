@@ -327,9 +327,10 @@ void EditorSceneHierarchy::Draw(Engine& engine, EditorSession& session, bool& op
         return !filtering || filteredVisible.contains(id);
     };
 
-    const Entity selectedEntity = editing ? session.EditDocument().Selection() : Entity{};
+    const Entity selectedEntity = session.ViewDocument().Selection();
     const std::uint64_t selectedID =
-        selectedEntity ? session.EditDocument().PersistentID(selectedEntity) : 0;
+        selectedEntity && session.ViewWorld().Alive(selectedEntity)
+            ? session.ViewDocument().PersistentID(selectedEntity) : 0;
     if (editing && selectedID && !Locked(selectedID) &&
         ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
         !ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_F2, false))
@@ -446,9 +447,9 @@ void EditorSceneHierarchy::Draw(Engine& engine, EditorSession& session, bool& op
                     if (locked)
                         ImGui::PopStyleColor();
 
-                    if (clicked && editing && !locked)
+                    if (clicked && (session.Playing() || (editing && !locked)))
                     {
-                        try { session.EditDocument().SelectPersistent(item->persistentID); }
+                        try { session.SelectViewPersistent(item->persistentID); }
                         catch (const std::exception& error) { LogEditorError(engine, error); }
                     }
 
@@ -628,7 +629,7 @@ void EditorSceneHierarchy::Draw(Engine& engine, EditorSession& session, bool& op
     if (!editing)
     {
         ImGui::Separator();
-        ImGui::TextDisabled("Play mode: hierarchy is read-only.");
+        ImGui::TextDisabled("Play mode: select entities to inspect; editing is disabled.");
     }
 
     if (ImGui::BeginPopupContextWindow(

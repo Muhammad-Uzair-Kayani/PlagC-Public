@@ -270,7 +270,7 @@ private:
     void HandleViewportPicking(PlagC::Engine& engine)
     {
         const auto& viewport = layer_.Viewport();
-        if (!session_->EditingEnabled() || !viewport.input.AcceptSelectionMouse() ||
+        if ((!session_->Playing() && !session_->EditingEnabled()) || !viewport.input.AcceptSelectionMouse() ||
             !ImGui::IsMouseClicked(ImGuiMouseButton_Left, false) || ImGui::GetDragDropPayload())
             return;
         ImGuiWindow* window = ImGui::FindWindowByName("Viewport");
@@ -284,18 +284,17 @@ private:
         request.y = (mouse.y - rect.Min.y) * static_cast<float>(viewport.height) / rect.GetHeight();
         request.width = viewport.width;
         request.height = viewport.height;
-        request.camera = editorCamera_;
-        request.orthographic = viewport.orthographic;
+        request.camera = session_->Playing() ? gameCamera_ : editorCamera_;
+        request.orthographic = !session_->Playing() && viewport.orthographic;
         request.orthographicHeight = viewport.orthographicHeight;
         try
         {
-            PlagC::Editor::RendererPickingProvider picker(engine.Graphics(), session_->EditDocument(), *sceneRenderer_, *assetScene_);
-            auto& document = session_->EditDocument();
+            PlagC::Editor::RendererPickingProvider picker(engine.Graphics(), session_->ViewDocument(), *sceneRenderer_, *assetScene_);
             if (const auto hit = picker.Pick(request);
-                hit && !layer_.HierarchyEntityLocked(hit->persistentID))
-                document.SelectPersistent(hit->persistentID);
+                hit && (session_->Playing() || !layer_.HierarchyEntityLocked(hit->persistentID)))
+                session_->SelectViewPersistent(hit->persistentID);
             else
-                document.Select({});
+                session_->SelectViewPersistent(0);
         }
         catch (const std::exception& error)
         {

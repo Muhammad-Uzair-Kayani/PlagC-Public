@@ -29,6 +29,8 @@ public:
     SceneDocument& EditDocument();
     const SceneDocument& ViewDocument() const;
     const SceneDocument& RuntimeDocument() const;
+    // Selection is view-local; runtime inspection never edits authoring state.
+    void SelectViewPersistent(std::uint64_t persistentID);
 
     bool HasPath() const;
     const std::filesystem::path& Path() const;

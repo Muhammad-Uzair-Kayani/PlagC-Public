@@ -33,6 +33,12 @@ const SceneDocument& EditorSession::RuntimeDocument() const {
     return play_.RuntimeDocument();
 }
 
+void EditorSession::SelectViewPersistent(std::uint64_t persistentID) {
+    Thread::RequireMain();
+    if (play_.Running()) play_.SelectPersistent(persistentID);
+    else document_->SelectPersistent(persistentID);
+}
+
 bool EditorSession::HasPath() const {
     Thread::RequireMain();
     return !path_.empty();
