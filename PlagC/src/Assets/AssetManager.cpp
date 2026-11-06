@@ -357,6 +357,19 @@ void AssetManager::Reload(const std::string &path)
     e.info.state = AssetState::Queued;
     Pump();
 }
+void AssetManager::ReloadAndWait(const std::string &path)
+{
+    Thread::RequireMain();
+    if (BuiltinPrimitiveKind(path)) return;
+    const auto key = impl_->Resolve(path).first;
+    if (!impl_->entries.contains(key))
+        throw std::invalid_argument("Cannot reload unregistered asset: " + key);
+    Reload(key);
+    Wait();
+    const auto &info = impl_->entries.at(key)->info;
+    if (info.state != AssetState::Ready)
+        throw std::runtime_error("Reload failed for " + key + ": " + info.error);
+}
 void AssetManager::Unload(const std::string &path)
 {
     Thread::RequireMain();

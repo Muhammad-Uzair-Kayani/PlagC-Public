@@ -48,6 +48,9 @@ class AssetManager
     void Pump();
     void Wait();
     void Reload(const std::string &);
+    // Throws with the asset key and worker error if this reload failed, even when
+    // an older immutable snapshot is still available through Get().
+    void ReloadAndWait(const std::string &);
     void Unload(const std::string &);
     std::vector<AssetInfo> Registry() const;
     std::size_t CollectUnused();

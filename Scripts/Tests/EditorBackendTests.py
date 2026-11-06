@@ -85,3 +85,15 @@ with tempfile.TemporaryDirectory(prefix='plagc-editor-tests-') as tmp:
             check=True)
         subprocess.run([exe], check=True)
         print(f'PASS {name}', flush=True)
+
+    # Exercise actual decode/reload with worker jobs and retained immutable handles.
+    exe = str(Path(tmp) / 'AssetReloadOutcomeTests')
+    sources = ['Scripts/Tests/AssetReloadOutcomeTests.cpp', 'PlagC/src/Jobs.cpp',
+               'PlagC/src/Renderer/Geometry.cpp', 'PlagC/src/Assets/Asset.cpp',
+               'PlagC/src/Assets/AssetIO.cpp', 'PlagC/src/Assets/AssetImport.cpp',
+               'PlagC/src/Assets/AssetManager.cpp']
+    subprocess.run([compiler, *flags, '-isystem', str(args.vendor_root / 'assimp/contrib'),
+                    *(str(root / name) for name in sources), '-Wl,--gc-sections', '-o', exe],
+                   check=True)
+    subprocess.run([exe, tmp], check=True)
+    print('PASS AssetReloadOutcomeTests', flush=True)

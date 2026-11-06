@@ -54,8 +54,8 @@ class EditorMilestone6Tests(unittest.TestCase):
         self.assertIn("Imported slots are read-only here", self.ui)
 
     def test_reload_rebinds_new_immutable_asset_generation_through_document(self):
-        self.assertIn("engine.Assets().Reload(path);", self.ui)
-        self.assertIn("engine.Assets().Wait();", self.ui)
+        self.assertIn("engine.Assets().ReloadAndWait(path);", self.ui)
+        self.assertLess(self.ui.index("ReloadAndWait(path)"), self.ui.index("document.ReloadModelAsset"))
         self.assertIn("engine.Assets().Get<ModelAsset>(path)", self.ui)
         self.assertIn("document.ReloadModelAsset", self.ui)
         self.assertIn('"Reload model asset"', self.document)

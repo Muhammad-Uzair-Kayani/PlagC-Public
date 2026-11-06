@@ -487,8 +487,7 @@ void DrawModelInspector(Engine& engine, EditorSession& session, EditorDataPanels
         try
         {
             const std::string path = asset->metadata.path;
-            engine.Assets().Reload(path);
-            engine.Assets().Wait();
+            engine.Assets().ReloadAndWait(path);
             auto reloaded = engine.Assets().Get<ModelAsset>(path);
             if (!reloaded)
                 throw std::runtime_error("Reload completed without a ModelAsset result");

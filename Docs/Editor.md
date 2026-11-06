@@ -340,7 +340,7 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 28 | Drag & Drop | `IMPLEMENTED` | Multiple DnD paths exist; depends on incomplete asset integration for full robustness. |
 | 29 | Editor Preview Rendering | `IMPLEMENTED` | Scene/Game visualization guards and camera ownership implemented; native visual acceptance pending. |
 | 30 | Rendering Quality | `PARTIAL` | HDR/bloom/environment/shadows exist; real MSAA and stronger backend acceptance remain. |
-| 31 | Asset Manager Integration | `FOUNDATION` | Loading/reload foundations exist; missing/moved/dependency/background-state UX is incomplete. |
+| 31 | Asset Manager Integration | `FOUNDATION` | Failed reloads preserve existing handles and report the asset key and decoder error in the Editor. Missing/moved dependency repair and background-state UX remain incomplete. |
 | 32 | Prefab-like Reusable Objects | `NOT STARTED` | No complete prefab workflow. |
 | 33 | Audio Editor Integration | `FOUNDATION` | Runtime/OpenAL foundation exists; usable editor authoring workflow is incomplete. |
 | 34 | Debug Visualization | `PARTIAL` | Some light/camera/physics helpers exist, but no coherent debug-visualization system. |

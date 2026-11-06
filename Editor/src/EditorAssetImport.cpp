@@ -33,12 +33,11 @@ void ReloadIfKnown(Engine& engine, const std::filesystem::path& cooked)
     const bool loaded = std::any_of(registry.begin(), registry.end(), [&](const AssetInfo& info) {
         std::string path = info.metadata.path;
         std::replace(path.begin(), path.end(), '\\', '/');
-        return path == key || path.ends_with("/" + key) || path.ends_with("://" + key);
+        return path == key; // The import destination is in the default cooked root.
     });
     if (!loaded)
         return;
-    engine.Assets().Reload(key);
-    engine.Assets().Wait();
+    engine.Assets().ReloadAndWait(key);
 }
 
 AssetImportReceipt ReceiptFromUI(const EditorLayer&)

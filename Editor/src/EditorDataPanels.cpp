@@ -645,9 +645,8 @@ bool DrawItemContext(Engine& engine,
             {
                 try
                 {
-                    engine.Assets().Reload(CookedAssetKey(item.asset->path));
-                    engine.Assets().Wait();
-                    refresh = true;
+                    refresh = true; // Also publish Failed state if decoding throws.
+                    engine.Assets().ReloadAndWait(CookedAssetKey(item.asset->path));
                     engine.Logger().Write(
                         Severity::Info, "EDITOR-ASSETS",
                         "Reloaded runtime asset: " + item.asset->path);
