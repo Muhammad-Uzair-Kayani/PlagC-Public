@@ -51,6 +51,24 @@ int main() {
     assert(text.find("\"animator\":")!=std::string::npos);
     int loads=0;
     auto resolver=[&](const std::string &path) { ++loads; assert(path==asset->metadata.path); return AssetHandle<ModelAsset>(asset); };
+    // A moved model is shared by mesh and animator. Recover both references,
+    // validate the replacement identity, and prove the new scene reloads by itself.
+    auto moved=std::make_shared<ModelAsset>(*asset);
+    moved->metadata.path="Game://moved/crate.plasset";
+    auto movedResolver=[&](const std::string& key) {
+        if(key!=moved->metadata.path) throw std::runtime_error("missing cooked file");
+        return AssetHandle<ModelAsset>(moved);
+    };
+    bool missingReported=false;
+    try { (void)SceneDocument::Deserialize(text,movedResolver); }
+    catch(const PlagC::Editor::SceneDependencyError& e) { missingReported=e.key==asset->metadata.path; }
+    assert(missingReported);
+    auto repaired=SceneDocument::Deserialize(text,movedResolver,{{asset->metadata.path,moved->metadata.path}});
+    auto repairedText=repaired->Serialize();
+    assert(repairedText.find(asset->metadata.path)==std::string::npos);
+    assert(repairedText.find(moved->metadata.path)!=std::string::npos);
+    assert(SceneDocument::Deserialize(repairedText,movedResolver)->Serialize()==repairedText);
+    assert(d.Serialize()==text);
     auto restored=SceneDocument::Deserialize(text,resolver);
     assert(loads==2 && !restored->Dirty() && !restored->Selection());
     assert(restored->Serialize()==text);

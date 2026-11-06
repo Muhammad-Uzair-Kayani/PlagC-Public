@@ -9,10 +9,19 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
 namespace PlagC::Editor {
+
+// The original serialized key stays stable across failed replacement attempts.
+struct SceneDependencyError : std::runtime_error {
+    std::string key;
+    SceneDependencyError(const std::string& original, const std::string& detail)
+        : std::runtime_error(original + ": " + detail), key(original) {}
+};
+using SceneRelinks = std::unordered_map<std::string,std::string>;
 
 struct EntityTemplate {
     std::string name = "Entity";
@@ -121,9 +130,9 @@ public:
     std::unique_ptr<SceneDocument> CloneForRuntime() const;
 
     std::string Serialize() const;
-    static std::unique_ptr<SceneDocument> Deserialize(std::string_view, ModelResolver = {});
+    static std::unique_ptr<SceneDocument> Deserialize(std::string_view, ModelResolver = {}, const SceneRelinks& = {});
     void Save(const std::filesystem::path&);
-    static std::unique_ptr<SceneDocument> Load(const std::filesystem::path&, ModelResolver = {});
+    static std::unique_ptr<SceneDocument> Load(const std::filesystem::path&, ModelResolver = {}, const SceneRelinks& = {});
 
 private:
     friend class PlaySession;

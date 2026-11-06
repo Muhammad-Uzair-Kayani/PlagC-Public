@@ -465,7 +465,7 @@ std::string SceneDocument::Serialize() const {
     return {buffer.GetString(),buffer.GetSize()};
 }
 
-std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text, ModelResolver resolve) {
+std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text, ModelResolver resolve,const SceneRelinks& relinks) {
     Thread::RequireMain();
     if(text.size()>MaxBytes) Fail("Scene exceeds size limit");
     if(text.find('\0')!=std::string_view::npos) Fail("Unexpected NUL byte in scene JSON");
@@ -560,18 +560,35 @@ std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text,
         world->SetActiveCamera(camera);
     }
 
+    auto replacementKey = [&](const std::string& original) -> const std::string& {
+        const auto it=relinks.find(original);
+        const auto& key=it==relinks.end()?original:it->second;
+        AssetPath(key);
+        return key;
+    };
+    auto modelReference = [&](const std::string& original) {
+        try {
+            const auto& key=replacementKey(original);
+            if(!resolve) Fail("Model resolver required");
+            auto asset=resolve(key);
+            if(!asset || asset->metadata.path!=key) Fail("Resolver did not return the requested model");
+            return asset;
+        } catch(const std::exception& e) { throw SceneDependencyError(original,e.what()); }
+    };
     for(const auto &r:records) if(!r.model.empty()) {
-        if(!resolve) Fail("Model resolver required to load this scene");
-        auto asset=resolve(r.model); if(!asset) Fail("Scene model could not be resolved");
-        if(asset->metadata.path!=r.model) Fail("Resolved model path does not match scene reference");
+        auto asset=modelReference(r.model);
         if(r.materialOverrides.size()>asset->materials.size()) Fail("Scene material override count exceeds model material slots");
         ModelComponent model{asset,r.visible,r.castShadows,{}};
         model.materialOverrides.resize(r.materialOverrides.size());
         for(std::size_t i=0;i<r.materialOverrides.size();++i) {
             if(r.materialOverrides[i].empty()) continue;
-            auto material=LoadMaterialAsset(r.materialOverrides[i]);
-            if(!material || material->assetPath!=r.materialOverrides[i]) Fail("Scene material could not be resolved");
-            model.materialOverrides[i]=std::move(material);
+            const auto& original=r.materialOverrides[i];
+            try {
+                const auto& key=replacementKey(original);
+                auto material=LoadMaterialAsset(key);
+                if(!material || material->assetPath!=key) Fail("Invalid material reference");
+                model.materialOverrides[i]=std::move(material);
+            } catch(const std::exception& e) { throw SceneDependencyError(original,e.what()); }
         }
         world->SetModel(entitiesByID.at(r.id),model); modelsByID.emplace(r.id,std::move(asset));
     }
@@ -585,9 +602,7 @@ std::unique_ptr<SceneDocument> SceneDocument::Deserialize(std::string_view text,
         AnimatorComponent animator; animator.state=r.animator->state; animator.upperBody=r.animator->upperBody;
         AssetHandle<ModelAsset> animationAsset;
         if(!r.animator->source.empty()) {
-            if(!resolve) Fail("Model resolver required to load animator source");
-            animationAsset=resolve(r.animator->source); if(!animationAsset) Fail("Animator source could not be resolved");
-            if(animationAsset->metadata.path!=r.animator->source) Fail("Resolved animator source path does not match scene reference");
+            animationAsset=modelReference(r.animator->source);
             animator.animationSource=animationAsset;
         }
         if(!animationAsset) {
@@ -650,7 +665,7 @@ void SceneDocument::Save(const std::filesystem::path &path) {
     history_.MarkSaved();
 }
 
-std::unique_ptr<SceneDocument> SceneDocument::Load(const std::filesystem::path &path,ModelResolver resolve) {
+std::unique_ptr<SceneDocument> SceneDocument::Load(const std::filesystem::path &path,ModelResolver resolve,const SceneRelinks& relinks) {
     Thread::RequireMain();
     std::ifstream file(path,std::ios::binary); if(!file) throw std::runtime_error("Cannot open scene file: "+path.string());
     std::string data; char chunk[8192];
@@ -658,7 +673,7 @@ std::unique_ptr<SceneDocument> SceneDocument::Load(const std::filesystem::path &
         file.read(chunk,sizeof(chunk)); data.append(chunk,static_cast<std::size_t>(file.gcount()));
         if(data.size()>MaxBytes) Fail("Scene exceeds size limit");
     }
-    auto document=Deserialize(data,std::move(resolve));
+    auto document=Deserialize(data,std::move(resolve),relinks);
     document->MarkSaved();
     return document;
 }

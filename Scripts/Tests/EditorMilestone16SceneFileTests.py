@@ -90,7 +90,7 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.assertIn("LoadMaterialAsset", self.scene)
         self.assertIn("materialOverrides", self.scene)
         self.assertIn("animationSource", self.scene)
-        self.assertIn("Model resolver required to load animator source", self.scene)
+        self.assertIn("animationAsset=modelReference(r.animator->source)", self.scene)
 
     def test_editor_primitives_and_physics_presets_use_persistent_model_assets(self):
         for path in (

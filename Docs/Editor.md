@@ -340,7 +340,7 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 28 | Drag & Drop | `IMPLEMENTED` | Multiple DnD paths exist; depends on incomplete asset integration for full robustness. |
 | 29 | Editor Preview Rendering | `IMPLEMENTED` | Scene/Game visualization guards and camera ownership implemented; native visual acceptance pending. |
 | 30 | Rendering Quality | `PARTIAL` | HDR/bloom/environment/shadows exist; real MSAA and stronger backend acceptance remain. |
-| 31 | Asset Manager Integration | `FOUNDATION` | Failed reloads preserve existing handles and report the asset key and decoder error in the Editor. Missing/moved dependency repair and background-state UX remain incomplete. |
+| 31 | Asset Manager Integration | `FOUNDATION` | Failed reloads preserve existing handles and report the asset key and decoder error in the Editor. Open Scene offers reference repair for unavailable models, animator sources, and material overrides. A repair validates the replacement keys and saves a separate scene; the active scene and source file stay unchanged. Background-state UX and native interaction acceptance remain pending. |
 | 32 | Prefab-like Reusable Objects | `NOT STARTED` | No complete prefab workflow. |
 | 33 | Audio Editor Integration | `FOUNDATION` | Runtime/OpenAL foundation exists; usable editor authoring workflow is incomplete. |
 | 34 | Debug Visualization | `PARTIAL` | Some light/camera/physics helpers exist, but no coherent debug-visualization system. |

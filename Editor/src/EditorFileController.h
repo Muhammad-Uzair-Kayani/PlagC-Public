@@ -2,6 +2,7 @@
 
 #include <PlagC/Editor/EditorSession.h>
 #include <cstdint>
+#include <array>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -40,6 +41,13 @@ private:
     void RemoveRecent(Engine&, const std::filesystem::path&);
     void SaveRecent(Engine&);
     void ReportError(Engine&, std::string operation, const std::exception&);
+
+    void DrawDependencyRepair(Engine&);
+    std::filesystem::path repairSource_;
+    SceneRelinks relinks_;
+    std::string missingKey_, repairError_;
+    std::array<char,1024> replacement_{};
+    bool showRepair_ = false;
 
     PendingAction pending_ = PendingAction::None;
     std::filesystem::path pendingPath_;

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
+#include <unordered_set>
 
 namespace PlagC::Editor {
 namespace {
@@ -162,6 +163,7 @@ bool EditorFileController::Save(Engine& engine, EditorSession& session)
 
 void EditorFileController::DrawUnsavedModal(Engine& engine, EditorSession& session)
 {
+    DrawDependencyRepair(engine);
     if (openUnsavedPopup_)
     {
         ImGui::OpenPopup("Unsaved Changes");
@@ -362,11 +364,61 @@ bool EditorFileController::OpenScenePath(Engine& engine,
 
     // EditorSession::Open constructs and validates the replacement document first;
     // the current authoring document/path are only swapped after loading succeeds.
-    session.Open(path, Resolver(engine), policy);
+    try { session.Open(path, Resolver(engine), policy); }
+    catch(const SceneDependencyError& e) {
+        repairSource_=path; missingKey_=e.key; repairError_=e.what();
+        relinks_.clear(); replacement_.fill(0); showRepair_=true;
+        ReportError(engine,"Scene dependency unavailable",e);
+        return false;
+    }
     RememberRecent(engine, path);
     lastError_.clear();
     engine.Logger().Write(Severity::Info, "EDITOR-FILE", "Opened scene: " + path.string());
     return true;
+}
+
+void EditorFileController::DrawDependencyRepair(Engine& engine)
+{
+    constexpr auto title="Repair scene dependencies";
+    if(showRepair_) { ImGui::OpenPopup(title); showRepair_=false; }
+    if(!ImGui::BeginPopupModal(title,nullptr,ImGuiWindowFlags_AlwaysAutoResize)) return;
+    ImGui::TextWrapped("Could not open %s",repairSource_.filename().string().c_str());
+    ImGui::TextWrapped("Reference: %s",missingKey_.c_str());
+    ImGui::TextWrapped("%s",repairError_.c_str());
+    ImGui::TextUnformatted("Enter a cooked asset key. The original scene stays unchanged.");
+    ImGui::SetNextItemWidth(420);
+    ImGui::InputText("Replacement",replacement_.data(),replacement_.size());
+    ImGui::BeginDisabled(replacement_[0]==0);
+    if(ImGui::Button("Validate and save a repaired copy")) {
+        relinks_[missingKey_]=replacement_.data();
+        try {
+            // A retained cached handle can outlive its backing file. Re-read each
+            // already registered dependency once before publishing a repaired scene.
+            std::unordered_set<std::string> cached;
+            for(const auto& info:engine.Assets().Registry()) cached.insert(info.metadata.path);
+            auto checkedResolver=[&](const std::string& key) {
+                if(cached.erase(key)) engine.Assets().ReloadAndWait(key);
+                return engine.Assets().Load<ModelAsset>(key);
+            };
+            auto recovered=SceneDocument::Load(repairSource_,checkedResolver,relinks_);
+            if(auto path=SaveSceneFileDialog(Owner(engine))) {
+                if(std::filesystem::exists(*path) && std::filesystem::equivalent(*path,repairSource_))
+                    throw std::invalid_argument("Choose a different file for the repaired scene.");
+                recovered->Save(*path);
+                RememberRecent(engine,*path);
+                lastError_.clear();
+                engine.Logger().Write(Severity::Info,"EDITOR-FILE","Saved repaired scene: "+path->string());
+                ImGui::CloseCurrentPopup();
+            }
+        } catch(const SceneDependencyError& e) {
+            if(missingKey_!=e.key) replacement_.fill(0);
+            missingKey_=e.key; repairError_=e.what();
+        } catch(const std::exception& e) { repairError_=e.what(); }
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if(ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+    ImGui::EndPopup();
 }
 
 void EditorFileController::EnsureRecentLoaded(Engine& engine)
