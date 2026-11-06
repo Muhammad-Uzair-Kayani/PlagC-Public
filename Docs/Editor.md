@@ -529,3 +529,14 @@ New visual polish, prefab expansion and other non-critical Editor features shoul
 The earlier milestone implementation history remains available in Git history and is still useful for locating code and prior commits. It should not be interpreted as proof that those milestones were product-complete.
 
 From this revision onward, `Docs/Editor.md` describes **what the Editor can reliably do as a product**, not merely what code has been written.
+
+## Native packaged rendering check
+
+From a VS2022 Developer Command Prompt on a Windows machine with OpenGL and Vulkan
+drivers, run `ValidateEditorPackages.bat`. It builds Release and Dist, copies each
+package into a fresh directory, and launches it from an unrelated working directory
+with each backend. The check requires a successful exit, the requested active
+backend, and an Ogre main-output draw that actually issued geometry. Per-case logs
+and results.json are retained under Build/ValidationLogs. This checks startup and
+draw submission; it does not verify the resulting pixels or replace the interactive
+Milestone 43 acceptance workflow.

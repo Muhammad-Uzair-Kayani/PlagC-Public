@@ -62,5 +62,39 @@ int main() {
         self.assertIn('Incomplete runtime package',result.stderr)
         self.assertIn(str(empty/'Assets'),result.stderr)
 
+class PackageEvidenceTests(unittest.TestCase):
+    def test_copied_package_requires_fresh_post_draw_evidence(self):
+        import importlib.util
+        from unittest.mock import patch
+        spec=importlib.util.spec_from_file_location('package_check',ROOT/'Scripts/ValidateEditorPackages.py')
+        check=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(check)
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            source=root/'Release'
+            (source/'Logs').mkdir(parents=True)
+            (source/'Editor.exe').write_bytes(b'fixture')
+            (source/'Logs'/'Ogre.log').write_text('stale evidence')
+            def fake(args, cwd, **kwargs):
+                package=Path(args[0]).parent
+                self.assertNotEqual(package,source)
+                self.assertNotEqual(package,cwd)
+                self.assertFalse((package/'Logs').exists())
+                (package/'Logs').mkdir()
+                (package/'Logs/PlagC.log').write_text('Backend: Vulkan')
+                (package/'Logs/Ogre.log').write_text('[PlagC UI] main-output draw completed: backend=Vulkan target=Window')
+                return subprocess.CompletedProcess(args,0,b'',b'')
+            with patch.object(check.subprocess,'run',side_effect=fake):
+                check.run_case(source,'vulkan',root/'evidence',10)
+            self.assertTrue((root/'evidence/Logs/Ogre.log').is_file())
+            self.assertEqual((source/'Logs/Ogre.log').read_text(),'stale evidence')
+        for engine,ogre in [
+            ('Backend: OpenGL','[PlagC UI] main-output draw completed: backend=Vulkan target=Window'),
+            ('Backend: Vulkan','[PlagC UI] explicit output=Window vertices=12'),
+            ('Backend: Vulkan','[PlagC UI] main-output draw completed: backend=OpenGL target=Window'),
+            ('Backend: Vulkan','[PlagC UI] ERROR: submitted UI was not presented')]:
+            with self.assertRaises(ValueError):
+                check.verify('vulkan',engine,ogre)
+
 if __name__ == '__main__':
     unittest.main()

@@ -70,6 +70,13 @@ if not errorlevel 1 (
     exit /b 1
 )
 
+findstr /I /C:"[PlagC UI] main-output draw completed: backend=%BACKEND% target=" "Logs\Ogre.log" >nul
+if errorlevel 1 (
+    echo [FAIL] No completed main-output UI draw for the requested backend.
+    popd
+    exit /b 1
+)
+
 echo [PASS] %BACKEND% editor UI commands reached the main Ogre output.
 popd
 exit /b 0

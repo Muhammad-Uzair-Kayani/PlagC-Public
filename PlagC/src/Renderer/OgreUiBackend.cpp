@@ -294,6 +294,7 @@ public:
         DetachWorkspace(renderer, nullptr);
         renderers_.erase(renderer);
         outputs_.erase(renderer);
+        loggedDraw_.erase(renderer);
         presented_.erase(renderer);
         reportedMissing_.erase(renderer);
         if (renderers_.empty())
@@ -354,7 +355,13 @@ public:
         }
         EnsureResources(renderer->Backend());
         if (Render(*frame, target, renderer->Backend()))
+        {
             presented_.insert(renderer);
+            if (loggedDraw_.insert(renderer).second)
+                Ogre::LogManager::getSingleton().logMessage(
+                    std::string("[PlagC UI] main-output draw completed: backend=") +
+                    BackendName(renderer->Backend()) + " target=" + target->getNameStr());
+        }
         else
             presented_.erase(renderer);
         lastRenderedFrame_ = frameNumber;
@@ -605,7 +612,7 @@ private:
     std::unordered_map<const Renderer*, Ogre::TextureGpu*> outputs_;
     std::unordered_map<const Renderer*, Ogre::CompositorWorkspace*> attachedWorkspaces_;
     std::string lastDimensions_;
-    std::unordered_set<const Renderer*> presented_, reportedMissing_;
+    std::unordered_set<const Renderer*> presented_, reportedMissing_, loggedDraw_;
     RendererBackend backend_ = RendererBackend::Auto;
     std::unique_ptr<Ogre::PsoCacheHelper> psoCache_;
     std::unique_ptr<UiBuffers> buffers_;
