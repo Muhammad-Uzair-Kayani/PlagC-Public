@@ -94,7 +94,7 @@ class EditorMilestone7MaterialTests(unittest.TestCase):
         self.assertIn("setTwoSidedLighting", self.ogre)
 
     def test_material_assignments_remain_persistent_in_current_scene_format(self):
-        self.assertIn("CurrentSceneVersion = 4", self.scene)
+        self.assertIn("CurrentSceneVersion = 6", self.scene)
         self.assertIn("if(version<1 || version>CurrentSceneVersion)", self.scene)
         self.assertIn("if(version<3)", self.scene)
         self.assertIn('w.Key("materials")', self.scene)
@@ -131,8 +131,8 @@ class EditorMilestone7MaterialTests(unittest.TestCase):
         self.assertNotIn("Ogre::", self.inspector)
 
     def test_scope_boundary_and_validation_wiring(self):
-        self.assertIn("## 7. Material System + Inspector — `DONE`", self.docs)
-        self.assertIn("## 10. Physics Inspector — `DONE`", self.docs)
+        self.assertIn("| 7 | Material System + Inspector |", self.docs)
+        self.assertIn("| 10 | Physics Inspector |", self.docs)
         self.assertIn("EditorMilestone7MaterialTests.py", self.validate)
         self.assertIn("EditorMilestone7MaterialTests.py", self.workflow)
         self.assertIn("EditorMilestone8Tests.py", self.validate)

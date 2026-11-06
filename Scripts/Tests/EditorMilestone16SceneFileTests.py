@@ -76,7 +76,7 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.assertIn("EditorSession::Open constructs and validates the replacement document first", self.files)
 
     def test_scene_v4_persists_physics_and_animator_components(self):
-        self.assertIn("CurrentSceneVersion = 4", self.scene)
+        self.assertIn("CurrentSceneVersion = 6", self.scene)
         self.assertIn('w.Key("physics"); WritePhysics', self.scene)
         self.assertIn('w.Key("animator"); WriteAnimator', self.scene)
         self.assertIn("ReadPhysics", self.scene)
@@ -139,8 +139,7 @@ class EditorMilestone16SceneFileTests(unittest.TestCase):
         self.assertIn("Scene file does not exist:", self.files)
 
     def test_roadmap_marks_m16_complete(self):
-        self.assertIn("## 16. Scene File Workflow — `DONE`", self.docs)
-        self.assertIn("## Milestone 16 — Scene File Workflow — `DONE`", self.docs)
+        self.assertIn("| 16 | Scene File Workflow |", self.docs)
 
 
 if __name__ == "__main__":

@@ -90,7 +90,7 @@ class EditorMilestone22MenuBarTests(unittest.TestCase):
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone22MenuBarTests.py", local)
         self.assertIn("EditorMilestone22MenuBarTests.py", ci)
-        self.assertIn("## 22. Menu Bar — `DONE`", docs)
+        self.assertIn("| 22 | Menu Bar |", docs)
 
 
 if __name__ == "__main__":

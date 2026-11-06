@@ -72,7 +72,7 @@ class EditorMilestone17PlayToolbarTests(unittest.TestCase):
     def test_runtime_camera_physics_animation_and_step_remain_existing_runtime_contracts(self):
         app = self.read("Editor/src/EditorApp.cpp")
         runtime = self.read("Editor/src/EditorPlayRuntime.cpp")
-        self.assertIn("runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics())", app)
+        self.assertIn("runtimeCamera_.Extract(session_->ViewWorld())", app)
         self.assertIn("presentation = playRuntime_.Update(engine, *session_, dt)", app)
         self.assertIn("assetScene_->Update(session_->SystemWorld()", app)
         self.assertIn("playRuntime_.CompleteFrame(engine, *session_)", app)
@@ -86,7 +86,7 @@ class EditorMilestone17PlayToolbarTests(unittest.TestCase):
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone17PlayToolbarTests.py", validate)
         self.assertIn("EditorMilestone17PlayToolbarTests.py", workflow)
-        self.assertIn("## 17. Play Toolbar — `DONE`", docs)
+        self.assertIn("| 17 | Play Toolbar |", docs)
 
 
 if __name__ == "__main__":

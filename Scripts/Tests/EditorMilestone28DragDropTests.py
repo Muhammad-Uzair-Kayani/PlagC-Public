@@ -104,7 +104,7 @@ class EditorMilestone28DragDropTests(unittest.TestCase):
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone28DragDropTests.py", local)
         self.assertIn("EditorMilestone28DragDropTests.py", ci)
-        self.assertIn("## 28. Drag & Drop — `DONE`", docs)
+        self.assertIn("| 28 | Drag & Drop |", docs)
 
 
 if __name__ == "__main__":

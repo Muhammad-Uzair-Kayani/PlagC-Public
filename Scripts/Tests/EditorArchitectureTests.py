@@ -87,7 +87,7 @@ class EditorArchitectureTests(unittest.TestCase):
 
     def test_scene_v4_persists_hierarchy_and_keeps_v1_v3_readable(self):
         source = self.read("PlagC/src/Editor/SceneSerialization.cpp")
-        self.assertIn("CurrentSceneVersion = 4", source)
+        self.assertIn("CurrentSceneVersion = 6", source)
         self.assertIn("if(version<1 || version>CurrentSceneVersion)", source)
         self.assertIn("if(version==1)", source)
         self.assertIn("else if(version<4)", source)

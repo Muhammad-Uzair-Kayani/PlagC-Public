@@ -67,8 +67,8 @@ class EditorMilestone19ConsoleTests(unittest.TestCase):
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone19ConsoleTests.py", local)
         self.assertIn("EditorMilestone19ConsoleTests.py", ci)
-        self.assertIn("## 19. Console — `DONE`", docs)
-        self.assertIn("## 20. Statistics / Profiler — `DONE`", docs)
+        self.assertIn("| 19 | Console |", docs)
+        self.assertIn("| 20 | Statistics / Profiler |", docs)
 
 
 if __name__ == "__main__":

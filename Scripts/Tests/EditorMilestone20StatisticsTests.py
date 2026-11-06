@@ -89,8 +89,8 @@ class EditorMilestone20StatisticsTests(unittest.TestCase):
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone20StatisticsTests.py", local)
         self.assertIn("EditorMilestone20StatisticsTests.py", ci)
-        self.assertIn("## 20. Statistics / Profiler — `DONE`", docs)
-        self.assertIn("Continue this explicitly assigned batch with **23 → 26 → 29**", docs)
+        self.assertIn("| 20 | Statistics / Profiler |", docs)
+        self.assertIn("Acceptance rule", docs)
 
 
 if __name__ == "__main__":

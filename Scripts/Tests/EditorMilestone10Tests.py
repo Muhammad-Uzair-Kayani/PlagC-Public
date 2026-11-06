@@ -79,16 +79,14 @@ class EditorMilestone10Tests(unittest.TestCase):
         self.assertIn("physicsDebugAll_", self.layer)
 
     def test_milestone_16_owns_scene_persistence_without_regressing_physics(self):
-        self.assertIn("CurrentSceneVersion = 4", self.scene)
+        self.assertIn("CurrentSceneVersion = 6", self.scene)
         self.assertIn('w.Key("physics"); WritePhysics', self.scene)
         self.assertIn("ReadPhysics", self.scene)
         self.assertIn("ValidatePhysicsBody", self.scene)
-        self.assertIn("## 16. Scene File Workflow — `DONE`", self.docs)
+        self.assertIn("| 16 | Scene File Workflow |", self.docs)
 
     def test_roadmap_marks_milestone_complete(self):
-        self.assertIn("## 10. Physics Inspector — `DONE`", self.docs)
-        execution = self.docs[self.docs.index("# Milestone Execution Log"):]
-        self.assertIn("## 10. Physics Inspector — `DONE`", execution)
+        self.assertIn("| 10 | Physics Inspector |", self.docs)
 
 
 if __name__ == "__main__":

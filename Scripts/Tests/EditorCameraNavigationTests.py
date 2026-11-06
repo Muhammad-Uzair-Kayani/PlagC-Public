@@ -31,8 +31,8 @@ class EditorCameraNavigationTests(unittest.TestCase):
     def test_left_mouse_remains_selection_input(self):
         app = (ROOT / "Editor/src/EditorApp.cpp").read_text(encoding="utf-8")
         self.assertIn("ImGui::IsMouseClicked(ImGuiMouseButton_Left, false)", app)
-        self.assertIn("document.SelectPersistent(hit->persistentID)", app)
-        self.assertIn("document.Select({})", app)
+        self.assertIn("session_->SelectViewPersistent(hit->persistentID)", app)
+        self.assertIn("session_->SelectViewPersistent(0)", app)
 
 
 if __name__ == "__main__":

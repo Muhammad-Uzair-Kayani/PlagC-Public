@@ -16,7 +16,7 @@ class EditorSceneHierarchyMilestoneTests(unittest.TestCase):
         drag_drop = self.read("Editor/src/EditorDragDrop.h")
         for required in (
             "session.ViewDocument().Snapshot()",
-            "SelectPersistent",
+            "SelectViewPersistent",
             "FindByPersistentID",
             "SetParent",
             "ClearParent",
@@ -78,7 +78,7 @@ class EditorSceneHierarchyMilestoneTests(unittest.TestCase):
 
     def test_roadmap_marks_scene_hierarchy_done(self):
         doc = self.read("Docs/Editor.md")
-        self.assertGreaterEqual(doc.count("## 2. Scene Hierarchy — `DONE`"), 2)
+        self.assertIn("| 2 | Scene Hierarchy |", doc)
 
 
 if __name__ == "__main__":

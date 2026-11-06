@@ -47,6 +47,11 @@ For editor-facing features, acceptance should normally include an actual sequenc
 7. verify Play/Edit isolation when runtime behavior is relevant;
 8. verify Release/Dist where packaging or startup is relevant.
 
+The 36 Python validation scripts listed by ValidateEditor.bat and the Windows workflow
+were run locally. The source regressions now check v6 scene wiring and isolated runtime
+selection/camera paths; roadmap checks no longer require historical DONE labels.
+This does not validate Windows rendering or the native build.
+
 Source-inspection tests remain useful as architectural regressions, but they do **not** prove usability.
 
 ---

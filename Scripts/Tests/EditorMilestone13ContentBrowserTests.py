@@ -84,8 +84,8 @@ class EditorMilestone13ContentBrowserTests(unittest.TestCase):
         panel = self.read("Editor/src/EditorDataPanels.cpp")
         self.assertIn("EditorMilestone13ContentBrowserTests.py", local)
         self.assertIn("EditorMilestone13ContentBrowserTests.py", ci)
-        self.assertIn("## 13. Content Browser — `DONE`", docs)
-        self.assertIn("## 17. Play Toolbar — `DONE`", docs)
+        self.assertIn("| 13 | Content Browser |", docs)
+        self.assertIn("| 17 | Play Toolbar |", docs)
         self.assertNotIn("CookImportedAsset(", panel)
 
 

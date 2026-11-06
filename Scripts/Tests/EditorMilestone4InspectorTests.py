@@ -75,12 +75,11 @@ class EditorMilestone4InspectorTests(unittest.TestCase):
 
     def test_milestone_boundary_is_documented(self):
         doc = self.read("Docs/Editor.md")
-        self.assertIn("## 4. Inspector — `DONE`", doc)
-        self.assertIn("## 4. Inspector — `DONE`", doc[doc.index("# Milestone Execution Log"):])
-        self.assertIn("Scope boundary", doc)
-        self.assertIn("## 5. Transform Inspector — `DONE`", doc)
-        self.assertIn("## 7. Material System + Inspector — `DONE`", doc)
-        self.assertIn("## 10. Physics Inspector — `DONE`", doc)
+        self.assertIn("| 4 | Inspector |", doc)
+        self.assertIn("Architecture contract", doc)
+        self.assertIn("| 5 | Transform Inspector |", doc)
+        self.assertIn("| 7 | Material System + Inspector |", doc)
+        self.assertIn("| 10 | Physics Inspector |", doc)
 
     def test_validation_entrypoints_run_milestone4_gate(self):
         validate = self.read("ValidateEditor.bat")

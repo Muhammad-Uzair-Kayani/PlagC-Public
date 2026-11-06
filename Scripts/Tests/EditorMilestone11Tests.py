@@ -69,7 +69,7 @@ checks = {
         "Clip Diagnostics" in animator and
         "tracks for" in animator,
     "milestone 11 is documented and wired into both validation gates":
-        "## 11. Animator Inspector — `DONE`" in docs and
+        "| 11 | Animator Inspector |" in docs and
         "EditorMilestone11Tests.py" in validate and
         "EditorMilestone11Tests.py" in workflow,
 }

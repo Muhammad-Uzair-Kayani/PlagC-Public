@@ -77,9 +77,9 @@ class EditorMilestone14ThumbnailTests(unittest.TestCase):
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone14ThumbnailTests.py", local)
         self.assertIn("EditorMilestone14ThumbnailTests.py", ci)
-        self.assertIn("## 14. Thumbnail / Preview System — `DONE`", docs)
-        self.assertIn("## 16. Scene File Workflow — `DONE`", docs)
-        self.assertIn("## 29. Editor Preview Rendering — `NOT STARTED`", docs)
+        self.assertIn("| 14 | Thumbnail / Preview |", docs)
+        self.assertIn("| 16 | Scene File Workflow |", docs)
+        self.assertIn("| 29 | Editor Preview Rendering |", docs)
 
 
 if __name__ == "__main__":

@@ -82,7 +82,7 @@ class EditorMilestone25WorkspaceTests(unittest.TestCase):
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone25WorkspaceTests.py", local)
         self.assertIn("EditorMilestone25WorkspaceTests.py", ci)
-        self.assertIn("## 25. Docking / Workspace — `DONE`", docs)
+        self.assertIn("| 25 | Docking / Workspace |", docs)
 
 
 if __name__ == "__main__":

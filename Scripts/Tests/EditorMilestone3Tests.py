@@ -37,7 +37,7 @@ class EditorMilestone3Tests(unittest.TestCase):
 
     def test_camera_and_all_light_types_have_defaults(self):
         self.assertIn("entity.camera = camera;", self.source)
-        self.assertIn("camera.target = {anchor.x, anchor.y + 1.0f, anchor.z};", self.source)
+        self.assertIn("entity.transform.rotationDegrees = DirectionRotation({0,-1,-5});", self.source)
         self.assertIn("LightType::Directional", self.source)
         self.assertIn("LightType::Point", self.source)
         self.assertIn("LightType::Spot", self.source)

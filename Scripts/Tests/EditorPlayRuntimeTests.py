@@ -61,17 +61,19 @@ class EditorPlayRuntimeTests(unittest.TestCase):
         self.assertIn("playRuntime_.Reset(engine)", app)
         self.assertIn("std::make_unique<EditorApplication>(config)", app)
 
-    def test_play_mode_uses_runtime_active_camera_and_editor_fallback(self):
+    def test_play_mode_uses_runtime_active_camera_and_independent_fallback(self):
         app = self.read("Editor/src/EditorApp.cpp")
         self.assertIn("PlagC::CameraSystem runtimeCamera_", app)
         self.assertIn("runtimeCamera_.SetViewport(viewport.width, viewport.height)", app)
-        self.assertIn("runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics())", app)
-        self.assertIn("engine.Graphics().SetCamera(editorCamera_)", app)
+        self.assertIn("runtimeCamera_.Extract(session_->ViewWorld())", app)
         self.assertIn("CameraProjection::Perspective", app)
 
         play = app.index("if (session_->Playing())", app.index("void UpdateEditorCamera"))
-        sync = app.index("runtimeCamera_.Sync(session_->SystemWorld(), engine.Graphics())", play)
+        sync = app.index("runtimeCamera_.Extract(session_->ViewWorld())", play)
         leave = app.index("return;", sync)
+        self.assertIn(": PlagC::CameraDesc{}", app[play:leave])
+        self.assertIn("SetCamera(gameCamera_)", app[play:leave])
+        self.assertNotIn("SetCamera(editorCamera_)", app[play:leave])
         movement = app.index("viewport.input.AcceptCameraMouse()", play)
         self.assertLess(sync, leave)
         self.assertLess(leave, movement)

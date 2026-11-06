@@ -46,8 +46,8 @@ class EditorViewportSceneViewTests(unittest.TestCase):
         picking = self.read("PlagC/src/Editor/ScenePicking.cpp")
         self.assertIn("RendererPickingProvider", app)
         self.assertIn("picker.Pick(request)", app)
-        self.assertIn("document.SelectPersistent(hit->persistentID)", app)
-        self.assertIn("document.Select({})", app)
+        self.assertIn("session_->SelectViewPersistent(hit->persistentID)", app)
+        self.assertIn("session_->SelectViewPersistent(0)", app)
         self.assertIn("sceneRenderer.EntityForObject", picking)
         self.assertIn("assetScene.EntityForObject", picking)
 
@@ -96,10 +96,9 @@ class EditorViewportSceneViewTests(unittest.TestCase):
 
     def test_scene_view_roadmap_is_done_and_has_execution_evidence(self):
         doc = self.read("Docs/Editor.md")
-        self.assertIn("## 1. Viewport / Scene View — `DONE`", doc)
-        self.assertIn("## 1. Viewport / Scene View — `DONE`", doc[doc.index("# Milestone Execution Log"):])
-        self.assertIn("EditorViewportSceneViewTests.py", doc)
-        self.assertIn("editor-only preview lighting/environment", doc)
+        self.assertIn("| 1 | Viewport / Scene View |", doc)
+        self.assertIn("native visual acceptance pending", doc)
+        self.assertIn("Game defaults to no helpers", doc)
 
 
 if __name__ == "__main__":

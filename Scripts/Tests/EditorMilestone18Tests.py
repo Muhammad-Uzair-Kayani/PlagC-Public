@@ -104,7 +104,7 @@ class EditorMilestone18Tests(unittest.TestCase):
         docs = self.read("Docs/Editor.md")
         self.assertIn("EditorMilestone18Tests.py", local)
         self.assertIn("EditorMilestone18Tests.py", ci)
-        self.assertIn("## 18. Runtime / Game Logic — `DONE`", docs)
+        self.assertIn("| 18 | Runtime / Game Logic |", docs)
 
 
 if __name__ == "__main__":
