@@ -10,6 +10,28 @@ using namespace PlagC::Editor;
 int main() {
     Thread::InitializeMain();
 
+    NotificationFeed notices;
+    std::vector<LogRecord> records{
+        {1,Severity::Info,"","PROFILER","","","frame"},
+        {2,Severity::Error,"","EDITOR-FILE","","","missing dependency"},
+        {3,Severity::Error,"","EDITOR-FILE","","","missing dependency"},
+        {4,Severity::Info,"","EDITOR-IMPORT","","","Imported texture"}};
+    notices.Update(records,0);
+    assert(notices.Cursor()==4 && notices.Visible().size()==2 && notices.Visible()[0].repeats==2);
+    notices.Update(records,1);
+    assert(notices.Visible()[0].repeats==2); // No replay on overlapping reads.
+    notices.Update({},5);
+    assert(notices.Visible().size()==1);
+    records.clear();
+    for(unsigned id=5;id<=10;++id)
+        records.push_back({id,Severity::Info,"","EDITOR-FILE","","",std::to_string(id)});
+    notices.Update(records,6);
+    assert(notices.Visible().size()==4 && notices.Visible()[0].record.sequence==2);
+    notices.Dismiss(2);
+    assert(notices.Visible().size()==3);
+    notices.Update({},20);
+    assert(notices.Visible().empty());
+
     MainThreadMailbox mailbox(4);
     int committed = 0;
     std::thread producer([&] {

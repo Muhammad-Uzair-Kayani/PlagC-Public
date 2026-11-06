@@ -88,7 +88,10 @@ private:
     bool showHierarchy_ = true;
     bool showInspector_ = true;
     bool showContentBrowser_ = true;
+    NotificationFeed notifications_;
+    void DrawNotifications(Engine&);
     bool showConsole_ = true;
+    bool focusConsole_ = false;
     bool showStatistics_ = true;
 
     std::uint64_t inspectorPersistentID_ = 0;

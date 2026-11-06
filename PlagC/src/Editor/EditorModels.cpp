@@ -284,4 +284,32 @@ EditorTelemetry MakeTelemetry(const FrameProfile& frame,
     return result;
 }
 
+void NotificationFeed::Dismiss(std::uint64_t id) {
+    std::erase_if(visible_,[&](const EditorNotice& n){ return n.record.sequence==id; });
+}
+
+void NotificationFeed::Update(std::span<const LogRecord> records,double now) {
+    std::erase_if(visible_,[&](const EditorNotice& n){ return n.expires<=now; });
+    for(const auto& r:records) {
+        if(r.sequence<=cursor_) continue;
+        cursor_=r.sequence;
+        const bool outcome=r.category=="EDITOR-FILE" || r.category=="EDITOR-IMPORT" ||
+                           r.category=="EDITOR-ASSETS" || r.category=="EDITOR-PLAY";
+        if(r.severity<Severity::Warning && !(r.severity==Severity::Info && outcome)) continue;
+        const double expires=now+(r.severity>=Severity::Error?12.0:5.0);
+        auto same=std::find_if(visible_.begin(),visible_.end(),[&](const EditorNotice& n) {
+            return n.record.severity==r.severity && n.record.category==r.category && n.record.message==r.message;
+        });
+        if(same!=visible_.end()) { ++same->repeats; same->expires=expires; continue; }
+        if(visible_.size()==4) {
+            auto lowest=std::min_element(visible_.begin(),visible_.end(),[](const EditorNotice& a,const EditorNotice& b){
+                return a.record.severity<b.record.severity;
+            });
+            if(lowest->record.severity>r.severity) continue;
+            visible_.erase(lowest);
+        }
+        visible_.push_back({r,expires,1});
+    }
+}
+
 } // namespace PlagC::Editor

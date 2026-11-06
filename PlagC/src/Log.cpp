@@ -41,5 +41,13 @@ void Log::Write(Severity severity, std::string_view category, std::string_view m
     impl_->records.push_back(std::move(record));
 }
 std::vector<LogRecord> Log::Snapshot() const { std::lock_guard lock(impl_->mutex); return {impl_->records.begin(),impl_->records.end()}; }
+std::vector<LogRecord> Log::Since(std::uint64_t sequence) const {
+    std::lock_guard lock(impl_->mutex);
+    const auto& records=impl_->records;
+    if(records.empty() || records.back().sequence<=sequence) return {};
+    const auto first=std::upper_bound(records.begin(),records.end(),sequence,
+        [](std::uint64_t id,const LogRecord& record){ return id<record.sequence; });
+    return {first,records.end()};
+}
 void Log::Clear() { std::lock_guard lock(impl_->mutex); impl_->records.clear(); }
 }

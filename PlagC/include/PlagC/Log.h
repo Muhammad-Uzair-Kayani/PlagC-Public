@@ -15,6 +15,7 @@ public:
     Log& operator=(const Log&) = delete;
     void Write(Severity, std::string_view category, std::string_view message);
     std::vector<LogRecord> Snapshot() const;
+    std::vector<LogRecord> Since(std::uint64_t sequence) const;
     void Clear();
 private:
     struct Impl;

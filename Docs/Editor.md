@@ -348,7 +348,7 @@ The original 43 milestone numbers are retained so existing history and discussio
 | 36 | Editor Settings | `PARTIAL` | Renderer/preferences infrastructure exists; complete persisted editor settings are not finished. |
 | 37 | Performance | `PARTIAL` | Profiling and async work exist; large-scene responsiveness is not yet an accepted product property. |
 | 38 | Error Handling | `PARTIAL` | Logging/dialogs exist and Dist fatal reporting was improved; failures are not yet consistently actionable in-editor. |
-| 39 | Notifications / Feedback | `NOT STARTED` | No complete non-blocking status/toast system. |
+| 39 | Notifications / Feedback | `IMPLEMENTED` | Non-modal editor notices show file, asset, import and Play outcomes, plus warnings/errors. Repeats are grouped; dismiss or open Console for details. Queue behavior is executable-tested; native UI acceptance pending. |
 | 40 | Testing | `PARTIAL` | Many regressions exist, but too many are source-token tests instead of executable workflows. |
 | 41 | CI / Build | `PARTIAL` | Windows/MSVC validation exists; backend/runtime/Dist acceptance is not yet comprehensive. |
 | 42 | Repository Cleanup | `PARTIAL` | `prototype` is authoritative, but historical branch/work cleanup remains unfinished. |

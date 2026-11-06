@@ -76,7 +76,40 @@ void EditorLayer::Frame(Engine& engine, EditorSession& session)
 
 void EditorLayer::DrawModals(Engine& engine, EditorSession& session)
 {
+    DrawNotifications(engine);
     files_.DrawUnsavedModal(engine, session);
+}
+
+void EditorLayer::DrawNotifications(Engine& engine)
+{
+    notifications_.Update(engine.Logger().Since(notifications_.Cursor()), ImGui::GetTime());
+    if(notifications_.Visible().empty()) return;
+    const auto* viewport=ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos({viewport->WorkPos.x+viewport->WorkSize.x-12,
+                             viewport->WorkPos.y+viewport->WorkSize.y-12},ImGuiCond_Always,{1,1});
+    ImGui::SetNextWindowSizeConstraints({0,0},{std::max(120.f,viewport->WorkSize.x*.85f),
+                                             std::max(80.f,viewport->WorkSize.y*.45f)});
+    constexpr auto flags=ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|
+        ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoDocking|
+        ImGuiWindowFlags_NoNavFocus;
+    std::uint64_t dismiss=0;
+    if(ImGui::Begin("Notifications##EditorFeedback",nullptr,flags)) {
+        for(const auto& notice:notifications_.Visible()) {
+            const auto& r=notice.record;
+            ImGui::PushID(std::to_string(r.sequence).c_str());
+            const char* label=r.severity>=Severity::Error?"Error":r.severity==Severity::Warning?"Warning":"Info";
+            ImGui::Text("%s | %s",label,r.category.c_str());
+            if(notice.repeats>1) { ImGui::SameLine(); ImGui::TextDisabled("(%u times)",notice.repeats); }
+            ImGui::SameLine();
+            if(ImGui::SmallButton("Dismiss")) dismiss=r.sequence;
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX()+std::min(380.f,viewport->WorkSize.x*.7f));
+            ImGui::TextUnformatted(r.message.c_str());
+            ImGui::PopTextWrapPos(); ImGui::PopID();
+        }
+        if(ImGui::SmallButton("Show Console")) { showConsole_=true; focusConsole_=true; }
+    }
+    ImGui::End();
+    if(dismiss) notifications_.Dismiss(dismiss);
 }
 
 void EditorLayer::Shutdown()
@@ -489,6 +522,7 @@ void EditorLayer::DrawContentBrowser(Engine& engine)
 
 void EditorLayer::DrawConsole(Engine& engine)
 {
+    if (focusConsole_) { ImGui::SetNextWindowFocus(); focusConsole_=false; }
     if (!ImGui::Begin("Console", &showConsole_)) { ImGui::End(); return; }
     dataPanels_.DrawConsole(engine);
     ImGui::End();

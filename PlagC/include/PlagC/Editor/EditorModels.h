@@ -86,6 +86,22 @@ private:
         std::make_shared<const std::vector<AssetBrowserEntry>>();
 };
 
+struct EditorNotice {
+    LogRecord record;
+    double expires;
+    unsigned repeats = 1;
+};
+class NotificationFeed {
+public:
+    void Update(std::span<const LogRecord>, double now);
+    void Dismiss(std::uint64_t id);
+    std::uint64_t Cursor() const { return cursor_; }
+    const std::vector<EditorNotice>& Visible() const { return visible_; }
+private:
+    std::uint64_t cursor_ = 0;
+    std::vector<EditorNotice> visible_;
+};
+
 struct ConsoleFilter {
     bool trace = true, debug = true, info = true, warning = true, error = true, critical = true;
     std::string search;
