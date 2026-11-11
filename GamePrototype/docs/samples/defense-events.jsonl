@@ -1,0 +1,7 @@
+{"actor":3,"id":1001,"kind":"pickup","position":[3,0,6],"target":102,"tick":1}
+{"actor":10,"id":1002,"kind":"aim","position":[6,0,5],"target":3,"tick":1}
+{"actor":10,"id":1003,"kind":"attack","position":[6,0,5],"target":3,"tick":1}
+{"actor":10,"id":2001,"kind":"aim","position":[6,0,5],"target":3,"tick":2}
+{"actor":10,"id":2002,"kind":"attack","position":[6,0,5],"target":3,"tick":2}
+{"actor":10,"id":3001,"kind":"aim","position":[6,0,5],"target":3,"tick":3}
+{"actor":10,"id":3002,"kind":"attack","position":[6,0,5],"target":3,"tick":3}

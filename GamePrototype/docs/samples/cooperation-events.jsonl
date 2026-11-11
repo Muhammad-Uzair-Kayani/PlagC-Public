@@ -1,0 +1,7 @@
+{"actor":3,"id":11001,"kind":"help","position":[8,0,5],"target":4,"tick":11}
+{"actor":4,"id":11002,"kind":"help","position":[8,0,5],"target":3,"tick":11}
+{"actor":1,"id":21001,"kind":"arrival","position":[17,0,5],"target":0,"tick":21}
+{"actor":2,"id":21002,"kind":"arrival","position":[17,0,5],"target":0,"tick":21}
+{"actor":3,"id":21003,"kind":"arrival","position":[17,0,5],"target":0,"tick":21}
+{"actor":4,"id":21004,"kind":"arrival","position":[17,0,5],"target":0,"tick":21}
+{"actor":5,"id":21005,"kind":"arrival","position":[17,0,5],"target":0,"tick":21}

@@ -154,3 +154,21 @@ The ECS stress scene now uses [retained rendering and a fast transform system](D
 F7 enables detailed sync timings; keep it off for baseline FPS comparisons. The title
 and console identify Debug versus optimized builds. Use the same Release settings
 and stable entity count when comparing against the previous revision.
+
+## Survival game prototype
+
+The `Game-Prototype` branch includes the standalone, engine-independent survival
+simulation in [GamePrototype](GamePrototype/README.md). It contains C++ gameplay,
+five survivors, Python neural inference and genetic training, tests, and measured
+results. It builds separately from the engine and does not require its vendor
+dependencies. PlagC adapter/graphics integration remains a later milestone.
+
+```sh
+cmake -S GamePrototype -B GamePrototype/build -DCMAKE_BUILD_TYPE=Release
+cmake --build GamePrototype/build --config Release -j 4
+ctest --test-dir GamePrototype/build -C Release --output-on-failure
+```
+
+Run `GamePrototype/build/GameRuntime` (Windows multi-configuration builds:
+`GamePrototype/build/Release/GameRuntime.exe`). See the prototype README for
+console controls, model loading, training and held-out evaluation commands.
