@@ -71,3 +71,18 @@ continues from that exact state, not from the champion alone. Training output
 paths are independent of simulation semantics. Tests do not assert noisy
 wall-clock timing or require matplotlib. Charts are optional; raw CSVs are the
 measurement source of truth.
+
+## Premake/Python launcher update
+
+The Premake path now builds the separate core/synthetic libraries, runtime and
+both C++ tests. Python is detected for Visual Studio debugger launches and can
+be overridden with `--python-exe`. Legacy embedding flags are removed because
+the runtime uses a persistent subprocess, not pybind11.
+
+Verified with a clean Premake gmake2 Release build, both C++ test executables,
+Python/protocol integration tests against that executable, and a neural episode
+through the new launcher. A copied checkout whose path contains spaces launched
+successfully from a different working directory with zero policy failures.
+Generated VS2022 debugger XML was checked for correctly quoted interpreter and
+asset paths. Windows execution and the batch launcher require Windows and were
+not executed in this Linux session.

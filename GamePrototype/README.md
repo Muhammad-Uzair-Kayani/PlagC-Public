@@ -17,13 +17,53 @@ ctest --test-dir build -C Release --output-on-failure
 ./build/GameRuntime
 ```
 
-Windows multi-configuration builds use `build/Release/GameRuntime.exe`.
-`GenerateProjects.bat vs2022`/`vs2026` also builds the console and persistent
-transport through Premake; Python embedding flags are legacy and unnecessary.
-If CMake is unavailable with GCC/Clang, `python3 scripts/build.py` builds the
-runtime and both C++ test binaries. Then run `build/core_tests`,
-`build/scenario_tests`, and `python3 -m unittest discover -s python/tests -v`.
-Set `SURVIVAL_RUNTIME` to the executable path when testing another build.
+Windows CMake multi-configuration builds use `build/Release/GameRuntime.exe`.
+
+## Premake / Visual Studio with Python
+
+Run from **GamePrototype**, where the game's `premake5.lua` lives. The
+repository root's Premake builds the separate engine.
+
+```cmd
+GenerateProjects.bat vs2026
+start "" "build\premake\vs2026\SurvivalGame.sln"
+```
+
+For Visual Studio 2022 use `vs2022` in both commands. Select **Release | x64**,
+set **GameRuntime** as startup project, then press **Ctrl+F5**. Premake detects
+Python and sets the working directory, persistent service and included trained
+model in the debugger settings. Both C++ test executables are included in the
+solution. This workflow does not require CMake.
+
+To select an interpreter explicitly:
+
+```cmd
+GenerateProjects.bat vs2026 --python-exe="C:\Path To Python\python.exe"
+```
+
+Python runs as a subprocess. Python development headers, import libraries,
+pybind11 and a Debug Python build are unnecessary. Do not use the old
+`--python-root` or `--pybind-include` flags. Python 3.10+ is required. Premake
+still needs Visual Studio's C++ workload/compiler to build the generated solution.
+
+After building, launch with Python enabled using:
+
+```cmd
+RunGame.bat
+RunGame.bat --headless
+RunGame.bat --scenario hostile --seed 103
+RunGame.bat --runtime "build\premake\vs2026\bin\Release\GameRuntime.exe"
+```
+
+The launcher uses `py -3` or `python`, finds a Release/Debug executable and
+passes the same interpreter to the service. It sets its own working directory.
+Opening `GameRuntime.exe` directly starts the rule-based game; use Ctrl+F5,
+RunGame.bat or explicit service/model arguments for the neural policy.
+
+On Linux use `premake5 gmake2`, then
+`make -C build/premake/gmake2 config=release`, then
+`python3 scripts/run_game.py`. Without CMake/Premake, GCC/Clang users can use
+`python3 scripts/build.py` as a fallback.
 
 ## Play and demonstrate
 
