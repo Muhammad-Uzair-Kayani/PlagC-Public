@@ -1,0 +1,35 @@
+name: LastLight portable Windows binary checks
+on:
+  push:
+    paths:
+      - 'Deliverables/LastLight-Windows-x64.zip'
+      - '.github/workflows/lastlight-binary.yml'
+  pull_request:
+    paths:
+      - 'Deliverables/LastLight-Windows-x64.zip'
+      - '.github/workflows/lastlight-binary.yml'
+jobs:
+  portable-windows:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract the exact distribution ZIP
+        shell: pwsh
+        run: |
+          Expand-Archive -LiteralPath Deliverables/LastLight-Windows-x64.zip -DestinationPath "$env:RUNNER_TEMP\Last Light Portable Check" -Force
+      - name: Validate using only bundled Python and system PATH
+        shell: pwsh
+        run: |
+          $root = "$env:RUNNER_TEMP\Last Light Portable Check\LastLight-Windows-x64"
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          Remove-Item Env:PYTHONHOME -ErrorAction SilentlyContinue
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          & "$root\python-runtime\python.exe" "$root\Verify-Game.py"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: LastLight-Portable-Binary-Reports
+          path: ${{ runner.temp }}/Last Light Portable Check/LastLight-Windows-x64/diagnostics
+          retention-days: 14
