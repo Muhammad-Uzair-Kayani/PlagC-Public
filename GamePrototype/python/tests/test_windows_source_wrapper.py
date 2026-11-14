@@ -25,7 +25,6 @@ def load_tests(loader, tests, pattern):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     tests.addTests(loader.loadTestsFromTestCase(module.WindowsNativeTests))
-    tests.addTests(loader.loadTestsFromTestCase(FullDeliveredGodotBuild))
     return tests
 
 
