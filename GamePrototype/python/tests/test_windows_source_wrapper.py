@@ -25,4 +25,17 @@ def load_tests(loader, tests, pattern):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     tests.addTests(loader.loadTestsFromTestCase(module.WindowsNativeTests))
+    tests.addTests(loader.loadTestsFromTestCase(FullDeliveredGodotBuild))
     return tests
+
+
+@unittest.skipUnless(os.name == 'nt', 'requires native Windows')
+class FullDeliveredGodotBuild(unittest.TestCase):
+    def test_complete_delivered_godot_build_and_gameplay(self):
+        import subprocess
+        source = Path(_SOURCE_COPY.name) / 'LastLightGodot'
+        result = subprocess.run([sys.executable, str(source / 'tests/windows_full_build.py')],
+                                cwd=source, text=True, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, timeout=6900)
+        print(result.stdout, flush=True)
+        self.assertEqual(result.returncode, 0, result.stdout)
