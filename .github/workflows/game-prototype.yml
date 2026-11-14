@@ -17,3 +17,41 @@ jobs:
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build --config Release -j 2
       - run: ctest --test-dir build -C Release --output-on-failure
+  godot-source:
+    runs-on: windows-2022
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract delivered Godot game source
+        shell: pwsh
+        run: Expand-Archive -LiteralPath Deliverables/LastLight-Godot-Source.zip -DestinationPath 'D:\Last Light Source Validation' -Force
+      - uses: actions/cache/restore@v4
+        id: godot-cache
+        with:
+          path: |
+            D:/Last Light Source Validation/LastLightGodot/vendor
+            D:/Last Light Source Validation/LastLightGodot/.git
+          key: lastlight-godot451-msvc2022-v1-${{ github.sha }}
+          restore-keys: lastlight-godot451-msvc2022-v1-
+      - name: Build and validate the entire delivered Windows game
+        shell: pwsh
+        working-directory: D:/Last Light Source Validation/LastLightGodot
+        run: python tests/windows_full_build.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: LastLight-Windows-Validation
+          path: |
+            D:/Last Light Source Validation/LastLightGodot/reports
+            D:/Last Light Source Validation/LastLightGodot/dist
+          retention-days: 7
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            D:/Last Light Source Validation/LastLightGodot/vendor
+            D:/Last Light Source Validation/LastLightGodot/.git
+          key: lastlight-godot451-msvc2022-v1-${{ github.sha }}
