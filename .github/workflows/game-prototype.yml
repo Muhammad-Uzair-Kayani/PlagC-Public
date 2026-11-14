@@ -39,7 +39,7 @@ jobs:
       - name: Build and validate the entire delivered Windows game
         shell: pwsh
         working-directory: D:/Last Light Source Validation/LastLightGodot
-        run: python tests/windows_full_build.py
+        run: python tests/windows_full_build.py --jobs 4
       - uses: actions/upload-artifact@v4
         if: always()
         with:
