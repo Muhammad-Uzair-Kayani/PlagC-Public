@@ -1,5 +1,15 @@
 name: Game prototype simulation and policy tests
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - 'GamePrototype/**'
+      - 'Deliverables/LastLight-Godot-Source.zip'
+      - '.github/workflows/game-prototype.yml'
+  pull_request:
+    paths:
+      - 'GamePrototype/**'
+      - 'Deliverables/LastLight-Godot-Source.zip'
+      - '.github/workflows/game-prototype.yml' 
 jobs:
   tests:
     strategy:
