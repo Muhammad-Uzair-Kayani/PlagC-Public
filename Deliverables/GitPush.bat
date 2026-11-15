@@ -18,6 +18,7 @@ if not errorlevel 1 (
     goto done
 )
 echo Python is required. Install Python 3.10+ or run the project Setup.bat.
+if not "%GITPUSH_MODE%"=="--check" pause
 exit /b 1
 :done
 set "GITPUSH_RESULT=%errorlevel%"
@@ -47,10 +48,11 @@ class Push:
         self.env['GIT_LITERAL_PATHSPECS']='0'
         self.backup=None
     def git(self,*args,check=True,data=None,cwd=None):
+        network=any(arg in ('ls-remote','fetch','push') for arg in args)
         result=subprocess.run(['git','-c','core.longpaths=true',*args],cwd=cwd or self.root,
-            env=self.env,input=data,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            env=self.env,input=data,stdout=subprocess.PIPE,stderr=None if network else subprocess.PIPE)
         if check and result.returncode:
-            raise Stop(result.stderr.decode('utf-8','replace').strip() or
+            raise Stop((result.stderr or b'').decode('utf-8','replace').strip() or
                        'Git failed: '+args[0])
         return result
     def text(self,*args,**kw):
@@ -67,6 +69,8 @@ class Push:
         return value
     def preflight(self):
         if not shutil.which('git'): raise Stop('Install Git for Windows and reopen the terminal.')
+        overrides=[key for key in ('GIT_DIR','GIT_WORK_TREE','GIT_INDEX_FILE','GIT_COMMON_DIR','GIT_NAMESPACE','GIT_OBJECT_DIRECTORY','GIT_ALTERNATE_OBJECT_DIRECTORIES') if self.env.get(key)]
+        if overrides:raise Stop('Review/remove Git repository override variables before uploading: '+', '.join(overrides))
         top=self.git('rev-parse','--show-toplevel',check=False)
         if top.returncode: raise Stop('This folder is not a Git checkout. Clone your destination repository first, then copy the project into it.')
         if Path(os.fsdecode(top.stdout).strip()).resolve()!=self.root:
@@ -203,6 +207,11 @@ class Push:
         self.large_objects(oids)
         if (self.root/'godot.lock.json').exists():
             if not (self.root/'game/game-content.pck').is_file():raise Stop('Required runtime assets missing: game/game-content.pck.')
+            if self.git('ls-files','--error-unmatch','--','game/game-content.pck',check=False).returncode:
+                raise Stop('game/game-content.pck is ignored/untracked. Correct the ignore rules before uploading.')
+            bundle='Deliverables/LastLight-Windows-x64.zip'
+            if (self.root/bundle).is_file() and self.git('ls-files','--error-unmatch','--',bundle,check=False).returncode:
+                raise Stop('The playable ZIP is ignored/untracked. Correct its ignore rule before uploading.')
             if not (self.root/'Deliverables/LastLight-Windows-x64.zip').is_file():
                 print('NOTE: No playable Windows ZIP is included. This upload will require a source build to play.')
     def large_objects(self,oids):
@@ -232,13 +241,14 @@ class Push:
             if not self.text('rev-parse','--verify','HEAD',check=False):raise Stop('Nothing to commit or push.')
             if self.ask('No staged changes. Push existing local commits? [y/N]: ').strip().lower()!='y':raise Stop('Cancelled.')
         revision=self.text('rev-parse','HEAD')
+        print('Local commit preserved:',revision)
         # Inspect unpublished history too: removing a huge file in a later commit is insufficient.
         args=['rev-list','--objects','--no-object-names',revision]
         if tip:args+=['^'+tip]
         self.large_objects(self.text(*args).splitlines())
         # Ordinary push rejects races/non-fast-forwards; never use --force or pull.
         result=self.git('-c','push.followTags=false','push','--porcelain','origin','HEAD:refs/heads/'+target,check=False)
-        print(result.stdout.decode('utf-8','replace'));print(result.stderr.decode('utf-8','replace'))
+        print(result.stdout.decode('utf-8','replace'));print((result.stderr or b'').decode('utf-8','replace'))
         if result.returncode:raise Stop('Push failed. Your local commit '+revision+' is preserved. Review the server/authentication/hook error above and rerun. No force-push was attempted.')
         published=self.text('ls-remote','--heads','origin','refs/heads/'+target).split()
         if not published or published[0]!=revision:raise Stop('Push returned success but remote verification changed/failed. Check GitHub before retrying.')
@@ -258,7 +268,7 @@ def main(root=None):
         job.run();return 0
     except (Stop,OSError,KeyboardInterrupt,EOFError) as e:
         print('\nSTOPPED:',str(e) or 'Cancelled.')
-        print('Working files were not deleted or reset. Staging/configuration may have changed.')
+        print('Working files were not deleted or reset. Local commits are kept. Staging/configuration may have changed.')
         if job.backup:print('Original index/.gitmodules backup:',job.backup)
         return 1
 if __name__=='__main__':sys.exit(main())
