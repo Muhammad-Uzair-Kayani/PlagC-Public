@@ -1,0 +1,45 @@
+name: GitPush Windows validation
+on:
+  push:
+    paths:
+      - 'Deliverables/GitPush-Tools.zip'
+      - '.github/workflows/gitpush-tools.yml'
+jobs:
+  native-git:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract upload helper
+        shell: pwsh
+        run: Expand-Archive -LiteralPath Deliverables/GitPush-Tools.zip -DestinationPath "$env:RUNNER_TEMP\Git Push Validation" -Force
+      - name: Real Git history, messages, staging and race scenarios
+        shell: pwsh
+        run: |
+          python -m unittest discover -s "$env:RUNNER_TEMP\Git Push Validation\validation" -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Native cmd.exe standalone BAT launcher
+        shell: python
+        run: |
+          import os, pathlib, shutil, subprocess, tempfile
+          source=pathlib.Path(os.environ['RUNNER_TEMP'])/'Git Push Validation'
+          code=(source/'GitPush.bat').read_text(encoding='utf-8').split('\n# GITPUSH_PYTHON\n',1)[1]
+          assert code==(source/'validation/git_push.py').read_text(encoding='utf-8')
+          comspec=os.environ['COMSPEC']
+          with tempfile.TemporaryDirectory(prefix='Last Light & Git Push ') as directory:
+              root=pathlib.Path(directory)
+              subprocess.run(['git','init','-b','main',str(root)],check=True,capture_output=True)
+              bat=root/'GitPush.bat';shutil.copy2(source/'GitPush.bat',bat)
+              command=f'"{comspec}" /d /s /v:off /c "call "{bat}" --check"'
+              p=subprocess.run(command,executable=comspec,shell=False,cwd=root,text=True,capture_output=True,timeout=30)
+              print(p.stdout,p.stderr)
+              assert p.returncode==0 and 'launcher ready' in p.stdout,(p.returncode,p.stdout,p.stderr)
+          with tempfile.TemporaryDirectory(prefix='Last Light No Repo ') as directory:
+              root=pathlib.Path(directory);bat=root/'GitPush.bat';shutil.copy2(source/'GitPush.bat',bat)
+              command=f'"{comspec}" /d /s /v:off /c "call "{bat}" --check"'
+              p=subprocess.run(command,executable=comspec,shell=False,cwd=root,text=True,capture_output=True,timeout=30)
+              print(p.stdout,p.stderr)
+              assert p.returncode==1 and 'not a Git checkout' in p.stdout,(p.returncode,p.stdout,p.stderr)
